@@ -138,6 +138,22 @@
   .done-wrap h2{font-family:var(--display);font-size:27px;font-weight:600;margin:14px 0 0}
   .done-wrap p{color:var(--muted);font-size:14px;margin:8px 0 0}
 
+  /* letter forms, audio, register tags */
+  .formrow{display:flex;gap:12px;justify-content:center;margin-top:8px;direction:rtl}
+  .formrow .f{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .formrow .f .g{font-family:var(--arabic);font-size:21px;line-height:1.2}
+  .formrow .f .l{font-size:8.5px;color:var(--muted);letter-spacing:.3px}
+  .gutt{display:inline-block;font-size:9px;font-weight:700;color:var(--coral);
+        background:rgba(193,89,46,.16);border-radius:99px;padding:2px 7px;margin-top:6px}
+  .regtag{display:inline-block;font-size:8.5px;font-weight:700;color:var(--teal);
+          background:rgba(79,138,139,.16);border-radius:99px;padding:1px 6px;
+          letter-spacing:.4px;vertical-align:1px}
+  .playbtn{background:var(--bg-deep);border-radius:8px;padding:6px 8px;display:flex;color:var(--gold)}
+  .playbtn svg{width:13px;height:13px}
+  .playbtn.miss{color:var(--muted);opacity:.45}
+  .covlist{max-height:150px;overflow-y:auto;font-size:11px;color:var(--muted);
+           line-height:1.7;margin-top:8px;font-family:ui-monospace,monospace}
+
   .note{color:var(--muted);font-size:11px;line-height:1.5;margin-top:18px;
         border-top:1px solid var(--surface-lt);padding-top:12px}
   .reset{background:none;color:var(--coral);font-size:11.5px;font-weight:600;
@@ -222,45 +238,257 @@ var ALPHABET = [
   {id:'al28',letter:'ي',name:'Yāʾ',translit:'y / ī',sound:"like 'y', or long 'i'",ex:'يَد',exT:'yad',exE:'hand'}
 ];
 
-/* ---------- content: 10 root families, 30 words ---------- */
+/* ---------- letter positional forms & flags ----------
+   Keyed by ALPHABET id. forms: [isolated, initial, medial, final]
+   (pre-shaped strings; tatweel supplies joining context). `key` is the
+   audio filename stem (audio/letters/<key>.mp3). guttural flags per
+   design doc §2.2. Authoring source: content/letters.json. */
+var LETTER_META = {
+  al01:{key:'alif',guttural:false,forms:['ا','ا','ـا','ـا']},
+  al02:{key:'ba',guttural:false,forms:['ب','بـ','ـبـ','ـب']},
+  al03:{key:'ta',guttural:false,forms:['ت','تـ','ـتـ','ـت']},
+  al04:{key:'tha',guttural:false,forms:['ث','ثـ','ـثـ','ـث']},
+  al05:{key:'jim',guttural:false,forms:['ج','جـ','ـجـ','ـج']},
+  al06:{key:'hha',guttural:true,forms:['ح','حـ','ـحـ','ـح']},
+  al07:{key:'kha',guttural:true,forms:['خ','خـ','ـخـ','ـخ']},
+  al08:{key:'dal',guttural:false,forms:['د','د','ـد','ـد']},
+  al09:{key:'dhal',guttural:false,forms:['ذ','ذ','ـذ','ـذ']},
+  al10:{key:'ra',guttural:false,forms:['ر','ر','ـر','ـر']},
+  al11:{key:'zay',guttural:false,forms:['ز','ز','ـز','ـز']},
+  al12:{key:'sin',guttural:false,forms:['س','سـ','ـسـ','ـس']},
+  al13:{key:'shin',guttural:false,forms:['ش','شـ','ـشـ','ـش']},
+  al14:{key:'sad',guttural:false,forms:['ص','صـ','ـصـ','ـص']},
+  al15:{key:'dad',guttural:false,forms:['ض','ضـ','ـضـ','ـض']},
+  al16:{key:'taa',guttural:false,forms:['ط','طـ','ـطـ','ـط']},
+  al17:{key:'zaa',guttural:false,forms:['ظ','ظـ','ـظـ','ـظ']},
+  al18:{key:'ayn',guttural:true,forms:['ع','عـ','ـعـ','ـع']},
+  al19:{key:'ghayn',guttural:true,forms:['غ','غـ','ـغـ','ـغ']},
+  al20:{key:'fa',guttural:false,forms:['ف','فـ','ـفـ','ـف']},
+  al21:{key:'qaf',guttural:true,forms:['ق','قـ','ـقـ','ـق']},
+  al22:{key:'kaf',guttural:false,forms:['ك','كـ','ـكـ','ـك']},
+  al23:{key:'lam',guttural:false,forms:['ل','لـ','ـلـ','ـل']},
+  al24:{key:'mim',guttural:false,forms:['م','مـ','ـمـ','ـم']},
+  al25:{key:'nun',guttural:false,forms:['ن','نـ','ـنـ','ـن']},
+  al26:{key:'haa',guttural:false,forms:['ه','هـ','ـهـ','ـه']},
+  al27:{key:'waw',guttural:false,forms:['و','و','ـو','ـو']},
+  al28:{key:'ya',guttural:false,forms:['ي','يـ','ـيـ','ـي']}
+};
+
+/* ---------- content: root families & words ----------
+   Card IDs are index-based (v-<rootIdx>-<wordIdx>): the first 10 families and
+   their original word order are LOAD-BEARING for saved progress. Append only;
+   never reorder. `a` is the audio filename stem (audio/words/<a>.mp3).
+   Authoring source: content/roots-words.json. */
 var ROOTS = [
   {root:'ك ت ب',meaning:'writing',words:[
-    {ar:'كَتَبَ',t:'kataba',en:'he wrote'},{ar:'كِتَاب',t:'kitāb',en:'book'},{ar:'كَاتِب',t:'kātib',en:'writer'}]},
+    {ar:'كَتَبَ',t:'kataba',en:'he wrote',a:'kataba',reg:'msa'},
+    {ar:'كِتَاب',t:'kitāb',en:'book',a:'kitaab',reg:'msa'},
+    {ar:'كَاتِب',t:'kātib',en:'writer',a:'kaatib',reg:'msa'},
+    {ar:'مَكْتَب',t:'maktab',en:'office; desk',a:'maktab',reg:'msa'},
+    {ar:'مَكْتَبَة',t:'maktaba',en:'library; bookstore',a:'maktaba',reg:'msa'}
+  ]},
   {root:'د ر س',meaning:'studying',words:[
-    {ar:'دَرَسَ',t:'darasa',en:'he studied'},{ar:'دَرْس',t:'dars',en:'lesson'},{ar:'مَدْرَسَة',t:'madrasa',en:'school'}]},
+    {ar:'دَرَسَ',t:'darasa',en:'he studied',a:'darasa',reg:'msa'},
+    {ar:'دَرْس',t:'dars',en:'lesson',a:'dars',reg:'msa'},
+    {ar:'مَدْرَسَة',t:'madrasa',en:'school',a:'madrasa',reg:'msa'},
+    {ar:'مُدَرِّس',t:'mudarris',en:'teacher, instructor',a:'mudarris',reg:'msa'}
+  ]},
   {root:'ع ل م',meaning:'knowledge',words:[
-    {ar:'عَلِمَ',t:'ʿalima',en:'he knew'},{ar:'عِلْم',t:'ʿilm',en:'knowledge'},{ar:'مُعَلِّم',t:'muʿallim',en:'teacher'}]},
+    {ar:'عَلِمَ',t:'ʿalima',en:'he knew',a:'3alima',reg:'msa'},
+    {ar:'عِلْم',t:'ʿilm',en:'knowledge',a:'3ilm',reg:'msa'},
+    {ar:'مُعَلِّم',t:'muʿallim',en:'teacher',a:'mu3allim',reg:'msa'},
+    {ar:'عَالَم',t:'ʿālam',en:'world',a:'3aalam',reg:'msa'}
+  ]},
   {root:'ق ر أ',meaning:'reading',words:[
-    {ar:'قَرَأَ',t:'qaraʾa',en:'he read'},{ar:'قِرَاءَة',t:'qirāʾa',en:'reading'},{ar:'قَارِئ',t:'qāriʾ',en:'reader'}]},
+    {ar:'قَرَأَ',t:'qaraʾa',en:'he read',a:'qara2a',reg:'msa'},
+    {ar:'قِرَاءَة',t:'qirāʾa',en:'reading',a:'qiraa2a',reg:'msa'},
+    {ar:'قَارِئ',t:'qāriʾ',en:'reader',a:'qaari2',reg:'msa'}
+  ]},
   {root:'ع م ل',meaning:'work',words:[
-    {ar:'عَمِلَ',t:'ʿamila',en:'he worked'},{ar:'عَمَل',t:'ʿamal',en:'work'},{ar:'عَامِل',t:'ʿāmil',en:'worker'}]},
+    {ar:'عَمِلَ',t:'ʿamila',en:'he worked',a:'3amila',reg:'msa'},
+    {ar:'عَمَل',t:'ʿamal',en:'work',a:'3amal',reg:'msa'},
+    {ar:'عَامِل',t:'ʿāmil',en:'worker',a:'3aamil',reg:'msa'}
+  ]},
   {root:'س ل م',meaning:'peace / safety',words:[
-    {ar:'سَلَام',t:'salām',en:'peace'},{ar:'سَلَامَة',t:'salāma',en:'safety'},{ar:'مُسْلِم',t:'muslim',en:'one who submits'}]},
+    {ar:'سَلَام',t:'salām',en:'peace',a:'salaam',reg:'msa'},
+    {ar:'سَلَامَة',t:'salāma',en:'safety',a:'salaama',reg:'msa'},
+    {ar:'مُسْلِم',t:'muslim',en:'one who submits',a:'muslim',reg:'msa'}
+  ]},
   {root:'ح ب ب',meaning:'love',words:[
-    {ar:'أَحَبَّ',t:'aḥabba',en:'he loved'},{ar:'حُبّ',t:'ḥubb',en:'love'},{ar:'حَبِيب',t:'ḥabīb',en:'beloved'}]},
+    {ar:'أَحَبَّ',t:'aḥabba',en:'he loved',a:'ahabba',reg:'msa'},
+    {ar:'حُبّ',t:'ḥubb',en:'love',a:'hubb',reg:'msa'},
+    {ar:'حَبِيب',t:'ḥabīb',en:'beloved',a:'habiib',reg:'msa'}
+  ]},
   {root:'ك ب ر',meaning:'bigness',words:[
-    {ar:'كَبِير',t:'kabīr',en:'big'},{ar:'أَكْبَر',t:'akbar',en:'bigger / biggest'},{ar:'كِبَر',t:'kibar',en:'greatness'}]},
+    {ar:'كَبِير',t:'kabīr',en:'big',a:'kabiir',reg:'msa'},
+    {ar:'أَكْبَر',t:'akbar',en:'bigger / biggest',a:'akbar',reg:'msa'},
+    {ar:'كِبَر',t:'kibar',en:'greatness',a:'kibar',reg:'msa'},
+    {ar:'كَبُرَ',t:'kabura',en:'he/it grew big',a:'kabura',reg:'msa'}
+  ]},
   {root:'ذ ه ب',meaning:'going',words:[
-    {ar:'ذَهَبَ',t:'dhahaba',en:'he went'},{ar:'يَذْهَب',t:'yadhhab',en:'he goes'},{ar:'ذَهَاب',t:'dhahāb',en:'departure'}]},
+    {ar:'ذَهَبَ',t:'dhahaba',en:'he went',a:'dhahaba',reg:'msa'},
+    {ar:'يَذْهَب',t:'yadhhab',en:'he goes',a:'yadhhab',reg:'msa'},
+    {ar:'ذَهَاب',t:'dhahāb',en:'departure',a:'dhahaab',reg:'msa'},
+    {ar:'ذَهَب',t:'dhahab',en:'gold',a:'dhahab',reg:'msa'}
+  ]},
   {root:'س ف ر',meaning:'travel',words:[
-    {ar:'سَافَرَ',t:'sāfara',en:'he traveled'},{ar:'سَفَر',t:'safar',en:'a trip'},{ar:'مُسَافِر',t:'musāfir',en:'traveler'}]}
+    {ar:'سَافَرَ',t:'sāfara',en:'he traveled',a:'saafara',reg:'msa'},
+    {ar:'سَفَر',t:'safar',en:'a trip',a:'safar',reg:'msa'},
+    {ar:'مُسَافِر',t:'musāfir',en:'traveler',a:'musaafir',reg:'msa'}
+  ]},
+  {root:'س ك ن',meaning:'dwelling, stillness',words:[
+    {ar:'سَكَنَ',t:'sakana',en:'he lived, resided',a:'sakana',reg:'msa'},
+    {ar:'مَسْكَن',t:'maskan',en:'residence, dwelling',a:'maskan',reg:'msa'},
+    {ar:'سُكَّان',t:'sukkān',en:'inhabitants',a:'sukkaan',reg:'msa'}
+  ]},
+  {root:'ط ع م',meaning:'food, taste',words:[
+    {ar:'طَعَام',t:'ṭaʿām',en:'food',a:'ta3aam',reg:'msa'},
+    {ar:'مَطْعَم',t:'maṭʿam',en:'restaurant',a:'mat3am',reg:'msa'},
+    {ar:'طَعْم',t:'ṭaʿm',en:'taste, flavor',a:'ta3m',reg:'msa'}
+  ]},
+  {root:'أ ك ل',meaning:'eating',words:[
+    {ar:'أَكَلَ',t:'ʾakala',en:'he ate',a:'2akala',reg:'msa'},
+    {ar:'أَكْل',t:'ʾakl',en:'eating; food',a:'2akl',reg:'msa'},
+    {ar:'مَأْكُولَات',t:'maʾkūlāt',en:'foods, dishes',a:'ma2kuulaat',reg:'msa'}
+  ]},
+  {root:'ش ر ب',meaning:'drinking',words:[
+    {ar:'شَرِبَ',t:'shariba',en:'he drank',a:'shariba',reg:'msa'},
+    {ar:'مَشْرُوب',t:'mashrūb',en:'drink, beverage',a:'mashruub',reg:'msa'},
+    {ar:'شَرَاب',t:'sharāb',en:'drink; syrup',a:'sharaab',reg:'msa'}
+  ]},
+  {root:'ج ل س',meaning:'sitting',words:[
+    {ar:'جَلَسَ',t:'jalasa',en:'he sat',a:'jalasa',reg:'msa'},
+    {ar:'جُلُوس',t:'julūs',en:'sitting',a:'juluus',reg:'msa'},
+    {ar:'مَجْلِس',t:'majlis',en:'council; sitting room',a:'majlis',reg:'msa'}
+  ]},
+  {root:'ف ه م',meaning:'understanding',words:[
+    {ar:'فَهِمَ',t:'fahima',en:'he understood',a:'fahima',reg:'msa'},
+    {ar:'فَهْم',t:'fahm',en:'understanding',a:'fahm',reg:'msa'},
+    {ar:'مَفْهُوم',t:'mafhūm',en:'concept; understood',a:'mafhuum',reg:'msa'}
+  ]},
+  {root:'ق و ل',meaning:'saying',words:[
+    {ar:'قَالَ',t:'qāla',en:'he said',a:'qaala',reg:'msa'},
+    {ar:'قَوْل',t:'qawl',en:'saying, statement',a:'qawl',reg:'msa'},
+    {ar:'مَقَال',t:'maqāl',en:'article, essay',a:'maqaal',reg:'msa'}
+  ]},
+  {root:'ف ع ل',meaning:'doing, acting',words:[
+    {ar:'فَعَلَ',t:'faʿala',en:'he did',a:'fa3ala',reg:'msa'},
+    {ar:'فِعْل',t:'fiʿl',en:'action; verb',a:'fi3l',reg:'msa'},
+    {ar:'فَاعِل',t:'fāʿil',en:'doer; agent',a:'faa3il',reg:'msa'}
+  ]},
+  {root:'ن ظ ر',meaning:'looking, seeing',words:[
+    {ar:'نَظَرَ',t:'naẓara',en:'he looked',a:'nazara',reg:'msa'},
+    {ar:'نَظَر',t:'naẓar',en:'sight, view',a:'nazar',reg:'msa'},
+    {ar:'مَنْظَر',t:'manẓar',en:'view, scene',a:'manzar',reg:'msa'},
+    {ar:'نَظَّارَة',t:'naẓẓāra',en:'eyeglasses',a:'nazzaara',reg:'msa'}
+  ]},
+  {root:'س م ع',meaning:'hearing',words:[
+    {ar:'سَمِعَ',t:'samiʿa',en:'he heard',a:'sami3a',reg:'msa'},
+    {ar:'سَمْع',t:'samʿ',en:'hearing',a:'sam3',reg:'msa'},
+    {ar:'مُسْتَمِع',t:'mustamiʿ',en:'listener',a:'mustami3',reg:'msa'}
+  ]},
+  {root:'ك ل م',meaning:'speaking, words',words:[
+    {ar:'كَلِمَة',t:'kalima',en:'word',a:'kalima',reg:'msa'},
+    {ar:'كَلَام',t:'kalām',en:'speech, talk',a:'kalaam',reg:'msa'},
+    {ar:'تَكَلَّمَ',t:'takallama',en:'he spoke',a:'takallama',reg:'msa'}
+  ]},
+  {root:'ع ر ف',meaning:'knowing, recognizing',words:[
+    {ar:'عَرَفَ',t:'ʿarafa',en:'he knew, recognized',a:'3arafa',reg:'msa'},
+    {ar:'مَعْرِفَة',t:'maʿrifa',en:'knowledge',a:'ma3rifa',reg:'msa'},
+    {ar:'مَعْرُوف',t:'maʿrūf',en:'well-known; favor',a:'ma3ruuf',reg:'msa'}
+  ]},
+  {root:'خ ر ج',meaning:'exiting, going out',words:[
+    {ar:'خَرَجَ',t:'kharaja',en:'he went out',a:'kharaja',reg:'msa'},
+    {ar:'خَارِج',t:'khārij',en:'outside',a:'khaarij',reg:'msa'},
+    {ar:'مَخْرَج',t:'makhraj',en:'exit',a:'makhraj',reg:'msa'}
+  ]},
+  {root:'د خ ل',meaning:'entering',words:[
+    {ar:'دَخَلَ',t:'dakhala',en:'he entered',a:'dakhala',reg:'msa'},
+    {ar:'دَاخِل',t:'dākhil',en:'inside',a:'daakhil',reg:'msa'},
+    {ar:'مَدْخَل',t:'madkhal',en:'entrance',a:'madkhal',reg:'msa'}
+  ]},
+  {root:'ص غ ر',meaning:'smallness',words:[
+    {ar:'صَغِير',t:'ṣaghīr',en:'small; young',a:'saghiir',reg:'msa'},
+    {ar:'أَصْغَر',t:'ʾaṣghar',en:'smaller, smallest',a:'2asghar',reg:'msa'}
+  ]},
+  {root:'ج م ل',meaning:'beauty',words:[
+    {ar:'جَمِيل',t:'jamīl',en:'beautiful',a:'jamiil',reg:'msa'},
+    {ar:'جَمَال',t:'jamāl',en:'beauty',a:'jamaal',reg:'msa'},
+    {ar:'أَجْمَل',t:'ʾajmal',en:'more beautiful',a:'2ajmal',reg:'msa'}
+  ]},
+  {root:'ف ت ح',meaning:'opening',words:[
+    {ar:'فَتَحَ',t:'fataḥa',en:'he opened',a:'fataha',reg:'msa'},
+    {ar:'مِفْتَاح',t:'miftāḥ',en:'key',a:'miftaah',reg:'msa'},
+    {ar:'مَفْتُوح',t:'maftūḥ',en:'open',a:'maftuuh',reg:'msa'}
+  ]},
+  {root:'س أ ل',meaning:'asking',words:[
+    {ar:'سَأَلَ',t:'saʾala',en:'he asked',a:'sa2ala',reg:'msa'},
+    {ar:'سُؤَال',t:'suʾāl',en:'question',a:'su2aal',reg:'msa'},
+    {ar:'مَسْأَلَة',t:'masʾala',en:'issue, problem',a:'mas2ala',reg:'msa'}
+  ]},
+  {root:'ج و ب',meaning:'answering',words:[
+    {ar:'أَجَابَ',t:'ʾajāba',en:'he answered',a:'2ajaaba',reg:'msa'},
+    {ar:'جَوَاب',t:'jawāb',en:'answer',a:'jawaab',reg:'msa'},
+    {ar:'إِجَابَة',t:'ʾijāba',en:'answer, response',a:'2ijaaba',reg:'msa'}
+  ]},
+  {root:'ل ع ب',meaning:'playing',words:[
+    {ar:'لَعِبَ',t:'laʿiba',en:'he played',a:'la3iba',reg:'msa'},
+    {ar:'لُعْبَة',t:'luʿba',en:'game, toy',a:'lu3ba',reg:'msa'},
+    {ar:'لَاعِب',t:'lāʿib',en:'player',a:'laa3ib',reg:'msa'},
+    {ar:'مَلْعَب',t:'malʿab',en:'playground, stadium',a:'mal3ab',reg:'msa'}
+  ]},
+  {root:'ن و م',meaning:'sleeping',words:[
+    {ar:'نَامَ',t:'nāma',en:'he slept',a:'naama',reg:'msa'},
+    {ar:'نَوْم',t:'nawm',en:'sleep',a:'nawm',reg:'msa'},
+    {ar:'نَائِم',t:'nāʾim',en:'asleep, sleeping',a:'naa2im',reg:'msa'}
+  ]},
+  {root:'ش غ ل',meaning:'occupation, busyness',words:[
+    {ar:'شُغْل',t:'shughl',en:'work, business',a:'shughl',reg:'msa'},
+    {ar:'مَشْغُول',t:'mashghūl',en:'busy',a:'mashghuul',reg:'msa'},
+    {ar:'اِشْتَغَلَ',t:'ishtaghala',en:'he worked',a:'ishtaghala',reg:'msa'}
+  ]},
+  {root:'ز و ر',meaning:'visiting',words:[
+    {ar:'زَارَ',t:'zāra',en:'he visited',a:'zaara',reg:'msa'},
+    {ar:'زِيَارَة',t:'ziyāra',en:'visit',a:'ziyaara',reg:'msa'},
+    {ar:'زَائِر',t:'zāʾir',en:'visitor',a:'zaa2ir',reg:'msa'}
+  ]},
+  {root:'و ص ل',meaning:'arriving, connecting',words:[
+    {ar:'وَصَلَ',t:'waṣala',en:'he arrived',a:'wasala',reg:'msa'},
+    {ar:'وُصُول',t:'wuṣūl',en:'arrival',a:'wusuul',reg:'msa'},
+    {ar:'مُوَاصَلَات',t:'muwāṣalāt',en:'transportation',a:'muwaasalaat',reg:'msa'}
+  ]},
+  {root:'غ س ل',meaning:'washing',words:[
+    {ar:'غَسَلَ',t:'ghasala',en:'he washed',a:'ghasala',reg:'msa'},
+    {ar:'غَسِيل',t:'ghasīl',en:'laundry',a:'ghasiil',reg:'msa'},
+    {ar:'غَسَّالَة',t:'ghassāla',en:'washing machine',a:'ghassaala',reg:'msa'}
+  ]},
+  {root:'ط ب خ',meaning:'cooking',words:[
+    {ar:'طَبَخَ',t:'ṭabakha',en:'he cooked',a:'tabakha',reg:'msa'},
+    {ar:'مَطْبَخ',t:'maṭbakh',en:'kitchen',a:'matbakh',reg:'msa'},
+    {ar:'طَبَّاخ',t:'ṭabbākh',en:'cook, chef',a:'tabbaakh',reg:'msa'}
+  ]},
+  {root:'ص ب ح',meaning:'morning, becoming',words:[
+    {ar:'صَبَاح',t:'ṣabāḥ',en:'morning',a:'sabaah',reg:'msa'},
+    {ar:'مِصْبَاح',t:'miṣbāḥ',en:'lamp',a:'misbaah',reg:'msa'},
+    {ar:'أَصْبَحَ',t:'ʾaṣbaḥa',en:'he became',a:'2asbaha',reg:'msa'}
+  ]}
 ];
 
 var ROADMAP = [
-  {ph:'PHASE 0',ttl:'Script & sound',wk:'Weeks 1–3',
-   goal:'Read all 28 letters and reproduce every sound, including the throat sounds (ح ع خ غ ق) that have no English equivalent.',
-   tip:'Pure short-burst memorization — ideal for 5-minute daily reps rather than long sittings.'},
-  {ph:'PHASE 1',ttl:'Root vocabulary + survival phrases',wk:'Weeks 4–10',
-   goal:'Roughly 150 words drawn from ~30 common roots, plus greetings, numbers, and basic questions.',
+  {ph:'PHASE 0',ttl:'Script & sound',wk:'gate: retention',
+   goal:'All 28 letters held at 3+ successful reps with week-long intervals \u2014 and every sound produced aloud, especially the throat letters (\u062d \u0639 \u062e \u063a \u0642) that have no English equivalent.',
+   tip:'Pure short-burst memorization \u2014 ideal for 5-minute daily reps rather than long sittings.'},
+  {ph:'PHASE 1',ttl:'Root vocabulary + survival phrases',wk:'gate: ~150 words',
+   goal:'Roughly 150 MSA words retained across ~30 root families, with Egyptian Arabic layered in for listening from the start \u2014 every card tagged with its register.',
    tip:'Learning by root family rather than word-by-word is the single biggest lever on retention speed in Arabic.'},
-  {ph:'PHASE 2',ttl:'Core grammar',wk:'Weeks 11–20',
-   goal:'Present and past verb conjugation, sentence structure, the definite article, gender agreement.',
+  {ph:'PHASE 2',ttl:'Core grammar',wk:'gate: checklist',
+   goal:'Present and past verb conjugation, sentence structure, the definite article, gender agreement \u2014 cleared when unseen simple sentences parse.',
    tip:'Arabic grammar is more regular than it first looks once the root-and-pattern logic clicks.'},
-  {ph:'PHASE 3',ttl:'MSA conversation + dialect choice',wk:'Months 6–9',
-   goal:'Hold basic conversations in Modern Standard Arabic, and pick one spoken dialect (Egyptian, Levantine, or Gulf) to layer in.',
-   tip:'MSA is what gets written and broadcast; a dialect is what people actually speak. You will likely want both.'},
-  {ph:'PHASE 4',ttl:'Immersion & fluency building',wk:'Month 10+',
-   goal:'Regular media, conversation exchange, and reading — shifting from studying Arabic to using Arabic.',
+  {ph:'PHASE 3',ttl:'Conversation, both registers',wk:'gate: exchange',
+   goal:'Sustained basic exchange in Egyptian Arabic; MSA reading unaided.',
+   tip:'MSA is what gets written and broadcast; Egyptian is what people actually speak \u2014 and what most Arabic media exports.'},
+  {ph:'PHASE 4',ttl:'Immersion',wk:'ongoing',
+   goal:'Regular media, conversation exchange, and reading \u2014 shifting from studying Arabic to using Arabic. No exit criterion.',
    tip:'Category IV languages reward consistency over intensity. Steady daily contact beats occasional cramming.'}
 ];
 
@@ -269,7 +497,7 @@ var DECK = [];
 ALPHABET.forEach(function(a){ DECK.push({id:'a-'+a.id,type:'alphabet',d:a}); });
 ROOTS.forEach(function(r,ri){
   r.words.forEach(function(w,wi){
-    DECK.push({id:'v-'+ri+'-'+wi,type:'vocab',d:{ar:w.ar,t:w.t,en:w.en,root:r.root,rootMeaning:r.meaning}});
+    DECK.push({id:'v-'+ri+'-'+wi,type:'vocab',d:{ar:w.ar,t:w.t,en:w.en,a:w.a,reg:w.reg,root:r.root,rootMeaning:r.meaning}});
   });
 });
 var TOTAL_WORDS = ROOTS.reduce(function(n,r){return n+r.words.length;},0);
@@ -289,6 +517,58 @@ function schedule(prev,q){
   if(q===3) ease = ease+0.15;
   if(reps===1) iv=1; else if(reps===2) iv=3; else iv=Math.max(1,Math.round(iv*ease));
   return {interval:iv,ease:ease,reps:reps,due:addDays(today(),iv)};
+}
+
+/* ---------- audio ----------
+   Recorded human clips only — no TTS for core content [R-24].
+   Drop files next to this HTML: audio/letters/<key>.mp3, audio/words/<a>.mp3.
+   Missing files degrade to a muted button; the Progress tab has a coverage check. */
+var AUDIO_MISSING = {};
+var audioEl = null;
+function letterSrc(id){ return 'audio/letters/'+LETTER_META[id].key+'.mp3'; }
+function wordSrc(w){ return 'audio/words/'+w.a+'.mp3'; }
+function playAudio(src){
+  if(!audioEl) audioEl = new Audio();
+  audioEl.onerror = function(){ if(!AUDIO_MISSING[src]){ AUDIO_MISSING[src]=true; render(); } };
+  audioEl.src = src;
+  var p = audioEl.play();
+  if(p && p.catch) p.catch(function(){ if(!AUDIO_MISSING[src]){ AUDIO_MISSING[src]=true; render(); } });
+}
+function playBtn(src){
+  var miss = AUDIO_MISSING[src];
+  return '<button class="playbtn'+(miss?' miss':'')+'" data-play="'+src+'" title="'
+       + (miss?'no recording yet — see Progress → Audio coverage':'play recording')+'">'+svg(IC.spk)+'</button>';
+}
+function allAudio(){
+  var list = [];
+  ALPHABET.forEach(function(a){ list.push(letterSrc(a.id)); });
+  ROOTS.forEach(function(r){ r.words.forEach(function(w){ list.push(wordSrc(w)); }); });
+  return list;
+}
+var COV = null;
+function probeCoverage(){
+  var list = allAudio();
+  COV = {done:0,total:list.length,missing:[],running:true};
+  render();
+  var i = 0;
+  function next(){
+    if(i >= list.length){ COV.running=false; render(); return; }
+    var src = list[i++], a = new Audio(), settled = false, tm;
+    function fin(ok){
+      if(settled) return;
+      settled = true; clearTimeout(tm);
+      COV.done++;
+      if(!ok){ COV.missing.push(src); AUDIO_MISSING[src]=true; }
+      if(COV.done % 10 === 0) render();
+      next();
+    }
+    a.onerror = function(){ fin(false); };
+    a.onloadeddata = function(){ fin(true); };
+    a.oncanplaythrough = function(){ fin(true); };
+    tm = setTimeout(function(){ fin(false); }, 4000);
+    a.preload = 'auto'; a.src = src; a.load();
+  }
+  next();
 }
 
 /* ---------- state ---------- */
@@ -324,7 +604,8 @@ var IC = {
   x:'<path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   check:'<path d="M4 12l5 5L20 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>',
   chev:'<path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-  chevD:'<path d="M5 9l7 7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+  chevD:'<path d="M5 9l7 7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  spk:'<path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
 };
 function svg(p,cls){ return '<svg viewBox="0 0 24 24" class="'+(cls||'')+'">'+p+'</svg>'; }
 function starRow(){
@@ -335,6 +616,15 @@ function starRow(){
   return out+'</div>';
 }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formCells(id,size){
+  var M = LETTER_META[id], labels = ['isolated','initial','medial','final'], out = '';
+  for(var i=0;i<4;i++){
+    out += '<div class="f"><span class="g"'+(size?' style="font-size:'+size+'px"':'')+'>'
+         + M.forms[i]+'</span><span class="l">'+labels[i]+'</span></div>';
+  }
+  return out;
+}
+function regTag(reg){ return '<span class="regtag">'+(reg==='egy'?'EGY':'MSA')+'</span>'; }
 
 /* ---------- views ---------- */
 function viewHome(){
@@ -377,9 +667,12 @@ function viewScript(){
     } else {
       out += '<div class="ex">'+a.ex+'</div>'
            + '<div class="exs">'+esc(a.exT)+' \u00b7 '+esc(a.exE)+'</div>'
+           + '<div class="formrow">'+formCells(a.id,15)+'</div>'
+           + (LETTER_META[a.id].guttural?'<span class="gutt">throat sound</span>':'')
            + '<div class="row">'
            +   '<button data-grade="'+id+'|0" style="color:var(--coral)">'+svg(IC.x)+'</button>'
            +   '<button data-grade="'+id+'|2" style="color:var(--teal)">'+svg(IC.check)+'</button>'
+           +   '<button class="playbtn'+(AUDIO_MISSING[letterSrc(a.id)]?' miss':'')+'" data-play="'+letterSrc(a.id)+'">'+svg(IC.spk)+'</button>'
            + '</div>';
     }
     out += '</div>';
@@ -413,9 +706,11 @@ function viewVocab(){
           'learned':['#4F8A8B','rgba(79,138,139,.16)']
         }[st];
         out += '<div class="word"><div><div class="w-ar">'+w.ar+'</div>'
-             + '<div class="w-en">'+esc(w.t)+' \u00b7 '+esc(w.en)+'</div></div>'
-             + '<span class="pill" style="color:'+PILL[0]+';background:'+PILL[1]+'">'+st+'</span>'
-             + '</div>';
+             + '<div class="w-en">'+esc(w.t)+' \u00b7 '+esc(w.en)+' '+regTag(w.reg)+'</div></div>'
+             + '<div style="display:flex;align-items:center;gap:8px">'
+             +   playBtn(wordSrc(w))
+             +   '<span class="pill" style="color:'+PILL[0]+';background:'+PILL[1]+'">'+st+'</span>'
+             + '</div></div>';
       });
       out += '</div>';
     }
@@ -456,7 +751,30 @@ function viewProgress(){
        + '<div class="card" style="padding:16px;margin-top:12px">'
        +   '<div style="font-size:13px;font-weight:600;margin-bottom:11px">Last 30 days</div>'
        +   '<div class="heat">'+cells+'</div>'
-       + '</div>';
+       + '</div>'
+       + covCard();
+}
+function covCard(){
+  var out = '<div class="card" style="padding:16px;margin-top:12px">'
+    + '<div style="font-size:13px;font-weight:600">Audio coverage</div>'
+    + '<p class="sub">Recorded human audio only — no TTS. Drop .mp3 files into '
+    + 'audio/letters/ and audio/words/ next to this HTML file; missing filenames are listed below.</p>';
+  if(!COV){
+    out += '<button class="btn-teal" style="margin:12px 0 0" data-act="probe">Check '+allAudio().length+' recordings</button>';
+  } else if(COV.running){
+    out += '<p class="sub" style="margin-top:10px">Checking… '+COV.done+' / '+COV.total+'</p>';
+  } else {
+    var have = COV.total - COV.missing.length;
+    out += '<div style="margin-top:10px;font-family:var(--display);font-size:19px;font-weight:600;color:'
+         + (COV.missing.length?'var(--amber)':'var(--teal)')+'">'+have+' / '+COV.total+' recorded</div>';
+    if(COV.missing.length){
+      out += '<div class="covlist">'+COV.missing.join('<br>')+'</div>';
+    } else {
+      out += '<p class="sub" style="margin-top:6px">Complete — every letter and word has a recording.</p>';
+    }
+    out += '<button class="reset" data-act="probe" style="color:var(--teal)">Re-check</button>';
+  }
+  return out+'</div>';
 }
 
 /* ---------- session ---------- */
@@ -512,14 +830,20 @@ function renderOverlay(){
   var mid;
   if(c.type==='alphabet'){
     mid = '<div class="q-letter">'+d.letter+'</div>'
-        + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.name)+' \u2014 '+esc(d.translit)+'</div>'
+        + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.name)+' \u2014 '+esc(d.translit)+' '+regTag('msa')+'</div>'
             + '<div class="a2">'+esc(d.sound)+'</div>'
+            + '<div class="formrow">'+formCells(d.id,26)+'</div>'
+            + (LETTER_META[d.id].guttural?'<span class="gutt">throat sound</span>':'')
             + '<div class="a3">'+d.ex+'</div>'
-            + '<div class="a4">'+esc(d.exT)+' \u00b7 '+esc(d.exE)+'</div></div>' : '');
+            + '<div class="a4">'+esc(d.exT)+' \u00b7 '+esc(d.exE)+'</div>'
+            + '<div style="display:flex;justify-content:center;margin-top:12px">'+playBtn(letterSrc(d.id))+'</div>'
+            + '</div>' : '');
   } else {
-    mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+')</div>'
+    mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
         + '<div class="q-word">'+d.ar+'</div>'
-        + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.t)+'</div><div class="a2">'+esc(d.en)+'</div></div>' : '');
+        + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.t)+'</div><div class="a2">'+esc(d.en)+'</div>'
+            + '<div style="display:flex;justify-content:center;margin-top:14px">'+playBtn(wordSrc(d))+'</div>'
+            + '</div>' : '');
   }
   var foot = sess.show
     ? '<div class="grades">'
@@ -562,6 +886,7 @@ function render(){
 /* ---------- one delegated listener ---------- */
 document.addEventListener('click', function(e){
   var el;
+  if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play); return; }
   if((el = e.target.closest('[data-g]'))){ grade(parseInt(el.dataset.g,10)); return; }
   if((el = e.target.closest('[data-grade]'))){
     var parts = el.dataset.grade.split('|');
@@ -579,6 +904,7 @@ document.addEventListener('click', function(e){
     var a = el.dataset.act;
     if(a==='start') startSession(null);
     else if(a==='start-vocab') startSession('vocab');
+    else if(a==='probe') probeCoverage();
     else if(a==='reveal'){ sess.show=true; render(); }
     else if(a==='close'){ sess=null; render(); }
     else if(a==='reset'){
