@@ -45,6 +45,18 @@ audio/
 - Suggested sources: a native speaker recording directly, or curated clips from
   Common Voice Arabic (check license attribution if redistributing).
 
+## Sharing / running your own copy
+
+The system is **single-learner by design, shared by replication** (design doc §11.7).
+Progress lives in each browser's `localStorage`, so today anyone can open the HTML file
+(or a hosted copy) and get fully independent streaks, XP, and review schedules.
+
+From build step 4 onward, the cloud features (content pipeline, pronunciation
+assessment, cross-device sync) require a personal backend: fork this repo, one-click
+deploy the serverless backend, and enter **your own API keys** as environment variables
+in your deployment. The app itself never holds API keys — only the URL and access token
+of *your* backend. No accounts, no shared infrastructure, no one else's bill.
+
 ## Content accuracy note `[HUMAN]`
 
 The Step 2 vocabulary (≥30 root families, ≥90 fully diacritized MSA words) was

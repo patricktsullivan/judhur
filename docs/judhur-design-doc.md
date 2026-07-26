@@ -2,7 +2,7 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.5 · July 2026
+Version 0.6 · July 2026 *(0.6 adds §11.7, the sharing model)*
 
 ---
 
@@ -483,7 +483,7 @@ Each step must be independently usable. Nothing depends on a later step to deliv
 | **1** | v0 HTML in daily use | ✅ Complete |
 | **2** | Content expansion: all letter forms (initial/medial/final/isolated), ~30 root families, recorded core audio | All 28 letters show 4 positional forms; ≥90 words across ≥30 roots; every letter and core word has recorded human audio playable offline |
 | **3** | PWA | Installs to home screen on iOS and Android; study loop fully functional in airplane mode; audio plays offline |
-| **4** | Backend skeleton + `/state` | No key in client bundle (grep-verifiable); profile syncs across two devices; client degrades gracefully when backend unreachable |
+| **4** | Backend skeleton + `/state` | No key in client bundle (grep-verifiable); profile syncs across two devices; client degrades gracefully when backend unreachable; backend deploys from the repo as a template with keys as env vars, and the client's only credentials are backend URL + access token (§11.7) |
 | **5** | `/speak` + Tier 1 intelligibility | Mic capture works on iOS Safari and desktop Chrome; ASR round-trip returns understood/not-understood; result never displayed as a score |
 | **6** | `/ingest` + `/generate`, verification Tier 1 | YouTube URL and article URL both produce a graded passage; output is fully diacritized; new words enter the review queue with provenance; extraction failures report a specific reason |
 | **7** | Tier 2a Azure assessment + calibration pool | Per-phoneme results returned against `ar-SA`; pool populates with correct flagged/passed stratification; all output marked provisional; phase advancement unaffected |
@@ -601,6 +601,22 @@ The risk is that building the system becomes the project and Arabic never gets l
 
 All three are checkable from data the app already tracks.
 
+### 11.7 Sharing model → Replicable single-user deployments
+
+*(Added v0.6, July 2026 — decided when classmates in an introductory Arabic course asked to use the system.)*
+
+The §1.1 non-goal stands: **no multi-tenancy, ever.** No accounts, no shared infrastructure, no learner's data or API spend on another learner's stack. Sharing works by **replication**: each learner runs the entire system for themselves.
+
+- **Through Step 3 this is already free.** The client is a static PWA; state is per-browser `localStorage`. Anyone with the URL (or the file) gets independent progress with zero engineering.
+- **From Step 4, the backend is a template.** The repo is structured so a new learner can fork (or "Use this template"), one-click deploy the serverless backend (Cloudflare Workers / Vercel free tier), and enter **their own API keys as environment variables** in their own deployment. Keys never enter client code — `[R-16]`-style vendor choices and billing stay per-learner, and `[R-10]` is preserved exactly.
+- **The client gains one settings surface at Step 4:** the URL of the learner's own backend plus a private access token. Nothing else. (The token was implicit anyway — a keyed backend reachable from the open web needs one, or anyone with the URL can spend the owner's credits.)
+
+**`[R-41]`** The client MUST NOT accept or store third-party API keys. The only credentials it holds are the learner's own backend URL and its access token.
+
+**`[R-42]`** Backend configuration MUST be limited to environment variables plus a documented deploy path, so that "run your own" stays a fork-deploy-paste operation, not an ops project.
+
+**What "run everything from your own device" means here:** the study loop is fully on-device (`[R-11]`); generation, verification, and speech assessment are calls from your backend to your own cloud accounts (§10.1 keeps ML off the critical path, so there is no local-model fallback). The "installer" is the Step 3 PWA install.
+
 ---
 
 ## 12. `[HUMAN]` The reviewer role
@@ -717,3 +733,4 @@ Not pending decisions — questions only answerable by running the system.
 | Reviewer search parallel, with a 200-item checkpoint | Unblocks the build without letting "not blocking" become "not happening" |
 | Provisional feedback cannot gate phases | Acting on unverified feedback drills errors into permanence |
 | Building gated on 14 days of prior daily use | The failure mode is shipping features to a system nobody studies with |
+| Sharing by replication, never multi-tenancy | Each learner forks and deploys their own backend with their own keys; the client never holds API keys (§11.7) |
