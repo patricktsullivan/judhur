@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Judhūr — Arabic study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12213A; --bg-deep:#0D1930; --surface:#1B3054; --surface-lt:#25406B;
+    --gold:#C9A24B; --teal:#4F8A8B; --coral:#C1592E; --amber:#B8935A;
+    --ink:#F4EFE1; --muted:#9FB2C9;
+    --display:'Fraunces',Georgia,serif;
+    --body:'Inter',system-ui,-apple-system,sans-serif;
+    --arabic:'Noto Naskh Arabic','Traditional Arabic','Geeza Pro',serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg-deep);color:var(--ink);font-family:var(--body)}
+  body{min-height:100vh}
+  button{font-family:inherit;border:none;cursor:pointer;color:inherit}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);
+       display:flex;flex-direction:column;position:relative;overflow:hidden}
+
+  /* header */
+  .hdr{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 10px}
+  .brand-ar{font-family:var(--arabic);color:var(--gold);font-size:23px;line-height:1}
+  .brand-en{font-family:var(--display);font-size:12.5px;letter-spacing:.6px;opacity:.65;margin-top:2px}
+  .chips{display:flex;gap:8px}
+  .chip{display:flex;align-items:center;gap:6px;background:var(--surface);
+        padding:5px 11px;border-radius:99px;font-size:13px;font-weight:600}
+  .chip svg{width:13px;height:13px;display:block}
+
+  /* body / nav */
+  main{flex:1;overflow-y:auto;padding:4px 20px 96px}
+  nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;
+      background:var(--bg-deep);border-top:1px solid var(--surface-lt);z-index:5}
+  .nav-in{max-width:480px;width:100%;display:grid;grid-template-columns:repeat(5,1fr)}
+  nav button{background:none;display:flex;flex-direction:column;align-items:center;
+             gap:4px;padding:10px 0 12px;color:var(--muted);font-size:10px;font-weight:600}
+  nav button.on{color:var(--gold)}
+  nav svg{width:19px;height:19px}
+
+  /* generic */
+  h1.tt{font-family:var(--display);font-size:22px;font-weight:600;margin:8px 0 0}
+  p.sub{color:var(--muted);font-size:12.5px;line-height:1.5;margin:4px 0 0}
+  .card{background:var(--surface);border-radius:14px}
+  .stars{display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 0}
+  .stars svg{width:10px;height:10px;opacity:.35}
+  .stars svg.mid{opacity:.9}
+
+  /* home */
+  .hero{background:linear-gradient(135deg,var(--surface),var(--surface-lt));
+        border-radius:18px;padding:20px;margin-top:10px}
+  .hero .eyebrow{color:var(--muted);font-size:13px}
+  .hero h2{font-family:var(--display);font-size:26px;font-weight:600;margin:2px 0 0}
+  .hero p{color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 0}
+  .btn-gold{width:100%;background:var(--gold);color:var(--bg-deep);font-weight:700;
+            font-size:15px;padding:13px;border-radius:12px;margin-top:16px}
+  .btn-teal{width:100%;background:var(--teal);color:var(--bg-deep);font-weight:700;
+            font-size:14px;padding:11px;border-radius:12px;margin-bottom:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:12px}
+  .stat{padding:14px}
+  .stat .lbl{color:var(--muted);font-size:11.5px;margin-bottom:4px}
+  .stat .val{font-family:var(--display);font-size:20px;font-weight:600}
+  .stat .sub2{color:var(--muted);font-size:10.5px;margin-top:2px}
+
+  /* alphabet grid */
+  .alpha{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .tile{background:var(--surface);border-radius:12px;min-height:100px;padding:10px;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        text-align:center;border:1.5px solid transparent;cursor:pointer}
+  .tile.known{border-color:var(--gold)}
+  .tile .big{font-family:var(--arabic);font-size:31px}
+  .tile .nm{font-size:10.5px;color:var(--muted);margin-top:4px}
+  .tile .ex{font-family:var(--arabic);font-size:15px;color:var(--gold);direction:rtl}
+  .tile .exs{font-size:9.5px;color:var(--muted);margin-top:3px;line-height:1.3}
+  .tile .row{display:flex;gap:6px;margin-top:7px}
+  .tile .row button{background:var(--bg-deep);border-radius:6px;padding:4px 6px;display:flex}
+  .tile .row svg{width:11px;height:11px}
+
+  /* roots */
+  .rootlist{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+  .root{background:var(--surface);border-radius:12px;overflow:hidden}
+  .root-hd{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;cursor:pointer}
+  .root-hd .lt{display:flex;align-items:center;gap:12px}
+  .root-ar{font-family:var(--arabic);font-size:18px;color:var(--gold);direction:rtl}
+  .root-mn{font-size:13.5px;font-weight:600}
+  .root-ct{font-size:11px;color:var(--muted)}
+  .root-bd{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px}
+  .word{background:var(--bg-deep);border-radius:9px;padding:10px;
+        display:flex;align-items:center;justify-content:space-between}
+  .word .w-ar{font-family:var(--arabic);font-size:16px;direction:rtl}
+  .word .w-en{font-size:11px;color:var(--muted);margin-top:1px}
+  .pill{font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:99px}
+
+  /* roadmap */
+  .phase{padding:16px;margin-bottom:11px}
+  .phase .top{display:flex;justify-content:space-between;align-items:center}
+  .phase .ph{color:var(--gold);font-size:10.5px;font-weight:700;letter-spacing:.7px}
+  .phase .wk{color:var(--muted);font-size:11px}
+  .phase h3{font-family:var(--display);font-size:17px;font-weight:600;margin:3px 0 0}
+  .phase .goal{color:var(--muted);font-size:12.5px;line-height:1.5;margin-top:5px}
+  .phase .tip{border-top:1px solid var(--surface-lt);margin-top:11px;padding-top:10px;
+              color:var(--teal);font-size:11.5px;line-height:1.5}
+
+  /* heatmap */
+  .heat{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
+  .heat div{aspect-ratio:1/1;border-radius:3px;background:var(--bg-deep)}
+  .heat div.on{background:var(--gold)}
+
+  /* session overlay */
+  #ovl{position:fixed;inset:0;background:var(--bg-deep);z-index:20;
+       display:none;flex-direction:column;padding:18px}
+  #ovl.show{display:flex}
+  .ov-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .ov-top button{background:none;color:var(--muted);display:flex;padding:4px}
+  .ov-top svg{width:20px;height:20px}
+  .ov-ct{font-size:12px;color:var(--muted);font-weight:600}
+  .bar{height:4px;background:var(--surface);border-radius:99px;margin-bottom:28px}
+  .bar i{display:block;height:4px;background:var(--gold);border-radius:99px;transition:width .25s}
+  .ov-mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .q-letter{font-family:var(--arabic);font-size:74px;line-height:1}
+  .q-word{font-family:var(--arabic);font-size:46px;direction:rtl;line-height:1.3}
+  .q-root{color:var(--teal);font-size:12px;margin-bottom:10px}
+  .q-root span{font-family:var(--arabic);direction:rtl}
+  .ans{margin-top:26px}
+  .ans .a1{color:var(--gold);font-size:17px;font-weight:600}
+  .ans .a2{color:var(--muted);font-size:13.5px;margin-top:5px;line-height:1.5}
+  .ans .a3{font-family:var(--arabic);font-size:21px;direction:rtl;margin-top:18px}
+  .ans .a4{color:var(--muted);font-size:12px;margin-top:4px}
+  .reveal{width:100%;background:var(--surface);color:var(--ink);font-weight:600;
+          font-size:15px;padding:15px;border-radius:12px}
+  .grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .grades button{padding:13px 0;border-radius:12px;font-size:12.5px;font-weight:700}
+  .done-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .done-wrap h2{font-family:var(--display);font-size:27px;font-weight:600;margin:14px 0 0}
+  .done-wrap p{color:var(--muted);font-size:14px;margin:8px 0 0}
+
+  .note{color:var(--muted);font-size:11px;line-height:1.5;margin-top:18px;
+        border-top:1px solid var(--surface-lt);padding-top:12px}
+  .reset{background:none;color:var(--coral);font-size:11.5px;font-weight:600;
+         padding:6px 0;margin-top:6px;text-decoration:underline}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hdr">
+    <div>
+      <div class="brand-ar">جُذُور</div>
+      <div class="brand-en">Judhūr · Roots</div>
+    </div>
+    <div class="chips">
+      <div class="chip"><svg viewBox="0 0 24 24" fill="#C1592E"><path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.3-2-.8-2.8 2 1 3.8 3.3 3.8 6A6 6 0 0 1 6 14c0-5 6-6 6-12z"/></svg><span id="c-streak">0</span></div>
+      <div class="chip"><svg viewBox="0 0 24 24" fill="#C9A24B"><path d="M12 2l2.6 6.9L22 9.6l-5.6 4.6L18 22l-6-3.8L6 22l1.6-7.8L2 9.6l7.4-.7z"/></svg><span id="c-xp">0</span></div>
+    </div>
+  </div>
+
+  <main id="main"></main>
+
+  <nav><div class="nav-in" id="nav"></div></nav>
+
+  <div id="ovl"></div>
+</div>
+
+<script>
+/* ============================================================
+   Judhūr — standalone Arabic study app
+   Single file. No build step. Open in any browser.
+   Progress saves to localStorage; falls back to memory if blocked.
+   ============================================================ */
+
+/* ---------- storage (graceful fallback) ---------- */
+var KEY = 'judhur-v1';
+var memStore = {};
+var canLS = (function(){
+  try { var t='__t'; localStorage.setItem(t,'1'); localStorage.removeItem(t); return true; }
+  catch(e){ return false; }
+})();
+function save(obj){
+  var s = JSON.stringify(obj);
+  if (canLS) { try { localStorage.setItem(KEY, s); return; } catch(e){} }
+  memStore[KEY] = s;
+}
+function load(){
+  var s = canLS ? localStorage.getItem(KEY) : memStore[KEY];
+  if (!s) return null;
+  try { return JSON.parse(s); } catch(e){ return null; }
+}
+
+/* ---------- content: 28 letters ---------- */
+var ALPHABET = [
+  {id:'al01',letter:'ا',name:'Alif',translit:'a / ā',sound:"glottal stop, or long 'a'",ex:'أَسَد',exT:'asad',exE:'lion'},
+  {id:'al02',letter:'ب',name:'Bāʾ',translit:'b',sound:"like English 'b'",ex:'بَيْت',exT:'bayt',exE:'house'},
+  {id:'al03',letter:'ت',name:'Tāʾ',translit:'t',sound:"like English 't'",ex:'تُفَّاح',exT:'tuffāḥ',exE:'apple'},
+  {id:'al04',letter:'ث',name:'Thāʾ',translit:'th',sound:"like 'th' in think",ex:'ثَعْلَب',exT:'thaʿlab',exE:'fox'},
+  {id:'al05',letter:'ج',name:'Jīm',translit:'j',sound:"like 'j' in jam",ex:'جَمَل',exT:'jamal',exE:'camel'},
+  {id:'al06',letter:'ح',name:'Ḥāʾ',translit:'ḥ',sound:"breathy 'h' from the throat",ex:'حَلِيب',exT:'ḥalīb',exE:'milk'},
+  {id:'al07',letter:'خ',name:'Khāʾ',translit:'kh',sound:"like Scottish 'loch'",ex:'خُبْز',exT:'khubz',exE:'bread'},
+  {id:'al08',letter:'د',name:'Dāl',translit:'d',sound:"like English 'd'",ex:'دَار',exT:'dār',exE:'home'},
+  {id:'al09',letter:'ذ',name:'Dhāl',translit:'dh',sound:"like 'th' in this",ex:'ذَهَب',exT:'dhahab',exE:'gold'},
+  {id:'al10',letter:'ر',name:'Rāʾ',translit:'r',sound:"rolled / trilled 'r'",ex:'رَجُل',exT:'rajul',exE:'man'},
+  {id:'al11',letter:'ز',name:'Zāy',translit:'z',sound:"like English 'z'",ex:'زَيْت',exT:'zayt',exE:'oil'},
+  {id:'al12',letter:'س',name:'Sīn',translit:'s',sound:"like English 's'",ex:'سَمَك',exT:'samak',exE:'fish'},
+  {id:'al13',letter:'ش',name:'Shīn',translit:'sh',sound:"like 'sh' in shoe",ex:'شَمْس',exT:'shams',exE:'sun'},
+  {id:'al14',letter:'ص',name:'Ṣād',translit:'ṣ',sound:"heavy, emphatic 's'",ex:'صَدِيق',exT:'ṣadīq',exE:'friend'},
+  {id:'al15',letter:'ض',name:'Ḍād',translit:'ḍ',sound:"heavy, emphatic 'd'",ex:'ضَوْء',exT:'ḍawʾ',exE:'light'},
+  {id:'al16',letter:'ط',name:'Ṭāʾ',translit:'ṭ',sound:"heavy, emphatic 't'",ex:'طَائِر',exT:'ṭāʾir',exE:'bird'},
+  {id:'al17',letter:'ظ',name:'Ẓāʾ',translit:'ẓ',sound:"heavy, emphatic 'th/z'",ex:'ظِلّ',exT:'ẓill',exE:'shadow'},
+  {id:'al18',letter:'ع',name:'ʿAyn',translit:'ʿ',sound:'squeezed throat sound — the classic Arabic one',ex:'عَيْن',exT:'ʿayn',exE:'eye'},
+  {id:'al19',letter:'غ',name:'Ghayn',translit:'gh',sound:"like a French 'r'",ex:'غُرْفَة',exT:'ghurfa',exE:'room'},
+  {id:'al20',letter:'ف',name:'Fāʾ',translit:'f',sound:"like English 'f'",ex:'فِيل',exT:'fīl',exE:'elephant'},
+  {id:'al21',letter:'ق',name:'Qāf',translit:'q',sound:"'k' made deeper in the throat",ex:'قَلَم',exT:'qalam',exE:'pen'},
+  {id:'al22',letter:'ك',name:'Kāf',translit:'k',sound:"like English 'k'",ex:'كِتَاب',exT:'kitāb',exE:'book'},
+  {id:'al23',letter:'ل',name:'Lām',translit:'l',sound:"like English 'l'",ex:'لَيْل',exT:'layl',exE:'night'},
+  {id:'al24',letter:'م',name:'Mīm',translit:'m',sound:"like English 'm'",ex:'مَاء',exT:'māʾ',exE:'water'},
+  {id:'al25',letter:'ن',name:'Nūn',translit:'n',sound:"like English 'n'",ex:'نَجْمَة',exT:'najma',exE:'star'},
+  {id:'al26',letter:'ه',name:'Hāʾ',translit:'h',sound:"like English 'h'",ex:'هَوَاء',exT:'hawāʾ',exE:'air'},
+  {id:'al27',letter:'و',name:'Wāw',translit:'w / ū',sound:"like 'w', or long 'u'",ex:'وَرْدَة',exT:'warda',exE:'flower'},
+  {id:'al28',letter:'ي',name:'Yāʾ',translit:'y / ī',sound:"like 'y', or long 'i'",ex:'يَد',exT:'yad',exE:'hand'}
+];
+
+/* ---------- content: 10 root families, 30 words ---------- */
+var ROOTS = [
+  {root:'ك ت ب',meaning:'writing',words:[
+    {ar:'كَتَبَ',t:'kataba',en:'he wrote'},{ar:'كِتَاب',t:'kitāb',en:'book'},{ar:'كَاتِب',t:'kātib',en:'writer'}]},
+  {root:'د ر س',meaning:'studying',words:[
+    {ar:'دَرَسَ',t:'darasa',en:'he studied'},{ar:'دَرْس',t:'dars',en:'lesson'},{ar:'مَدْرَسَة',t:'madrasa',en:'school'}]},
+  {root:'ع ل م',meaning:'knowledge',words:[
+    {ar:'عَلِمَ',t:'ʿalima',en:'he knew'},{ar:'عِلْم',t:'ʿilm',en:'knowledge'},{ar:'مُعَلِّم',t:'muʿallim',en:'teacher'}]},
+  {root:'ق ر أ',meaning:'reading',words:[
+    {ar:'قَرَأَ',t:'qaraʾa',en:'he read'},{ar:'قِرَاءَة',t:'qirāʾa',en:'reading'},{ar:'قَارِئ',t:'qāriʾ',en:'reader'}]},
+  {root:'ع م ل',meaning:'work',words:[
+    {ar:'عَمِلَ',t:'ʿamila',en:'he worked'},{ar:'عَمَل',t:'ʿamal',en:'work'},{ar:'عَامِل',t:'ʿāmil',en:'worker'}]},
+  {root:'س ل م',meaning:'peace / safety',words:[
+    {ar:'سَلَام',t:'salām',en:'peace'},{ar:'سَلَامَة',t:'salāma',en:'safety'},{ar:'مُسْلِم',t:'muslim',en:'one who submits'}]},
+  {root:'ح ب ب',meaning:'love',words:[
+    {ar:'أَحَبَّ',t:'aḥabba',en:'he loved'},{ar:'حُبّ',t:'ḥubb',en:'love'},{ar:'حَبِيب',t:'ḥabīb',en:'beloved'}]},
+  {root:'ك ب ر',meaning:'bigness',words:[
+    {ar:'كَبِير',t:'kabīr',en:'big'},{ar:'أَكْبَر',t:'akbar',en:'bigger / biggest'},{ar:'كِبَر',t:'kibar',en:'greatness'}]},
+  {root:'ذ ه ب',meaning:'going',words:[
+    {ar:'ذَهَبَ',t:'dhahaba',en:'he went'},{ar:'يَذْهَب',t:'yadhhab',en:'he goes'},{ar:'ذَهَاب',t:'dhahāb',en:'departure'}]},
+  {root:'س ف ر',meaning:'travel',words:[
+    {ar:'سَافَرَ',t:'sāfara',en:'he traveled'},{ar:'سَفَر',t:'safar',en:'a trip'},{ar:'مُسَافِر',t:'musāfir',en:'traveler'}]}
+];
+
+var ROADMAP = [
+  {ph:'PHASE 0',ttl:'Script & sound',wk:'Weeks 1–3',
+   goal:'Read all 28 letters and reproduce every sound, including the throat sounds (ح ع خ غ ق) that have no English equivalent.',
+   tip:'Pure short-burst memorization — ideal for 5-minute daily reps rather than long sittings.'},
+  {ph:'PHASE 1',ttl:'Root vocabulary + survival phrases',wk:'Weeks 4–10',
+   goal:'Roughly 150 words drawn from ~30 common roots, plus greetings, numbers, and basic questions.',
+   tip:'Learning by root family rather than word-by-word is the single biggest lever on retention speed in Arabic.'},
+  {ph:'PHASE 2',ttl:'Core grammar',wk:'Weeks 11–20',
+   goal:'Present and past verb conjugation, sentence structure, the definite article, gender agreement.',
+   tip:'Arabic grammar is more regular than it first looks once the root-and-pattern logic clicks.'},
+  {ph:'PHASE 3',ttl:'MSA conversation + dialect choice',wk:'Months 6–9',
+   goal:'Hold basic conversations in Modern Standard Arabic, and pick one spoken dialect (Egyptian, Levantine, or Gulf) to layer in.',
+   tip:'MSA is what gets written and broadcast; a dialect is what people actually speak. You will likely want both.'},
+  {ph:'PHASE 4',ttl:'Immersion & fluency building',wk:'Month 10+',
+   goal:'Regular media, conversation exchange, and reading — shifting from studying Arabic to using Arabic.',
+   tip:'Category IV languages reward consistency over intensity. Steady daily contact beats occasional cramming.'}
+];
+
+/* ---------- build the deck ---------- */
+var DECK = [];
+ALPHABET.forEach(function(a){ DECK.push({id:'a-'+a.id,type:'alphabet',d:a}); });
+ROOTS.forEach(function(r,ri){
+  r.words.forEach(function(w,wi){
+    DECK.push({id:'v-'+ri+'-'+wi,type:'vocab',d:{ar:w.ar,t:w.t,en:w.en,root:r.root,rootMeaning:r.meaning}});
+  });
+});
+var TOTAL_WORDS = ROOTS.reduce(function(n,r){return n+r.words.length;},0);
+var MAX_SESSION = 12;
+
+/* ---------- date helpers ---------- */
+function today(){ var d=new Date(); return d.toISOString().slice(0,10); }
+function addDays(s,n){ var d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function dayDiff(a,b){ return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000); }
+
+/* ---------- SM-2-ish scheduler ---------- */
+function schedule(prev,q){
+  var iv = prev?prev.interval:0, ease = prev?prev.ease:2.5, reps = prev?prev.reps:0;
+  if(q===0) return {interval:0,ease:Math.max(1.3,ease-0.2),reps:0,due:today()};
+  reps++;
+  if(q===1) ease = Math.max(1.3,ease-0.15);
+  if(q===3) ease = ease+0.15;
+  if(reps===1) iv=1; else if(reps===2) iv=3; else iv=Math.max(1,Math.round(iv*ease));
+  return {interval:iv,ease:ease,reps:reps,due:addDays(today(),iv)};
+}
+
+/* ---------- state ---------- */
+var S = load() || {xp:0,streak:0,best:0,last:null,history:[],progress:{}};
+var tab = 'home';
+var flipped = {};
+var openRoot = null;
+var sess = null;
+
+function persist(){ save(S); }
+function reps(id){ var p=S.progress[id]; return p?p.reps:0; }
+function isDue(id){ var p=S.progress[id]; return p && p.due<=today(); }
+function lettersKnown(){ return ALPHABET.filter(function(a){return reps('a-'+a.id)>=2;}).length; }
+function wordsKnown(){ return DECK.filter(function(c){return c.type==='vocab'&&reps(c.id)>=2;}).length; }
+function dueList(filter){
+  var due=[],fresh=[];
+  DECK.forEach(function(c){
+    if(filter && c.type!==filter) return;
+    if(!S.progress[c.id]) fresh.push(c);
+    else if(S.progress[c.id].due<=today()) due.push(c);
+  });
+  due.sort(function(x,y){return S.progress[x.id].due < S.progress[y.id].due ? -1 : 1;});
+  return due.concat(fresh);
+}
+
+/* ---------- icons ---------- */
+var IC = {
+  home:'<path d="M3 10.5L12 3l9 7.5V21H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  book:'<path d="M4 4h7v16H4zM13 4h7v16h-7z" fill="none" stroke="currentColor" stroke-width="2"/>',
+  layers:'<path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  map:'<path d="M9 3L3 5v16l6-2 6 2 6-2V3l-6 2-6-2zM9 3v16M15 5v16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  trend:'<path d="M3 17l6-6 4 4 8-8M21 7v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  check:'<path d="M4 12l5 5L20 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>',
+  chev:'<path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  chevD:'<path d="M5 9l7 7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+};
+function svg(p,cls){ return '<svg viewBox="0 0 24 24" class="'+(cls||'')+'">'+p+'</svg>'; }
+function starRow(){
+  var out='<div class="stars">';
+  for(var i=0;i<5;i++){
+    out+='<svg viewBox="0 0 24 24" class="'+(i===2?'mid':'')+'" fill="#C9A24B"><path d="M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z"/></svg>';
+  }
+  return out+'</div>';
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---------- views ---------- */
+function viewHome(){
+  var due = dueList(null);
+  var n = Math.min(MAX_SESSION, Math.max(due.length,1));
+  var lvl = Math.floor(S.xp/100)+1, into = S.xp%100;
+  return ''
+  + '<div class="hero">'
+  +   '<div class="eyebrow">'+(due.length?due.length+' cards ready':'Nothing due — start fresh material')+'</div>'
+  +   '<h2>Today\u2019s session</h2>'
+  +   '<p>Capped at '+n+' cards, about 5\u20138 minutes. Short enough to actually finish, every day.</p>'
+  +   '<button class="btn-gold" data-act="start">Start session</button>'
+  + '</div>'
+  + starRow()
+  + '<div class="grid2">'
+  +   stat('Letters known', lettersKnown()+' / 28', null, 'var(--teal)')
+  +   stat('Words learned', wordsKnown()+' / '+TOTAL_WORDS, null, 'var(--gold)')
+  +   stat('Level', String(lvl), into+'/100 xp', 'var(--coral)')
+  +   stat('Best streak', S.best+' days', null, 'var(--teal)')
+  + '</div>'
+  + '<div class="note">Progress saves '+(canLS?'to this browser':'in memory only for this session — storage is blocked here')+'. '
+  +   'Everything runs offline after the fonts load.</div>'
+  + '<button class="reset" data-act="reset">Reset all progress</button>';
+}
+function stat(lbl,val,sub,color){
+  return '<div class="card stat"><div class="lbl">'+lbl+'</div>'
+       + '<div class="val" style="color:'+color+'">'+val+'</div>'
+       + (sub?'<div class="sub2">'+sub+'</div>':'')+'</div>';
+}
+
+function viewScript(){
+  var out = '<h1 class="tt">The alphabet</h1>'
+          + '<p class="sub">Tap a letter to flip it. Gold border means learned.</p>'
+          + '<div class="alpha">';
+  ALPHABET.forEach(function(a){
+    var id='a-'+a.id, known=reps(id)>=2, f=flipped[a.id];
+    out += '<div class="tile'+(known?' known':'')+'" data-flip="'+a.id+'">';
+    if(!f){
+      out += '<div class="big">'+a.letter+'</div><div class="nm">'+esc(a.name)+'</div>';
+    } else {
+      out += '<div class="ex">'+a.ex+'</div>'
+           + '<div class="exs">'+esc(a.exT)+' \u00b7 '+esc(a.exE)+'</div>'
+           + '<div class="row">'
+           +   '<button data-grade="'+id+'|0" style="color:var(--coral)">'+svg(IC.x)+'</button>'
+           +   '<button data-grade="'+id+'|2" style="color:var(--teal)">'+svg(IC.check)+'</button>'
+           + '</div>';
+    }
+    out += '</div>';
+  });
+  return out+'</div>';
+}
+
+function viewVocab(){
+  var dueN = DECK.filter(function(c){return c.type==='vocab'&&isDue(c.id);}).length;
+  var out = '<h1 class="tt">Vocabulary by root</h1>'
+          + '<p class="sub">'+TOTAL_WORDS+' words from '+ROOTS.length+' root families \u2014 the fastest way to grow Arabic vocabulary.</p>';
+  if(dueN) out += '<div style="margin-top:14px"><button class="btn-teal" data-act="start-vocab">Review '+dueN+' due word'+(dueN>1?'s':'')+'</button></div>';
+  out += '<div class="rootlist">';
+  ROOTS.forEach(function(r,ri){
+    var open = openRoot===ri;
+    var learned = r.words.filter(function(w,wi){return reps('v-'+ri+'-'+wi)>=2;}).length;
+    out += '<div class="root"><div class="root-hd" data-root="'+ri+'">'
+         +   '<div class="lt"><div class="root-ar">'+r.root+'</div>'
+         +     '<div><div class="root-mn">'+esc(r.meaning)+'</div>'
+         +       '<div class="root-ct">'+learned+'/'+r.words.length+' learned</div></div></div>'
+         +   '<span style="color:var(--muted);display:flex">'+svg(open?IC.chevD:IC.chev)+'</span>'
+         + '</div>';
+    if(open){
+      out += '<div class="root-bd">';
+      r.words.forEach(function(w,wi){
+        var id='v-'+ri+'-'+wi, p=S.progress[id];
+        var st = !p ? 'new' : (p.due<=today() ? 'due' : 'learned');
+        var PILL = {
+          'new':    ['#9FB2C9','rgba(159,178,201,.15)'],
+          'due':    ['#C1592E','rgba(193,89,46,.16)'],
+          'learned':['#4F8A8B','rgba(79,138,139,.16)']
+        }[st];
+        out += '<div class="word"><div><div class="w-ar">'+w.ar+'</div>'
+             + '<div class="w-en">'+esc(w.t)+' \u00b7 '+esc(w.en)+'</div></div>'
+             + '<span class="pill" style="color:'+PILL[0]+';background:'+PILL[1]+'">'+st+'</span>'
+             + '</div>';
+      });
+      out += '</div>';
+    }
+    out += '</div>';
+  });
+  return out+'</div>';
+}
+
+function viewRoadmap(){
+  var out = '<h1 class="tt">The roadmap</h1>'
+          + '<p class="sub">Arabic is an FSI Category IV language \u2014 roughly four times the hours of Spanish. Here is the shape of the climb.</p>'
+          + '<div style="margin-top:14px">';
+  ROADMAP.forEach(function(p){
+    out += '<div class="card phase">'
+         +   '<div class="top"><span class="ph">'+p.ph+'</span><span class="wk">'+p.wk+'</span></div>'
+         +   '<h3>'+esc(p.ttl)+'</h3>'
+         +   '<div class="goal">'+esc(p.goal)+'</div>'
+         +   '<div class="tip">'+esc(p.tip)+'</div>'
+         + '</div>';
+  });
+  return out+'</div>';
+}
+
+function viewProgress(){
+  var cells='';
+  for(var i=29;i>=0;i--){
+    var d = addDays(today(),-i);
+    cells += '<div class="'+(S.history.indexOf(d)>-1?'on':'')+'" title="'+d+'"></div>';
+  }
+  return '<h1 class="tt">Progress</h1>'
+       + '<p class="sub">Consistency, not intensity, is what moves this forward.</p>'
+       + '<div class="grid2">'
+       +   stat('Current streak', S.streak+' days', null, 'var(--coral)')
+       +   stat('Longest streak', S.best+' days', null, 'var(--coral)')
+       +   stat('Letters known', lettersKnown()+' / 28', null, 'var(--teal)')
+       +   stat('Words learned', wordsKnown()+' / '+TOTAL_WORDS, null, 'var(--gold)')
+       + '</div>'
+       + '<div class="card" style="padding:16px;margin-top:12px">'
+       +   '<div style="font-size:13px;font-weight:600;margin-bottom:11px">Last 30 days</div>'
+       +   '<div class="heat">'+cells+'</div>'
+       + '</div>';
+}
+
+/* ---------- session ---------- */
+function startSession(filter){
+  var q = dueList(filter||null).slice(0,MAX_SESSION);
+  if(!q.length) return;
+  sess = {q:q,i:0,show:false,done:false,reviewed:0,xp:0};
+  render();
+}
+function grade(q){
+  var card = sess.q[sess.i];
+  S.progress[card.id] = schedule(S.progress[card.id], q);
+  var gain = [1,4,6,8][q];
+  var td = today();
+  if(S.last !== td){
+    if(S.last && dayDiff(S.last,td)===1) S.streak++; else S.streak=1;
+    if(S.streak>S.best) S.best=S.streak;
+    S.history.push(td);
+    S.last = td;
+  }
+  S.xp += gain;
+  sess.reviewed++; sess.xp += gain;
+  sess.i++;
+  sess.show = false;
+  if(sess.i >= sess.q.length) sess.done = true;
+  persist(); render();
+}
+function gradeOne(id,q){
+  S.progress[id] = schedule(S.progress[id], q);
+  var td=today();
+  if(S.last!==td){
+    if(S.last && dayDiff(S.last,td)===1) S.streak++; else S.streak=1;
+    if(S.streak>S.best) S.best=S.streak;
+    S.history.push(td); S.last=td;
+  }
+  S.xp += (q===0?1:6);
+  persist(); render();
+}
+
+function renderOverlay(){
+  var o = document.getElementById('ovl');
+  if(!sess){ o.className=''; o.innerHTML=''; return; }
+  o.className='show';
+  if(sess.done){
+    o.innerHTML = '<div class="done-wrap">'+starRow()
+      + '<h2>Nice work</h2>'
+      + '<p>'+sess.reviewed+' cards reviewed \u00b7 +'+sess.xp+' xp</p>'
+      + '<div style="width:100%;max-width:320px"><button class="btn-gold" data-act="close">Done</button></div>'
+      + '</div>';
+    return;
+  }
+  var c = sess.q[sess.i], d = c.d, pct = (sess.i/sess.q.length)*100;
+  var mid;
+  if(c.type==='alphabet'){
+    mid = '<div class="q-letter">'+d.letter+'</div>'
+        + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.name)+' \u2014 '+esc(d.translit)+'</div>'
+            + '<div class="a2">'+esc(d.sound)+'</div>'
+            + '<div class="a3">'+d.ex+'</div>'
+            + '<div class="a4">'+esc(d.exT)+' \u00b7 '+esc(d.exE)+'</div></div>' : '');
+  } else {
+    mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+')</div>'
+        + '<div class="q-word">'+d.ar+'</div>'
+        + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.t)+'</div><div class="a2">'+esc(d.en)+'</div></div>' : '');
+  }
+  var foot = sess.show
+    ? '<div class="grades">'
+      + '<button data-g="0" style="background:rgba(193,89,46,.16);color:var(--coral)">Again</button>'
+      + '<button data-g="1" style="background:rgba(184,147,90,.16);color:var(--amber)">Hard</button>'
+      + '<button data-g="2" style="background:rgba(79,138,139,.16);color:var(--teal)">Good</button>'
+      + '<button data-g="3" style="background:rgba(201,162,75,.16);color:var(--gold)">Easy</button>'
+      + '</div>'
+    : '<button class="reveal" data-act="reveal">Show answer</button>';
+
+  o.innerHTML = '<div class="ov-top">'
+    +   '<button data-act="close">'+svg(IC.x)+'</button>'
+    +   '<div class="ov-ct">'+(sess.i+1)+' / '+sess.q.length+'</div>'
+    + '</div>'
+    + '<div class="bar"><i style="width:'+pct+'%"></i></div>'
+    + '<div class="ov-mid">'+mid+'</div>'
+    + '<div style="padding-bottom:6px">'+foot+'</div>';
+}
+
+/* ---------- render ---------- */
+var TABS = [
+  ['home','Today',IC.home],['script','Script',IC.book],['vocab','Vocab',IC.layers],
+  ['roadmap','Roadmap',IC.map],['progress','Progress',IC.trend]
+];
+function render(){
+  document.getElementById('c-streak').textContent = S.streak;
+  document.getElementById('c-xp').textContent = S.xp;
+  var m = document.getElementById('main');
+  m.innerHTML = tab==='home' ? viewHome()
+              : tab==='script' ? viewScript()
+              : tab==='vocab' ? viewVocab()
+              : tab==='roadmap' ? viewRoadmap()
+              : viewProgress();
+  document.getElementById('nav').innerHTML = TABS.map(function(t){
+    return '<button data-tab="'+t[0]+'" class="'+(tab===t[0]?'on':'')+'">'+svg(t[2])+'<span>'+t[1]+'</span></button>';
+  }).join('');
+  renderOverlay();
+}
+
+/* ---------- one delegated listener ---------- */
+document.addEventListener('click', function(e){
+  var el;
+  if((el = e.target.closest('[data-g]'))){ grade(parseInt(el.dataset.g,10)); return; }
+  if((el = e.target.closest('[data-grade]'))){
+    var parts = el.dataset.grade.split('|');
+    gradeOne(parts[0], parseInt(parts[1],10)); return;
+  }
+  if((el = e.target.closest('[data-flip]'))){
+    flipped[el.dataset.flip] = !flipped[el.dataset.flip]; render(); return;
+  }
+  if((el = e.target.closest('[data-root]'))){
+    var ri = parseInt(el.dataset.root,10);
+    openRoot = (openRoot===ri) ? null : ri; render(); return;
+  }
+  if((el = e.target.closest('[data-tab]'))){ tab = el.dataset.tab; render(); return; }
+  if((el = e.target.closest('[data-act]'))){
+    var a = el.dataset.act;
+    if(a==='start') startSession(null);
+    else if(a==='start-vocab') startSession('vocab');
+    else if(a==='reveal'){ sess.show=true; render(); }
+    else if(a==='close'){ sess=null; render(); }
+    else if(a==='reset'){
+      if(confirm('Erase all progress? This cannot be undone.')){
+        S = {xp:0,streak:0,best:0,last:null,history:[],progress:{}};
+        flipped={}; openRoot=null; persist(); render();
+      }
+    }
+    return;
+  }
+});
+document.addEventListener('keydown', function(e){
+  if(!sess || sess.done) return;
+  if(e.key===' '||e.key==='Enter'){ e.preventDefault(); if(!sess.show){ sess.show=true; render(); } }
+  else if(sess.show && e.key>='1' && e.key<='4'){ grade(parseInt(e.key,10)-1); }
+  else if(e.key==='Escape'){ sess=null; render(); }
+});
+
+render();
+</script>
+</body>
+</html>
