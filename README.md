@@ -23,6 +23,22 @@ no server, no network, no build step. Progress persists in `localStorage`.
 
 Keyboard shortcuts: **Space** reveals a card, **1–4** grades it, **Esc** exits the session.
 
+### How storage works at the current stage (pre-PWA)
+
+- **The app**: the HTML file alone is the complete app. Audio is looked up by relative
+  path, so for sound a device also needs the `audio/` folder sitting next to the file.
+  Without it, everything works and play buttons show muted — nothing breaks.
+- **Authoritative copies**: this git repo is the source of truth for the app *and* the
+  recordings. A device's copy (including audio) is a cache. Per `[R-12]`, core audio
+  *must* end up cached on-device — hearing a word is part of the offline study loop —
+  so "audio on the device" is by design, not an accident of the current stage.
+- **Progress is per-browser.** Phone and desktop do not sync yet, and won't until build
+  step 4 (`/state`). Until then, study on one primary device — the `[R-34]` 14-day gate
+  only needs one — or accept independent streaks.
+- **What changes at step 3 (PWA)**: the app gets hosted at a URL; visiting it installs
+  it, and a service worker caches the app and audio automatically. Manually copying
+  files to a device stops being a thing. Step 4 then adds cross-device progress sync.
+
 ## Audio: recorded human audio drop-in convention
 
 Per `[R-24]`, the 28 letters and core vocabulary must use **recorded human audio, never
@@ -38,12 +54,23 @@ audio/
   words/<card-id>.mp3          e.g. audio/words/w-ktb-1.mp3
 ```
 
-- The app's **Audio coverage** view lists every expected filename and which are still
-  missing — use it as the recording checklist.
+**What to record: 146 clips — one per letter (28) and one per word (118).** Roots
+themselves are not recorded; each *word* in a family gets its own clip. The full list
+with exact filenames is [`content/recording-list.md`](content/recording-list.md) —
+hand it to the speaker as-is.
+
+- **Letters**: the letter's name, then its bare sound — "بَاء … بْ". Phase 0 gates on
+  *producing* sounds, so the isolated sound matters as much as the name.
+- **Words**: the word once, clearly, in careful MSA, exactly as diacritized.
+- The app's **Progress → Audio coverage** view probes which files are present and
+  lists what's missing — use it to track the recording effort.
 - A card with no audio file shows a muted icon and works normally otherwise.
 - Format: mp3 (Safari + Chrome, plays from `file://`). Mono, any reasonable bitrate.
-- Suggested sources: a native speaker recording directly, or curated clips from
-  Common Voice Arabic (check license attribution if redistributing).
+- Suggested sources: a native speaker recording directly (a tutor hired per design doc
+  §12.5 can do this), or curated clips from Common Voice Arabic (check license
+  attribution if redistributing).
+- **Commit finished recordings to this repo** — that's what makes them authoritative
+  and shared with every copy of the project.
 
 ## Sharing / running your own copy
 
