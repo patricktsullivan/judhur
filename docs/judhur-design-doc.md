@@ -2,7 +2,7 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.6 · July 2026 *(0.6 adds §11.7, the sharing model)*
+Version 0.7 · July 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop)*
 
 ---
 
@@ -476,7 +476,7 @@ ingested_content
 
 Each step must be independently usable. Nothing depends on a later step to deliver value.
 
-**`[R-34]`** No step begins until its predecessor has been in daily use for 14 consecutive days. Built and working is not the gate. Used is the gate.
+**`[R-34]`** *(amended v0.7, July 2026 — owner decision)* Building MAY proceed ahead of usage. The original rule — no step begins until its predecessor has 14 consecutive days of daily use — was retired three days into Step 2's usage window, on the owner's judgment that ADHD momentum cuts both ways: the activation cost of *resuming* a shelved build is the same cost the rest of this document works to avoid, so finishing the app while motivation is high is the better long-run bet. `[R-38]` remains fully binding and is now the sole usage safeguard: if the 30-day heatmap drops below 15 active days, all building stops. The original rule's intent — a system nobody studies with has failed — stands unchanged; only the enforcement mechanism moved.
 
 | Step | Deliverable | Acceptance criteria |
 |---|---|---|
@@ -593,7 +593,7 @@ Prosody, rhythm, and stress go to a human ear and are **unaddressed until one is
 
 The risk is that building the system becomes the project and Arabic never gets learned. §11.4 helps — the most seductive engineering task is now a contingency. The general failure mode remains, so it is mechanized.
 
-**Usage gates building** — `[R-34]`, defined in §10: 14 consecutive days of daily use before the next step begins.
+**Usage bounds building** — `[R-34]` as amended (v0.7): building may run ahead of usage while motivation is high, but `[R-38]`'s heatmap floor is a hard stop, not advice.
 
 **`[R-38]`** If the 30-day activity heatmap drops below 15 active days, all building stops until it recovers. A system under active development and not in use has failed at its only purpose, and adding features is the most appealing way to avoid noticing.
 
@@ -732,5 +732,5 @@ Not pending decisions — questions only answerable by running the system.
 | Labeler and teacher may be different people | Different aptitudes; labeling is async annotation work |
 | Reviewer search parallel, with a 200-item checkpoint | Unblocks the build without letting "not blocking" become "not happening" |
 | Provisional feedback cannot gate phases | Acting on unverified feedback drills errors into permanence |
-| Building gated on 14 days of prior daily use | The failure mode is shipping features to a system nobody studies with |
+| Building may run ahead of usage; heatmap floor ([R-38]) is the hard stop | Amended v0.7: ride motivation while it's high; a heatmap below 15/30 active days still halts all building |
 | Sharing by replication, never multi-tenancy | Each learner forks and deploys their own backend with their own keys; the client never holds API keys (§11.7) |
