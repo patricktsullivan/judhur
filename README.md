@@ -15,7 +15,8 @@ failure mode (§11.6).
 | 1 | v0 single-file HTML in daily use | ✅ |
 | 2 | Content expansion: positional letter forms, ~30 root families, recorded core audio | ✅ code · 🎙 recordings in progress |
 | 3 | PWA: installable, offline study loop, offline audio | ✅ code · needs hosting enabled (below) |
-| 4+ | Backend, pipeline, pronunciation | not started |
+| 4 | Backend skeleton + `/state` cross-device sync | ✅ code · needs your own deploy ([backend/README.md](backend/README.md)) |
+| 5+ | Speech, pipeline, pronunciation | not started |
 
 Building may run ahead of usage per `[R-34]` as amended (design doc v0.7); the hard
 stop is `[R-38]` — if the 30-day heatmap drops below 15 active days, building halts.
@@ -50,9 +51,12 @@ on the full study loop — audio included — works in airplane mode.
 - **This repo is the source of truth** for the app and recordings; each device holds a
   cache (`[R-12]` requires core audio on-device — hearing words is part of the offline
   loop). Deployed updates arrive on the next online visit (navigation is network-first).
-- **Progress is per-browser/per-install.** Phone and desktop do not sync until build
-  step 4 (`/state`). Until then, study on one primary device or accept independent
-  streaks.
+- **Cross-device sync is opt-in.** Deploy your own backend once
+  ([backend/README.md](backend/README.md), ~5 minutes on Cloudflare's free tier), then
+  on each device open **Progress → Sync across devices** and paste your backend URL +
+  token. Devices merge review histories per card — the higher rep count wins, streaks
+  recompute from the union of study days. Unconfigured or offline, nothing changes:
+  progress stays local and the app never blocks on the network.
 
 ## Audio: recorded human audio drop-in convention
 

@@ -1,0 +1,10 @@
+# Judhūr backend — Cloudflare Worker config.
+# Deploy path (see backend/README.md): create a KV namespace, paste its id
+# below, `npx wrangler deploy`, then `npx wrangler secret put SYNC_TOKEN`.
+name = "judhur-backend"
+main = "backend/worker.js"
+compatibility_date = "2026-07-01"
+
+[[kv_namespaces]]
+binding = "JUDHUR_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
