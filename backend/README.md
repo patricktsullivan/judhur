@@ -38,7 +38,8 @@ and hit **Sync now** on each device you use.
 |---|---|---|
 | `/state` | GET | Returns the stored learner profile (or `null`) |
 | `/state` | PUT | Stores the learner profile (JSON, ≤512 KB) |
-| `/ingest` `/generate` `/verify` `/speak` `/assess` | — | `501` stubs — arrive in later build steps (design doc §4, §10) |
+| `/assess` | POST | Tier 1 intelligibility: `{expected, audio(base64)}` → `{understood, heard}` via Workers AI Whisper (`task:"transcribe"`, `language:"ar"`). Free daily allocation; no audio stored. Never returns a score. |
+| `/ingest` `/generate` `/verify` `/speak` | — | `501` stubs — arrive in later build steps (design doc §4, §10) |
 
 All requests require `Authorization: Bearer <SYNC_TOKEN>`. An unset token means the
 worker refuses everything — it never runs open.

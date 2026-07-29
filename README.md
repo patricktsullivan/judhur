@@ -16,7 +16,8 @@ failure mode (§11.6).
 | 2 | Content expansion: positional letter forms, ~30 root families, recorded core audio | ✅ code · 🎙 recordings in progress |
 | 3 | PWA: installable, offline study loop, offline audio | ✅ code · needs hosting enabled (below) |
 | 4 | Backend skeleton + `/state` cross-device sync | ✅ code · needs your own deploy ([backend/README.md](backend/README.md)) |
-| 5+ | Speech, pipeline, pronunciation | not started |
+| 5 | Tier 1 speech: say it, hear back understood / not understood | ✅ code · live ASR needs your deploy (free, §11.9) |
+| 6+ | Content pipeline, pronunciation diagnosis | not started |
 
 Building may run ahead of usage per `[R-34]` as amended (design doc v0.7); the hard
 stop is `[R-38]` — if the 30-day heatmap drops below 15 active days, building halts.
@@ -116,6 +117,20 @@ assessment, cross-device sync) require a personal backend: fork this repo, one-c
 deploy the serverless backend, and enter **your own API keys** as environment variables
 in your deployment. The app itself never holds API keys — only the URL and access token
 of *your* backend. No accounts, no shared infrastructure, no one else's bill.
+
+## Speaking practice (Tier 1)
+
+With a backend configured, every revealed card in a session shows a **mic button**:
+tap, say the word (or the letter's name), tap again — the app answers **understood**
+or **not understood**, with what the listener heard. Notes:
+
+- It is a *yes/no intelligibility check*, deliberately never a score or percentage.
+  A "not understood" can be the speech model's fault, not yours — the wording says so.
+- Audio goes **only to your own backend**, which runs Whisper on Cloudflare's free
+  daily allocation (design doc §11.9). Nothing is stored; nothing goes to a third
+  party you didn't deploy.
+- No mic button appears until you configure sync + backend; declining mic permission
+  turns the feature off and affects nothing else.
 
 ## Content accuracy note `[HUMAN]`
 

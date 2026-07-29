@@ -168,6 +168,15 @@
   .sync-status{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.5}
   .sync-status.err{color:var(--coral)}
   .sync-status.okk{color:var(--teal)}
+  .micbtn{background:var(--bg-deep);border-radius:8px;padding:6px 9px;display:flex;color:var(--teal)}
+  .micbtn svg{width:14px;height:14px}
+  .micbtn.rec{color:var(--coral);animation:mpulse 1s infinite}
+  @keyframes mpulse{50%{opacity:.4}}
+  .t1{font-size:12px;margin-top:10px;line-height:1.55;max-width:320px}
+  .t1.ok{color:var(--teal)}
+  .t1.no{color:var(--amber)}
+  .t1.err{color:var(--coral)}
+  .t1 .heard{font-family:var(--arabic);font-size:14px}
 
   .note{color:var(--muted);font-size:11px;line-height:1.5;margin-top:18px;
         border-top:1px solid var(--surface-lt);padding-top:12px}
@@ -259,34 +268,34 @@ var ALPHABET = [
    audio filename stem (audio/letters/<key>.mp3). guttural flags per
    design doc §2.2. Authoring source: content/letters.json. */
 var LETTER_META = {
-  al01:{key:'alif',guttural:false,forms:['ا','ا','ـا','ـا']},
-  al02:{key:'ba',guttural:false,forms:['ب','بـ','ـبـ','ـب']},
-  al03:{key:'ta',guttural:false,forms:['ت','تـ','ـتـ','ـت']},
-  al04:{key:'tha',guttural:false,forms:['ث','ثـ','ـثـ','ـث']},
-  al05:{key:'jim',guttural:false,forms:['ج','جـ','ـجـ','ـج']},
-  al06:{key:'hha',guttural:true,forms:['ح','حـ','ـحـ','ـح']},
-  al07:{key:'kha',guttural:true,forms:['خ','خـ','ـخـ','ـخ']},
-  al08:{key:'dal',guttural:false,forms:['د','د','ـد','ـد']},
-  al09:{key:'dhal',guttural:false,forms:['ذ','ذ','ـذ','ـذ']},
-  al10:{key:'ra',guttural:false,forms:['ر','ر','ـر','ـر']},
-  al11:{key:'zay',guttural:false,forms:['ز','ز','ـز','ـز']},
-  al12:{key:'sin',guttural:false,forms:['س','سـ','ـسـ','ـس']},
-  al13:{key:'shin',guttural:false,forms:['ش','شـ','ـشـ','ـش']},
-  al14:{key:'sad',guttural:false,forms:['ص','صـ','ـصـ','ـص']},
-  al15:{key:'dad',guttural:false,forms:['ض','ضـ','ـضـ','ـض']},
-  al16:{key:'taa',guttural:false,forms:['ط','طـ','ـطـ','ـط']},
-  al17:{key:'zaa',guttural:false,forms:['ظ','ظـ','ـظـ','ـظ']},
-  al18:{key:'ayn',guttural:true,forms:['ع','عـ','ـعـ','ـع']},
-  al19:{key:'ghayn',guttural:true,forms:['غ','غـ','ـغـ','ـغ']},
-  al20:{key:'fa',guttural:false,forms:['ف','فـ','ـفـ','ـف']},
-  al21:{key:'qaf',guttural:true,forms:['ق','قـ','ـقـ','ـق']},
-  al22:{key:'kaf',guttural:false,forms:['ك','كـ','ـكـ','ـك']},
-  al23:{key:'lam',guttural:false,forms:['ل','لـ','ـلـ','ـل']},
-  al24:{key:'mim',guttural:false,forms:['م','مـ','ـمـ','ـم']},
-  al25:{key:'nun',guttural:false,forms:['ن','نـ','ـنـ','ـن']},
-  al26:{key:'haa',guttural:false,forms:['ه','هـ','ـهـ','ـه']},
-  al27:{key:'waw',guttural:false,forms:['و','و','ـو','ـو']},
-  al28:{key:'ya',guttural:false,forms:['ي','يـ','ـيـ','ـي']}
+  al01:{key:'alif',an:'ألف',guttural:false,forms:['ا','ا','ـا','ـا']},
+  al02:{key:'ba',an:'باء',guttural:false,forms:['ب','بـ','ـبـ','ـب']},
+  al03:{key:'ta',an:'تاء',guttural:false,forms:['ت','تـ','ـتـ','ـت']},
+  al04:{key:'tha',an:'ثاء',guttural:false,forms:['ث','ثـ','ـثـ','ـث']},
+  al05:{key:'jim',an:'جيم',guttural:false,forms:['ج','جـ','ـجـ','ـج']},
+  al06:{key:'hha',an:'حاء',guttural:true,forms:['ح','حـ','ـحـ','ـح']},
+  al07:{key:'kha',an:'خاء',guttural:true,forms:['خ','خـ','ـخـ','ـخ']},
+  al08:{key:'dal',an:'دال',guttural:false,forms:['د','د','ـد','ـد']},
+  al09:{key:'dhal',an:'ذال',guttural:false,forms:['ذ','ذ','ـذ','ـذ']},
+  al10:{key:'ra',an:'راء',guttural:false,forms:['ر','ر','ـر','ـر']},
+  al11:{key:'zay',an:'زاي',guttural:false,forms:['ز','ز','ـز','ـز']},
+  al12:{key:'sin',an:'سين',guttural:false,forms:['س','سـ','ـسـ','ـس']},
+  al13:{key:'shin',an:'شين',guttural:false,forms:['ش','شـ','ـشـ','ـش']},
+  al14:{key:'sad',an:'صاد',guttural:false,forms:['ص','صـ','ـصـ','ـص']},
+  al15:{key:'dad',an:'ضاد',guttural:false,forms:['ض','ضـ','ـضـ','ـض']},
+  al16:{key:'taa',an:'طاء',guttural:false,forms:['ط','طـ','ـطـ','ـط']},
+  al17:{key:'zaa',an:'ظاء',guttural:false,forms:['ظ','ظـ','ـظـ','ـظ']},
+  al18:{key:'ayn',an:'عين',guttural:true,forms:['ع','عـ','ـعـ','ـع']},
+  al19:{key:'ghayn',an:'غين',guttural:true,forms:['غ','غـ','ـغـ','ـغ']},
+  al20:{key:'fa',an:'فاء',guttural:false,forms:['ف','فـ','ـفـ','ـف']},
+  al21:{key:'qaf',an:'قاف',guttural:true,forms:['ق','قـ','ـقـ','ـق']},
+  al22:{key:'kaf',an:'كاف',guttural:false,forms:['ك','كـ','ـكـ','ـك']},
+  al23:{key:'lam',an:'لام',guttural:false,forms:['ل','لـ','ـلـ','ـل']},
+  al24:{key:'mim',an:'ميم',guttural:false,forms:['م','مـ','ـمـ','ـم']},
+  al25:{key:'nun',an:'نون',guttural:false,forms:['ن','نـ','ـنـ','ـن']},
+  al26:{key:'haa',an:'هاء',guttural:false,forms:['ه','هـ','ـهـ','ـه']},
+  al27:{key:'waw',an:'واو',guttural:false,forms:['و','و','ـو','ـو']},
+  al28:{key:'ya',an:'ياء',guttural:false,forms:['ي','يـ','ـيـ','ـي']}
 };
 
 /* ---------- content: root families & words ----------
@@ -634,6 +643,13 @@ function mergeStates(a,b){
   m.last = runs.last;
   m.streak = runs.current;
   m.best = Math.max(a.best||0, b.best||0, runs.best);
+  /* speech attempts: append-only union by key [R-32] */
+  var sk = {};
+  m.speech = [];
+  (a.speech||[]).concat(b.speech||[]).forEach(function(at){
+    var key = at.k || JSON.stringify(at);
+    if(!sk[key]){ sk[key]=1; m.speech.push(at); }
+  });
   return m;
 }
 function syncStatus(msg, cls){ SY.status=msg; SY.cls=cls||''; if(tab==='progress') render(); }
@@ -664,6 +680,105 @@ function syncNow(){
     .catch(function(e){
       syncStatus('Sync unavailable — '+e.message+'. Studying continues; local progress is safe.', 'err');
     });
+}
+
+/* ---------- Tier 1 speech (step 5) ----------
+   Hear the target, say it, get "understood / not understood" — never a
+   score [R-23], never a claim of completeness [R-20]. Audio goes only to
+   the learner's own backend (Workers AI Whisper, §11.9). The mic appears
+   only when a backend is configured; everything else works without it. */
+var REC = null;   // active recording {rec, chunks, cardId, stream, expected, timer}
+var T1 = {};      // cardId -> {st:'rec'|'busy'|'ok'|'no'|'err', heard, msg}
+function speechReady(){
+  return !!(CFG.url && CFG.token && navigator.mediaDevices &&
+            navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+}
+function expectedFor(c){ return c.type==='alphabet' ? LETTER_META[c.d.id].an : c.d.ar; }
+function micBtn(cardId){
+  if(!speechReady()) return '';
+  var recing = REC && REC.cardId===cardId;
+  return '<button class="micbtn'+(recing?' rec':'')+'" data-mic="'+cardId+'" title="'
+       + (recing?'stop recording':'say it aloud — checks whether you were understood')+'">'
+       + svg(recing?IC.stop:IC.mic)+'</button>';
+}
+function t1Line(cardId){
+  var t = T1[cardId]; if(!t) return '';
+  if(t.st==='rec')  return '<div class="t1">listening… tap the square to stop</div>';
+  if(t.st==='busy') return '<div class="t1">checking…</div>';
+  if(t.st==='ok')   return '<div class="t1 ok">understood ✓ — heard <span class="heard">'+esc(t.heard)+'</span></div>';
+  if(t.st==='no')   return '<div class="t1 no">not understood — heard <span class="heard">'+esc(t.heard||'—')+'</span>. '
+                         + 'The listener may be at fault, not you. Try again or just move on.</div>';
+  return '<div class="t1 err">'+esc(t.msg||'speech check unavailable')+'</div>';
+}
+function cancelMic(){
+  if(!REC) return;
+  clearTimeout(REC.timer);
+  REC.rec.onstop = null;
+  if(REC.rec.state!=='inactive') REC.rec.stop();
+  REC.stream.getTracks().forEach(function(t){ t.stop(); });
+  delete T1[REC.cardId];
+  REC = null;
+}
+function toggleMic(cardId){
+  if(REC){ if(REC.cardId===cardId){ stopMic(); } else { cancelMic(); } return; }
+  var card = null;
+  DECK.forEach(function(c){ if(c.id===cardId) card = c; });
+  if(!card) return;
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    var rec;
+    try { rec = new MediaRecorder(stream); }
+    catch(e){
+      stream.getTracks().forEach(function(t){ t.stop(); });
+      T1[cardId] = {st:'err', msg:'recording not supported in this browser'};
+      render(); return;
+    }
+    REC = {rec:rec, chunks:[], cardId:cardId, stream:stream, expected:expectedFor(card)};
+    T1[cardId] = {st:'rec'};
+    rec.ondataavailable = function(ev){ if(ev.data && ev.data.size && REC) REC.chunks.push(ev.data); };
+    rec.onstop = finishMic;
+    rec.start();
+    REC.timer = setTimeout(stopMic, 4000);   // it's one word — keep it short
+    render();
+  }).catch(function(){
+    T1[cardId] = {st:'err', msg:'microphone permission declined — speech checks stay off, everything else works'};
+    render();
+  });
+}
+function stopMic(){
+  if(!REC) return;
+  clearTimeout(REC.timer);
+  if(REC.rec.state!=='inactive') REC.rec.stop(); else finishMic();
+}
+function finishMic(){
+  var r = REC; REC = null;
+  if(!r) return;
+  r.stream.getTracks().forEach(function(t){ t.stop(); });
+  var blob = new Blob(r.chunks, {type: r.rec.mimeType || 'audio/webm'});
+  if(!blob.size){ T1[r.cardId] = {st:'err', msg:'nothing recorded'}; render(); return; }
+  T1[r.cardId] = {st:'busy'}; render();
+  var fr = new FileReader();
+  fr.onload = function(){
+    var b64 = String(fr.result).split(',')[1] || '';
+    fetch(CFG.url.replace(/\/+$/,'')+'/assess', {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+CFG.token, 'Content-Type':'application/json'},
+      body: JSON.stringify({expected:r.expected, audio:b64})
+    }).then(function(res){
+      if(!res.ok) return res.json().then(function(j){ throw new Error(j.error||('backend said '+res.status)); },
+                                         function(){ throw new Error('backend said '+res.status); });
+      return res.json();
+    }).then(function(out){
+      T1[r.cardId] = {st: out.understood ? 'ok' : 'no', heard: out.heard || ''};
+      if(!S.speech) S.speech = [];
+      S.speech.push({k:Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+                     d:today(), id:r.cardId, ok:!!out.understood});   // append-only [R-32]
+      persist(); render();
+    }).catch(function(e){
+      T1[r.cardId] = {st:'err', msg:'speech check unavailable — '+e.message+'. Studying continues.'};
+      render();
+    });
+  };
+  fr.readAsDataURL(blob);
 }
 
 /* ---------- state ---------- */
@@ -700,7 +815,9 @@ var IC = {
   check:'<path d="M4 12l5 5L20 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>',
   chev:'<path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   chevD:'<path d="M5 9l7 7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-  spk:'<path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
+  spk:'<path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  mic:'<path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  stop:'<rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/>'
 };
 function svg(p,cls){ return '<svg viewBox="0 0 24 24" class="'+(cls||'')+'">'+p+'</svg>'; }
 function starRow(){
@@ -898,6 +1015,7 @@ function startSession(filter){
   render();
 }
 function grade(q){
+  cancelMic();   /* grading moves on; discard any in-flight recording */
   var card = sess.q[sess.i];
   S.progress[card.id] = schedule(S.progress[card.id], q);
   var gain = [1,4,6,8][q];
@@ -950,13 +1068,15 @@ function renderOverlay(){
             + (LETTER_META[d.id].guttural?'<span class="gutt">throat sound</span>':'')
             + '<div class="a3">'+d.ex+'</div>'
             + '<div class="a4">'+esc(d.exT)+' \u00b7 '+esc(d.exE)+'</div>'
-            + '<div style="display:flex;justify-content:center;margin-top:12px">'+playBtn(letterSrc(d.id))+'</div>'
+            + '<div style="display:flex;justify-content:center;gap:10px;margin-top:12px">'+playBtn(letterSrc(d.id))+micBtn(c.id)+'</div>'
+            + t1Line(c.id)
             + '</div>' : '');
   } else {
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
         + '<div class="q-word">'+d.ar+'</div>'
         + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.t)+'</div><div class="a2">'+esc(d.en)+'</div>'
-            + '<div style="display:flex;justify-content:center;margin-top:14px">'+playBtn(wordSrc(d))+'</div>'
+            + '<div style="display:flex;justify-content:center;gap:10px;margin-top:14px">'+playBtn(wordSrc(d))+micBtn(c.id)+'</div>'
+            + t1Line(c.id)
             + '</div>' : '');
   }
   var foot = sess.show
@@ -1000,6 +1120,7 @@ function render(){
 /* ---------- one delegated listener ---------- */
 document.addEventListener('click', function(e){
   var el;
+  if((el = e.target.closest('[data-mic]'))){ toggleMic(el.dataset.mic); return; }
   if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play); return; }
   if((el = e.target.closest('[data-g]'))){ grade(parseInt(el.dataset.g,10)); return; }
   if((el = e.target.closest('[data-grade]'))){
@@ -1026,7 +1147,7 @@ document.addEventListener('click', function(e){
     }
     else if(a==='sync-now') syncNow();
     else if(a==='reveal'){ sess.show=true; render(); }
-    else if(a==='close'){ sess=null; render(); }
+    else if(a==='close'){ cancelMic(); sess=null; render(); }
     else if(a==='reset'){
       if(confirm('Erase all progress? This cannot be undone.')){
         S = {xp:0,streak:0,best:0,last:null,history:[],progress:{}};
