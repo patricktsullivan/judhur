@@ -2,7 +2,7 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.8 · July 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support)*
+Version 0.9 · July 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice)*
 
 ---
 
@@ -633,6 +633,28 @@ The §1.1 non-goal stands: **no multi-tenancy, ever.** No accounts, no shared in
 
 **`[R-43]`** Acceptance criteria MUST NOT require verification on non-Chromium platforms. Step 5's mic-capture criterion is amended accordingly (Android Chrome + desktop Chrome).
 
+### 11.9 Cost & accessibility → Free-first, paid as documented upgrade
+
+*(Added v0.9, July 2026 — owner decision, prompted by sharing with classmates.)*
+
+Free is weighted extremely high: anyone copying this project should be able to run all of it without paying. Better-but-paid options remain legitimate — as **documented, optional upgrades**, never as the only path.
+
+**`[R-44]`** The core study loop (letters, vocabulary, spaced repetition, recorded audio, offline PWA — Steps 1–3 scope) MUST remain free **and account-less**: open the URL, study. No signup may ever be added in front of it.
+
+**`[R-45]`** Every cloud-dependent feature MUST have a documented path that costs $0 at single-learner volume, and SHOULD avoid requiring a new vendor account where an already-required account can serve. Paid alternatives are permitted only as optional upgrades documented alongside the free path; the free path must stay functional, not a degraded stub.
+
+**Verified free-tier ladder (July 2026):**
+
+| Layer | Free path | Verified allowance | Paid upgrade (optional) |
+|---|---|---|---|
+| Study (Steps 1–3) | Static PWA, recorded audio | Unlimited; no account | — |
+| Sync (Step 4) | Cloudflare Workers free plan | KV + requests far beyond one learner | Workers Paid ($5/mo) if ever needed |
+| Tier 1 ASR (Step 5) | **Workers AI Whisper** (`@cf/openai/whisper-large-v3-turbo`, `task:"transcribe"`, `language:"ar"`) — same Cloudflare account as Step 4, zero new vendors | 10,000 neurons/day, resets daily | Azure Speech STT, or any commercial ASR |
+| Tier 2a MDD (Step 7) | Azure Speech **F0** | 5 audio-hours/month — ample for single-word drills | Azure S0 pay-as-you-go |
+| Generation (Step 6) | Free-tier model APIs (choose at build time; verify then) | — | Paid model APIs |
+
+**Tier 1 ASR decision (supersedes an implicit Azure-first assumption):** Workers AI Whisper wins on the two criteria that now dominate — $0 and zero additional signup (the learner's Cloudflare account already exists from Step 4). Whisper's documented Arabic weaknesses (§7.4) are acceptable at Tier 1 *because* Tier 1 is a yes/no intelligibility probe whose failure mode is explicitly "may be the model's fault" (`[R-23]`), and `task:"transcribe"` pins it against the translate-to-English failure. If it proves too weak even for the probe, Azure STT is the documented escalation — and arrives at Step 7 regardless.
+
 ---
 
 ## 12. `[HUMAN]` The reviewer role
@@ -751,3 +773,5 @@ Not pending decisions — questions only answerable by running the system.
 | Building may run ahead of usage; heatmap floor ([R-38]) is the hard stop | Amended v0.7: ride motivation while it's high; a heatmap below 15/30 active days still halts all building |
 | Sharing by replication, never multi-tenancy | Each learner forks and deploys their own backend with their own keys; the client never holds API keys (§11.7) |
 | Chromium-first; iOS/WebKit best-effort | All testing and acceptance runs on Chromium (Android + desktop). iOS cannot join that tier — every iOS browser is WebKit underneath (§11.8) |
+| Free-first: core account-less, cloud features $0 at one-learner volume | Accessibility for co-learners; paid options only as documented optional upgrades (§11.9) |
+| Tier 1 ASR on Workers AI Whisper, not Azure | $0 and zero new vendor beats accuracy for a yes/no intelligibility probe; Azure is the escalation and arrives at Step 7 anyway (§11.9) |
