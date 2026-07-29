@@ -12,32 +12,47 @@ failure mode (§11.6).
 
 | Step | Deliverable | Status |
 |---|---|---|
-| 1 | v0 single-file HTML in daily use | ✅ (see `judhur-arabic-study.html`) |
-| 2 | Content expansion: positional letter forms, ~30 root families, recorded core audio | 🔨 in progress |
-| 3+ | PWA, backend, pipeline, pronunciation | not started — gated by `[R-34]` (14 days of daily use per step) |
+| 1 | v0 single-file HTML in daily use | ✅ |
+| 2 | Content expansion: positional letter forms, ~30 root families, recorded core audio | ✅ code · 🎙 recordings in progress |
+| 3 | PWA: installable, offline study loop, offline audio | ✅ code · needs hosting enabled (below) |
+| 4+ | Backend, pipeline, pronunciation | not started |
+
+Building may run ahead of usage per `[R-34]` as amended (design doc v0.7); the hard
+stop is `[R-38]` — if the 30-day heatmap drops below 15 active days, building halts.
 
 ## Using the app
 
-Open `judhur-arabic-study.html` in any browser — directly from disk (`file://`) works;
-no server, no network, no build step. Progress persists in `localStorage`.
+Two ways to run it:
+
+1. **Hosted (recommended, enables install + offline):** enable GitHub Pages once —
+   repo **Settings → Pages → Deploy from a branch → `main` / `/ (root)`** — then visit
+   `https://<user>.github.io/judhur/`.
+2. **From disk:** open `index.html` in any browser (`file://` works). No server, no
+   build step. The service worker is skipped on `file://`, so audio needs the `audio/`
+   folder alongside the file and there's no home-screen install — fine as a fallback.
+
+Progress persists in `localStorage` either way.
 
 Keyboard shortcuts: **Space** reveals a card, **1–4** grades it, **Esc** exits the session.
 
-### How storage works at the current stage (pre-PWA)
+### Installing on a phone (PWA)
 
-- **The app**: the HTML file alone is the complete app. Audio is looked up by relative
-  path, so for sound a device also needs the `audio/` folder sitting next to the file.
-  Without it, everything works and play buttons show muted — nothing breaks.
-- **Authoritative copies**: this git repo is the source of truth for the app *and* the
-  recordings. A device's copy (including audio) is a cache. Per `[R-12]`, core audio
-  *must* end up cached on-device — hearing a word is part of the offline study loop —
-  so "audio on the device" is by design, not an accident of the current stage.
-- **Progress is per-browser.** Phone and desktop do not sync yet, and won't until build
-  step 4 (`/state`). Until then, study on one primary device — the `[R-34]` 14-day gate
-  only needs one — or accept independent streaks.
-- **What changes at step 3 (PWA)**: the app gets hosted at a URL; visiting it installs
-  it, and a service worker caches the app and audio automatically. Manually copying
-  files to a device stops being a thing. Step 4 then adds cross-device progress sync.
+- **iOS Safari:** open the hosted URL → Share → **Add to Home Screen**.
+- **Android Chrome:** open the hosted URL → ⋮ menu → **Add to Home screen** (or the
+  install prompt).
+
+After installing, open **Progress → Audio coverage → Check recordings** once while
+online: probing every clip pulls all existing audio into the offline cache. From then
+on the full study loop — audio included — works in airplane mode.
+
+### Storage & sync
+
+- **This repo is the source of truth** for the app and recordings; each device holds a
+  cache (`[R-12]` requires core audio on-device — hearing words is part of the offline
+  loop). Deployed updates arrive on the next online visit (navigation is network-first).
+- **Progress is per-browser/per-install.** Phone and desktop do not sync until build
+  step 4 (`/state`). Until then, study on one primary device or accept independent
+  streaks.
 
 ## Audio: recorded human audio drop-in convention
 
@@ -94,8 +109,15 @@ pass over `content/` belongs on the `[HUMAN]` track alongside the reviewer searc
 ## Repository layout
 
 ```
-judhur-arabic-study.html    the app — single self-contained file, embedded data
+index.html                  the app — single self-contained page, embedded data
+sw.js                       service worker: offline app shell + audio cache
+manifest.webmanifest        PWA manifest
+icons/                      app icons
 docs/judhur-design-doc.md   the spec of record
 content/                    content authoring source (JSON), embedded into the HTML
 audio/                      recorded human audio (drop-in; commit recordings so they follow the repo)
 ```
+
+Deploy note: when a change lands that should update installed clients' cached shell,
+bump `VERSION` in `sw.js` (navigations are network-first anyway, so the app page
+itself refreshes on the next online visit regardless).
