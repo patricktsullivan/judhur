@@ -2,7 +2,7 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.7 · July 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop)*
+Version 0.8 · July 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support)*
 
 ---
 
@@ -482,9 +482,9 @@ Each step must be independently usable. Nothing depends on a later step to deliv
 |---|---|---|
 | **1** | v0 HTML in daily use | ✅ Complete |
 | **2** | Content expansion: all letter forms (initial/medial/final/isolated), ~30 root families, recorded core audio | All 28 letters show 4 positional forms; ≥90 words across ≥30 roots; every letter and core word has recorded human audio playable offline |
-| **3** | PWA | Installs to home screen on iOS and Android; study loop fully functional in airplane mode; audio plays offline |
+| **3** | PWA | Installs to home screen on Android (tested); study loop fully functional in airplane mode; audio plays offline. iOS install best-effort per §11.8 |
 | **4** | Backend skeleton + `/state` | No key in client bundle (grep-verifiable); profile syncs across two devices; client degrades gracefully when backend unreachable; backend deploys from the repo as a template with keys as env vars, and the client's only credentials are backend URL + access token (§11.7) |
-| **5** | `/speak` + Tier 1 intelligibility | Mic capture works on iOS Safari and desktop Chrome; ASR round-trip returns understood/not-understood; result never displayed as a score |
+| **5** | `/speak` + Tier 1 intelligibility | Mic capture works on Android Chrome and desktop Chrome (§11.8); ASR round-trip returns understood/not-understood; result never displayed as a score |
 | **6** | `/ingest` + `/generate`, verification Tier 1 | YouTube URL and article URL both produce a graded passage; output is fully diacritized; new words enter the review queue with provenance; extraction failures report a specific reason |
 | **7** | Tier 2a Azure assessment + calibration pool | Per-phoneme results returned against `ar-SA`; pool populates with correct flagged/passed stratification; all output marked provisional; phase advancement unaffected |
 | **8** | Tier 3 LLM coaching | Receives structured MDD output only, never raw audio; produces articulatory guidance; inherits the provisional label |
@@ -617,6 +617,22 @@ The §1.1 non-goal stands: **no multi-tenancy, ever.** No accounts, no shared in
 
 **What "run everything from your own device" means here:** the study loop is fully on-device (`[R-11]`); generation, verification, and speech assessment are calls from your backend to your own cloud accounts (§10.1 keeps ML off the critical path, so there is no local-model fallback). The "installer" is the Step 3 PWA install.
 
+### 11.8 Platform support → Chromium-first, tested; iOS/WebKit best-effort
+
+*(Added v0.8, July 2026 — owner decision. The owner's devices are Android + desktop.)*
+
+**Supported and tested:** Chromium browsers — Chrome/Edge/Brave on Android and desktop. All automated verification runs on Chromium; acceptance criteria are met when they pass there.
+
+**Best-effort:** iOS. Not because iOS users are excluded, but because iOS cannot be brought into the Chromium tier at all: Apple requires every iOS browser, including Chrome-branded ones, to run Safari's WebKit engine, and true home-screen PWA install on iOS goes through Safari's Add to Home Screen. "Use Chrome on iPhone" does not escape Safari — it *is* Safari underneath. The app follows web standards WebKit supports, and iOS users may well find everything works; nothing is tested there and nothing blocks on it.
+
+**Consequences:**
+
+- Web-standard APIs only; no Chromium-proprietary features, so the best-effort tier stays plausible for free.
+- Platform-specific bugs on iOS are accepted as reported-when-reported; they never block a build step.
+- If a future co-learner on iOS hits a wall, the fix is scoped and deliberate, not an ambient support obligation.
+
+**`[R-43]`** Acceptance criteria MUST NOT require verification on non-Chromium platforms. Step 5's mic-capture criterion is amended accordingly (Android Chrome + desktop Chrome).
+
 ---
 
 ## 12. `[HUMAN]` The reviewer role
@@ -734,3 +750,4 @@ Not pending decisions — questions only answerable by running the system.
 | Provisional feedback cannot gate phases | Acting on unverified feedback drills errors into permanence |
 | Building may run ahead of usage; heatmap floor ([R-38]) is the hard stop | Amended v0.7: ride motivation while it's high; a heatmap below 15/30 active days still halts all building |
 | Sharing by replication, never multi-tenancy | Each learner forks and deploys their own backend with their own keys; the client never holds API keys (§11.7) |
+| Chromium-first; iOS/WebKit best-effort | All testing and acceptance runs on Chromium (Android + desktop). iOS cannot join that tier — every iOS browser is WebKit underneath (§11.8) |

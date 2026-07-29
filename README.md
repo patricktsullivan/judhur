@@ -36,15 +36,29 @@ Progress persists in `localStorage` either way.
 
 Keyboard shortcuts: **Space** reveals a card, **1–4** grades it, **Esc** exits the session.
 
-### Installing on a phone (PWA)
+### Which devices does this work on?
 
-- **iOS Safari:** open the hosted URL → Share → **Add to Home Screen**.
-- **Android Chrome:** open the hosted URL → ⋮ menu → **Add to Home screen** (or the
-  install prompt).
+There is **one app for everything** — no "Android version" or "iPhone version." It's a
+web app you install from a link, so it runs anywhere a modern browser runs. That said,
+platforms are not all equal (design doc §11.8):
 
-After installing, open **Progress → Audio coverage → Check recordings** once while
-online: probing every clip pulls all existing audio into the offline cache. From then
-on the full study loop — audio included — works in airplane mode.
+| Your device | How well it works | How to install |
+|---|---|---|
+| **Android phone** (Chrome) | ✅ Fully supported & tested | Open the app link in Chrome → tap the ⋮ menu → **Add to Home screen** |
+| **Windows / Mac / Linux** (Chrome, Edge, Brave) | ✅ Fully supported & tested | Just use the link — or click the install icon in the address bar for a windowed app |
+| **iPhone / iPad** | ⚠️ Should work, but untested | Open the link **in Safari** → Share button → **Add to Home Screen** |
+| Firefox (any platform) | ⚠️ Should work, but untested | Use the link directly; install support varies |
+
+**A note for iPhone users:** installing Chrome from the App Store won't change your
+tier — Apple requires every browser on iOS, Chrome included, to run on Safari's engine
+underneath, and installing to the home screen goes through Safari regardless. The app
+sticks to web standards, so it will most likely work fine — it just isn't part of the
+tested platforms, and quirks get fixed as they're reported rather than hunted in
+advance.
+
+**After installing (any platform):** open **Progress → Audio coverage → Check
+recordings** once while online — that pulls every available audio clip onto your
+device. From then on the whole study loop, audio included, works in airplane mode.
 
 ### Storage & sync
 
