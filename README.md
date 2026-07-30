@@ -15,7 +15,7 @@ failure mode (§11.6).
 | 1 | v0 single-file HTML in daily use | ✅ |
 | 2 | Content expansion: positional letter forms, ~30 root families, recorded core audio | ✅ code · 🎙 recordings in progress |
 | 3 | PWA: installable, offline study loop, offline audio | ✅ code · needs hosting enabled (below) |
-| 4 | Backend skeleton + `/state` cross-device sync | ✅ code · needs your own deploy ([backend/README.md](backend/README.md)) |
+| 4 | Backend skeleton + `/state` cross-device sync | ✅ code · needs your own deploy ([SETUP.md](backend/SETUP.md)) |
 | 5 | Tier 1 speech: say it, hear back understood / not understood | ✅ code · live ASR needs your deploy (free, §11.9) |
 | 6+ | Content pipeline, pronunciation diagnosis | not started |
 
@@ -66,13 +66,13 @@ device. From then on the whole study loop, audio included, works in airplane mod
 - **This repo is the source of truth** for the app and recordings; each device holds a
   cache (`[R-12]` requires core audio on-device — hearing words is part of the offline
   loop). Deployed updates arrive on the next online visit (navigation is network-first).
-- **Cross-device sync is opt-in.** Deploy your own free backend once — there's a
-  one-click button and a plain-language, no-terminal guide in
-  **[backend/README.md](backend/README.md)** (~10 minutes). Then on each device open
-  **Progress → Sync across devices** and paste your backend's web address + password.
-  Devices merge review histories per card — the higher rep count wins, streaks recompute
-  from the union of study days. Unconfigured or offline, nothing changes: progress stays
-  local and the app never blocks on the network.
+- **Cross-device sync is opt-in.** Deploy your own free backend once — simple,
+  no-terminal, step-by-step setup is in **[backend/SETUP.md](backend/SETUP.md)**
+  (~10 minutes); maintainers, see [backend/README.md](backend/README.md). Then on each
+  device open **Progress → Sync across devices** and paste your backend's web address +
+  password. Devices merge review histories per card — the higher rep count wins, streaks
+  recompute from the union of study days. Unconfigured or offline, nothing changes:
+  progress stays local and the app never blocks on the network.
 
 ## Audio: recorded human audio drop-in convention
 

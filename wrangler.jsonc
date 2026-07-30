@@ -20,10 +20,12 @@
   "preview_urls": false,
 
   // Workers AI — Tier 1 speech intelligibility (free daily allocation, §11.9).
-  "ai": { "binding": "AI" },
+  "ai": { "binding": "AI" }
 
-  // The one password you set. Declaring it here makes the deploy button prompt
-  // for it, and makes a hand deploy fail loudly if it's missing rather than
-  // running open. Set its value with: npx wrangler secret put SYNC_TOKEN
-  "secrets": { "required": ["SYNC_TOKEN"] }
+  // Note: SYNC_TOKEN (your password) is deliberately NOT declared as a required
+  // secret here. Declaring it made the one-click deploy fail before you had a
+  // chance to set it (the deploy UI's variable fields create plain vars, which
+  // don't satisfy a required *secret*). Instead, add it as an encrypted Secret
+  // after deploy (see SETUP.md / README.md). The Worker refuses every request
+  // until SYNC_TOKEN is set, so it never runs open regardless.
 }
