@@ -24,18 +24,24 @@ When it asks you to sign in, **sign in with your GitHub account**. That signs yo
 Cloudflare too — you don't need a separate Cloudflare account.
 
 **2. Let it set up.** It makes your own copy of the helper and gets it ready. Accept the
-options it suggests and keep going. When it finishes, it shows a **web address that ends
-in `.workers.dev`**. **Copy it and keep it somewhere** — you'll need it in step 4.
+options it suggests and keep going.
 
-**3. Set your password.** In Cloudflare, find your list of Workers (look for
-**"Workers & Pages"**, possibly under a **"Compute"** menu) and open the one called
-**`judhur-backend`**. Then:
+> If the setup offers **"variable"** boxes along the way, **leave them blank.** They don't
+> set your password — you'll do that in the next step, on the helper itself. (Putting the
+> password there looks like it works but won't.)
+
+When it finishes, it shows a **web address that ends in `.workers.dev`**. **Copy it and
+keep it somewhere** — you'll need it in step 4.
+
+**3. Set your password.** This is the one spot it has to go. In Cloudflare, find your list
+of Workers (look for **"Workers & Pages"**, possibly under a **"Compute"** menu) and open
+the one called **`judhur-backend`**. Then:
 
 - Go to **Settings**, then **Variables and Secrets**.
 - Click **Add**.
 - Name: type exactly **`SYNC_TOKEN`**
 - Value: type **your password**.
-- Choose the **Secret** option (sometimes labeled "Encrypt").
+- Turn on the **Encrypt** / **Secret** option.
 - Click **Save**.
 
 **4. Turn on syncing in the app.** Open the study app → **Progress** → **Sync across

@@ -31,10 +31,14 @@ Merging is done client-side; the Worker is deliberately dumb storage ([R-42]).
    (`JUDHUR_KV`, progress storage) and the **Workers AI** binding (`AI`, speech).
 3. Deploys and exposes the `*.workers.dev` URL (kept on via `workers_dev: true`).
 
-It does **not** reliably set secrets: the deploy UI's "variable" fields create plain env
-vars, which is why `SYNC_TOKEN` is set as an encrypted Secret *after* deploy rather than
-declared `required` in config (declaring it required made the button deploy fail before
-the user could set it). See the config note below.
+It does **not** set the runtime secret. Confirmed by testing: the deploy wizard's
+"variable name / value" fields (even with encrypt on) are **build-time** variables — they
+feed the build container, not the Worker's runtime `env`, so a `SYNC_TOKEN` entered there
+yields a 401 at runtime. The token must be set as a runtime secret **on the Worker**
+(Settings → Variables and Secrets, or `wrangler secret put`) *after* deploy. This is why
+`SYNC_TOKEN` is not declared `required` in config — doing so only made the build fail
+before the user could reach that step. One post-deploy step is unavoidable through the
+button.
 
 ## Deploy from the command line
 
