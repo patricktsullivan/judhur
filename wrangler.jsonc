@@ -1,0 +1,23 @@
+{
+  // Judhūr backend — Cloudflare Worker config.
+  // Easiest deploy: the "Deploy to Cloudflare" button in backend/README.md,
+  // which reads this file, creates the KV storage for you, and asks for your
+  // SYNC_TOKEN password during setup. Command-line steps are in backend/README.md too.
+  "name": "judhur-backend",
+  "main": "backend/worker.js",
+  "compatibility_date": "2026-07-01",
+
+  // Progress storage. The deploy button provisions a namespace and replaces
+  // this placeholder id automatically; by hand, create one and paste its id here.
+  "kv_namespaces": [
+    { "binding": "JUDHUR_KV", "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID" }
+  ],
+
+  // Workers AI — Tier 1 speech intelligibility (free daily allocation, §11.9).
+  "ai": { "binding": "AI" },
+
+  // The one password you set. Declaring it here makes the deploy button prompt
+  // for it, and makes a hand deploy fail loudly if it's missing rather than
+  // running open. Set its value with: npx wrangler secret put SYNC_TOKEN
+  "secrets": { "required": ["SYNC_TOKEN"] }
+}

@@ -66,12 +66,13 @@ device. From then on the whole study loop, audio included, works in airplane mod
 - **This repo is the source of truth** for the app and recordings; each device holds a
   cache (`[R-12]` requires core audio on-device — hearing words is part of the offline
   loop). Deployed updates arrive on the next online visit (navigation is network-first).
-- **Cross-device sync is opt-in.** Deploy your own backend once
-  ([backend/README.md](backend/README.md), ~5 minutes on Cloudflare's free tier), then
-  on each device open **Progress → Sync across devices** and paste your backend URL +
-  token. Devices merge review histories per card — the higher rep count wins, streaks
-  recompute from the union of study days. Unconfigured or offline, nothing changes:
-  progress stays local and the app never blocks on the network.
+- **Cross-device sync is opt-in.** Deploy your own free backend once — there's a
+  one-click button and a plain-language, no-terminal guide in
+  **[backend/README.md](backend/README.md)** (~10 minutes). Then on each device open
+  **Progress → Sync across devices** and paste your backend's web address + password.
+  Devices merge review histories per card — the higher rep count wins, streaks recompute
+  from the union of study days. Unconfigured or offline, nothing changes: progress stays
+  local and the app never blocks on the network.
 
 ## Audio: recorded human audio drop-in convention
 
@@ -146,6 +147,8 @@ index.html                  the app — single self-contained page, embedded dat
 sw.js                       service worker: offline app shell + audio cache
 manifest.webmanifest        PWA manifest
 icons/                      app icons
+backend/                    optional self-hosted helper (sync + speech); setup guide inside
+wrangler.jsonc              Cloudflare Worker config for the backend
 docs/judhur-design-doc.md   the spec of record
 content/                    content authoring source (JSON), embedded into the HTML
 audio/                      recorded human audio (drop-in; commit recordings so they follow the repo)

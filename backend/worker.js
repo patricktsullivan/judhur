@@ -5,7 +5,7 @@
      understood, never a score [R-23]. Free at one-learner volume.
    Remaining §4 endpoints are 501 stubs so the surface is visible but honest.
    Auth: Authorization: Bearer <SYNC_TOKEN>, set as a Worker secret [R-41].
-   All configuration is env vars/secrets + wrangler.toml [R-42].
+   All configuration is env vars/secrets + wrangler.jsonc [R-42].
    Storage: Workers KV, single key — single learner by design (§1.1). */
 
 const CORS = {
@@ -85,7 +85,7 @@ export default {
     }
 
     if (url.pathname === '/assess' && req.method === 'POST') {
-      if (!env.AI) return json({ error: 'ASR not configured — deploy with the [ai] binding in wrangler.toml' }, 503);
+      if (!env.AI) return json({ error: 'ASR not configured — deploy with the "ai" binding in wrangler.jsonc' }, 503);
       let body;
       try { body = await req.json(); } catch (e) { return json({ error: 'invalid json' }, 400); }
       if (!body.expected || !body.audio) return json({ error: 'expected and audio are required' }, 400);
