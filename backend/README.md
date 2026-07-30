@@ -52,7 +52,7 @@ Use this if the button gives you trouble, or you'd rather click through the site
 yourself. Cloudflare occasionally renames things, so match the nearest wording you see.
 
 1. **Make a free account** at [dash.cloudflare.com](https://dash.cloudflare.com) (no card).
-2. **Connect this project.** Go to **Workers & Pages → Create → Import a repository**,
+2. **Connect this project.** Go to **Compute → Workers & Pages → Create → Import a repository**,
    and choose your copy of this repo (fork it on GitHub first if needed). Deploy it —
    the storage and speech pieces are described in the project's config and set up for you.
 3. **Set your password.** Open the new Worker → **Settings → Variables and Secrets** →
