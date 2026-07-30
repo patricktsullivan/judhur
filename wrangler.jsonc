@@ -13,6 +13,12 @@
     { "binding": "JUDHUR_KV", "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID" }
   ],
 
+  // Keep the free public web address (https://<name>.<you>.workers.dev) turned on,
+  // so a fresh deploy is reachable without a dashboard toggle. Skip per-version
+  // preview URLs — a personal backend doesn't need them.
+  "workers_dev": true,
+  "preview_urls": false,
+
   // Workers AI — Tier 1 speech intelligibility (free daily allocation, §11.9).
   "ai": { "binding": "AI" },
 
