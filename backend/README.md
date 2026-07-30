@@ -30,10 +30,15 @@ Pick **one** of the three methods below. The first is easiest.
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/patricktsullivan/judhur)
 
 1. **Click the button above.** Sign in to Cloudflare, or make a free account (no card).
-2. Cloudflare makes its own copy of this project on your account and **sets up the
-   storage for you**. Follow the on-screen steps — the suggested defaults are fine.
-3. When it asks for **`SYNC_TOKEN`**, type the **password** from step 3 above.
-   Write it down now if you haven't.
+2. Pick your GitHub account. Cloudflare makes its own copy of this project (named
+   `judhur-backend`), **sets up the storage for you**, and starts deploying. The
+   defaults are fine.
+3. **The first deploy will fail**, saying `SYNC_TOKEN` is required. That's expected and
+   correct — the helper refuses to run without a password. Now set one:
+   open the new **`judhur-backend`** Worker → **Settings → Variables and Secrets** →
+   **Add**. Name it exactly `SYNC_TOKEN`, and — this matters — **choose the "Secret"
+   (encrypted) type, not a plain text variable** (see the warning below). Put your
+   made-up password as the value, save, and hit **Retry deploy**.
 4. When it finishes, it shows a **web address** ending in `.workers.dev`
    (like `https://judhur-backend.yourname.workers.dev`). **Copy it.**
 5. In the app, open **Progress → Sync across devices**, paste the **web address** and
@@ -41,23 +46,32 @@ Pick **one** of the three methods below. The first is easiest.
 6. On your **other device**, do step 5 again with the **same web address and password**.
    That's what links them.
 
-> If the button never asks you for a password, that's fine — finish the deploy, then add
-> it the way Method 2 describes in its last step ("Set your password"), and continue.
+> ⚠️ **Secret, not a plain variable.** When you add `SYNC_TOKEN`, Cloudflare's panel lets
+> you save it as either a plain-text *variable* or an encrypted *secret*. **Choose secret
+> / encrypt.** A plain variable is readable in your build logs *and* gets wiped the next
+> time the project auto-deploys — which silently breaks syncing later. A secret is hidden
+> and survives every deploy.
 
 ---
 
 ## Method 2 — Cloudflare's website (no button, no typing commands)
 
-Use this if the button gives you trouble, or you'd rather click through the site
-yourself. Cloudflare occasionally renames things, so match the nearest wording you see.
+Use this if you'd rather click through the site yourself. Cloudflare occasionally renames
+things, so match the nearest wording you see.
+
+> **If the dashboard's "Deploy" button seems to do nothing** (no error, no progress),
+> import the smaller **`judhur-backend`** repo the button in Method 1 creates rather than
+> the full project repo — the importer can stall on a repo that's mostly a website. In
+> practice Method 1's button is the more reliable path; prefer it.
 
 1. **Make a free account** at [dash.cloudflare.com](https://dash.cloudflare.com) (no card).
 2. **Connect this project.** Go to **Workers & Pages → Create → Import a repository**,
    and choose your copy of this repo (fork it on GitHub first if needed). Deploy it —
    the storage and speech pieces are described in the project's config and set up for you.
 3. **Set your password.** Open the new Worker → **Settings → Variables and Secrets** →
-   add a **Secret** named exactly `SYNC_TOKEN`, with your made-up password as the value.
-   Save, and if prompted, redeploy.
+   add `SYNC_TOKEN` and **choose the "Secret" (encrypted) type — not a plain text
+   variable** (see the warning under Method 1 for why). Put your made-up password as the
+   value, save, and redeploy if prompted.
 4. **Copy the web address** shown for the Worker (ends in `.workers.dev`).
 5. In the app: **Progress → Sync across devices**, paste the web address and password,
    **Save & sync** — then repeat on your other device with the same two values.
