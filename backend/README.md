@@ -15,7 +15,9 @@ no shared infrastructure, keys, or data.
 | `/state` | GET | Return the stored learner profile (or `null`) |
 | `/state` | PUT | Store the learner profile (JSON, ≤512 KB) |
 | `/assess` | POST | Tier 1 intelligibility: `{expected, audio(base64)}` → `{understood, heard}` via Workers AI Whisper (`task:"transcribe"`, `language:"ar"`). Free daily allowance; no audio stored. Never a score ([R-23]). |
-| `/ingest` `/generate` `/verify` `/speak` | — | `501` stubs — later build steps (§4, §10) |
+| `/ingest` | POST | `{url}` or `{text}` → `{title, excerpt, source_ref}`. Extracts article text (paste + article URLs; YouTube not yet). Extraction failures return a specific `reason` ([R-13]). |
+| `/generate` | POST | `{excerpt, profile}` → graded fully-diacritized MSA `{arabic, transliteration, english_gloss, new_words[], grammar_notes}`. Tier-1 verification = single pass, no cross-vendor check yet (§6.3). |
+| `/verify` `/speak` | — | `501` stubs — later build steps (§4, §10) |
 
 Auth on every request: `Authorization: Bearer <SYNC_TOKEN>` (timing-safe compare). If
 `SYNC_TOKEN` is unset the Worker refuses everything — it never runs open ([R-41]).
@@ -64,6 +66,13 @@ npx wrangler deploy                             # prints the https://...workers.
   in config. Storing it as a plain variable is unsafe: it appears in build logs and is
   wiped when a repo auto-deploy uploads config with no matching var. A Secret is hidden
   and survives every deploy.
+- **Generation model (`/generate`)** — defaults to **Workers AI** (free, zero-config; uses
+  the `ai` binding). Its Arabic/diacritics are the roughest of the options, so generated
+  content especially warrants the native-speaker review (README content note). To use a
+  stronger model, set these Worker secrets/vars and no code changes are needed:
+  `GEN_BASE_URL` (any OpenAI-compatible endpoint, e.g. Gemini's or Groq's), `GEN_MODEL`,
+  and `GEN_API_KEY`. Optionally `GEN_WAI_MODEL` overrides the Workers AI model id. Keys
+  live here as secrets, never in the client ([R-10], [R-41]).
 
 ## Troubleshooting
 

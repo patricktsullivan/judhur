@@ -3,6 +3,11 @@
    Step 5: /assess — Tier 1 intelligibility via Workers AI Whisper
      (task:"transcribe", language:"ar" — §11.9). Returns understood/not
      understood, never a score [R-23]. Free at one-learner volume.
+   Step 6: /ingest (URL/text → excerpt) + /generate (excerpt+profile →
+     graded diacritized MSA). Tier-1 verification = single pass, no
+     cross-vendor check (§6.3); that's Step 10. Generation is
+     provider-agnostic: Workers AI by default (free, zero-config), or any
+     OpenAI-compatible provider via GEN_BASE_URL/GEN_MODEL/GEN_API_KEY (§11.9).
    Remaining §4 endpoints are 501 stubs so the surface is visible but honest.
    Auth: Authorization: Bearer <SYNC_TOKEN>, set as a Worker secret [R-41].
    All configuration is env vars/secrets + wrangler.jsonc [R-42].
@@ -41,6 +46,135 @@ export function tier1Verdict(expected, heard) {
   const understood = h === e || h.indexOf(e) >= 0 ||
                      h.replace(/ /g, '') === e.replace(/ /g, '');
   return { understood };
+}
+
+const MAX_INGEST_TEXT = 200 * 1024;
+const SEG_MIN = 60, SEG_MAX = 300;   // words per adapted excerpt (§5.1)
+
+/* Pragmatic readability: strip HTML to text. Not a full Readability port —
+   §5.1 says naive extraction is acceptable initially. */
+function decodeEntities(s) {
+  return (s || '')
+    .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;|&rsquo;|&apos;/gi, "'");
+}
+export function extractText(html) {
+  const title = decodeEntities(((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '').trim()).trim();
+  let h = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ');
+  const main = h.match(/<article[\s\S]*?<\/article>/i) || h.match(/<main[\s\S]*?<\/main>/i);
+  if (main) h = main[0];
+  const text = decodeEntities(h
+    .replace(/<\/(p|div|h[1-6]|li|section|article|br)\s*>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, ' '))
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n\s*/g, '\n\n')
+    .trim();
+  return { title, text };
+}
+
+/* First coherent 60–300 word passage (§5.2 naive selection). */
+export function segment(text) {
+  const paras = (text || '').split(/\n\n+/)
+    .map(p => p.replace(/\s+/g, ' ').trim())
+    .filter(p => p.split(' ').length >= 15);
+  let chunk = '';
+  for (const p of paras) {
+    if ((chunk + ' ' + p).trim().split(' ').length > SEG_MAX && chunk) break;
+    chunk = (chunk ? chunk + '\n\n' : '') + p;
+    if (chunk.split(/\s+/).length >= SEG_MIN) break;
+  }
+  if (!chunk) chunk = paras[0] || (text || '').replace(/\s+/g, ' ').trim();
+  const words = chunk.split(/\s+/);
+  if (words.length > SEG_MAX) chunk = words.slice(0, SEG_MAX).join(' ');
+  return chunk;
+}
+
+/* Extract the JSON object from a model reply (may be fenced or prose-wrapped). */
+export function parseModelJson(txt) {
+  if (!txt) return null;
+  let s = String(txt).trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  try { return JSON.parse(s.slice(a, b + 1)); } catch (e) { return null; }
+}
+
+/* The §5.4 generation prompt. The prompt carries the load. */
+export function genPrompt(excerpt, profile) {
+  const p = profile || {};
+  const knownWords = (p.known_words || []).join('، ') || '(none yet)';
+  const knownRoots = (p.known_roots || []).join(' / ') || '(none yet)';
+  const target = p.target_new_words || 5;
+  const register = p.register || 'MSA';
+  return 'You adapt text into graded ' + register + ' Arabic for a beginner learner.\n\n' +
+    'SOURCE EXCERPT (any language):\n"""\n' + excerpt + '\n"""\n\n' +
+    'LEARNER PROFILE:\n' +
+    '- Known words (reuse where possible): ' + knownWords + '\n' +
+    '- Known roots (prefer new words from these): ' + knownRoots + '\n' +
+    '- Introduce at most ' + target + ' new words.\n\n' +
+    'RULES (all mandatory):\n' +
+    '- Write in ' + register + '. Put FULL vowel diacritics (harakat) on every Arabic word.\n' +
+    '- Preserve the meaning of the source; simplify the language, not the substance.\n' +
+    '- Reuse known words wherever natural; at most ' + target + ' new words, preferring the known roots.\n' +
+    '- Keep it to 2–4 short sentences.\n' +
+    'Return ONLY valid JSON (no prose, no code fences) in exactly this shape:\n' +
+    '{"arabic":"...","transliteration":"...","english_gloss":"...",' +
+    '"new_words":[{"ar":"","translit":"","en":"","root":"","root_meaning":""}],"grammar_notes":"..."}';
+}
+
+/* Provider-agnostic model call. Configured OpenAI-compatible provider wins
+   (Gemini/Groq/OpenAI/…); otherwise Workers AI (free, zero-config). */
+async function callModel(env, prompt) {
+  if (env.GEN_BASE_URL && env.GEN_API_KEY) {
+    const res = await fetch(env.GEN_BASE_URL.replace(/\/+$/, '') + '/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + env.GEN_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: env.GEN_MODEL || 'gpt-4o-mini', temperature: 0.3,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) throw new Error('model provider HTTP ' + res.status);
+    const j = await res.json();
+    return (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+  }
+  if (env.AI) {
+    const out = await env.AI.run(env.GEN_WAI_MODEL || '@cf/meta/llama-3.1-8b-instruct',
+      { messages: [{ role: 'user', content: prompt }], max_tokens: 1200 });
+    return out.response || '';
+  }
+  throw new Error('no generation model configured');
+}
+
+async function handleIngest(body) {
+  if (body.text && body.text.trim()) {
+    const text = body.text.trim().slice(0, MAX_INGEST_TEXT);
+    return { ok: true, title: (body.title || 'Pasted text'), source_ref: (body.source_ref || 'pasted text'),
+             excerpt: segment(text) || text };
+  }
+  const u = (body.url || '').trim();
+  if (!u) return { error: 'no-input', reason: 'Provide a URL or paste some text.' };
+  if (/(youtube\.com|youtu\.be)/i.test(u)) {
+    return { error: 'youtube-unsupported', reason: 'YouTube captions aren’t supported yet — paste the transcript, or use an article URL.' };
+  }
+  let res;
+  try { res = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (Judhur content ingest)' }, redirect: 'follow' }); }
+  catch (e) { return { error: 'fetch-failed', reason: 'Could not reach that URL: ' + (e.message || 'network error') + '.' }; }
+  if (!res.ok) return { error: 'fetch-failed', reason: 'That URL returned HTTP ' + res.status + '.' };
+  if (!/text|html/i.test(res.headers.get('content-type') || '')) {
+    return { error: 'not-text', reason: 'That link isn’t a text/article page.' };
+  }
+  const { title, text } = extractText(await res.text());
+  if (!text || text.split(/\s+/).length < 40) {
+    return { error: 'too-little-text', reason: 'Couldn’t find enough readable text (it may be paywalled or built with JavaScript). Try pasting the text directly.' };
+  }
+  const excerpt = segment(text);
+  if (!excerpt) return { error: 'no-excerpt', reason: 'Couldn’t select a passage from that page.' };
+  return { ok: true, title: title || u, source_ref: u, excerpt };
 }
 
 function json(obj, status) {
@@ -106,8 +240,35 @@ export default {
       return json({ understood: verdict.understood, heard: heard.trim(), reason: verdict.reason || null }, 200);
     }
 
+    if (url.pathname === '/ingest' && req.method === 'POST') {
+      let body;
+      try { body = await req.json(); } catch (e) { return json({ error: 'invalid json' }, 400); }
+      const out = await handleIngest(body);
+      /* [R-13]: extraction failures surface a specific reason, don't proceed */
+      return json(out, out.error ? (out.error === 'no-input' ? 400 : 422) : 200);
+    }
+
+    if (url.pathname === '/generate' && req.method === 'POST') {
+      let body;
+      try { body = await req.json(); } catch (e) { return json({ error: 'invalid json' }, 400); }
+      if (!body.excerpt) return json({ error: 'excerpt is required' }, 400);
+      let raw;
+      try { raw = await callModel(env, genPrompt(body.excerpt, body.profile)); }
+      catch (e) { return json({ error: 'generation failed: ' + (e.message || 'unknown') }, 502); }
+      const parsed = parseModelJson(raw);
+      if (!parsed || !parsed.arabic) {
+        return json({ error: 'the model did not return usable JSON', raw: String(raw).slice(0, 400) }, 502);
+      }
+      /* Tier 1: single strong model, no cross-vendor verification (§6.3) */
+      return json({
+        arabic: parsed.arabic, transliteration: parsed.transliteration || '',
+        english_gloss: parsed.english_gloss || '', new_words: parsed.new_words || [],
+        grammar_notes: parsed.grammar_notes || '', tier: 1
+      }, 200);
+    }
+
     // §4 endpoints arriving in later build steps
-    if (['/ingest', '/generate', '/verify', '/speak'].includes(url.pathname)) {
+    if (['/verify', '/speak'].includes(url.pathname)) {
       return json({ error: 'not implemented — later build step (design doc §10)' }, 501);
     }
 
