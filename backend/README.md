@@ -14,7 +14,7 @@ no shared infrastructure, keys, or data.
 |---|---|---|
 | `/state` | GET | Return the stored learner profile (or `null`) |
 | `/state` | PUT | Store the learner profile (JSON, ≤512 KB) |
-| `/assess` | POST | Tier 1 intelligibility: `{expected, audio(base64)}` → `{understood, heard}` via Workers AI Whisper (`task:"transcribe"`, `language:"ar"`). Free daily allowance; no audio stored. Never a score ([R-23]). |
+| `/assess` | POST | Pronunciation. `{expected, audio(base64), coach?}`. **Tier 2** when Azure is configured: per-phoneme scores via Azure Pronunciation Assessment (`ar-SA`), returning only clearly-low phonemes (precision-tuned [R-19]), plus optional LLM articulatory coaching from the flagged list only ([R-25]) — all marked provisional ([R-20][R-31]). **Tier 1** fallback (no Azure): Workers AI Whisper intelligibility, `{understood, heard}`, never a score ([R-23]). |
 | `/ingest` | POST | `{url}` or `{text}` → `{title, excerpt, source_ref}`. Extracts article text (paste + article URLs; YouTube not yet). Extraction failures return a specific `reason` ([R-13]). |
 | `/generate` | POST | `{excerpt, profile}` → graded fully-diacritized MSA `{arabic, transliteration, english_gloss, new_words[], grammar_notes}`. Tier-1 verification = single pass, no cross-vendor check yet (§6.3). |
 | `/verify` `/speak` | — | `501` stubs — later build steps (§4, §10) |
@@ -74,6 +74,15 @@ npx wrangler deploy                             # prints the https://...workers.
   To use a non-Cloudflare model, set `GEN_BASE_URL` (any OpenAI-compatible endpoint, e.g.
   Gemini's or Groq's), `GEN_MODEL`, and `GEN_API_KEY` — keys live here as secrets, never in
   the client ([R-10], [R-41]).
+- **Pronunciation Tier 2 (`/assess`)** — off by default (Tier 1 Whisper runs instead). To
+  enable Azure per-phoneme assessment, set Worker secrets `AZURE_SPEECH_KEY` and
+  `AZURE_SPEECH_REGION` (e.g. `eastus`); optionally `AZURE_SPEECH_LOCALE` (`ar-SA` default,
+  `ar-EG` also valid — §7.6.1). Azure's **F0 free tier** covers single-learner volume.
+  The Tier 3 coaching text reuses whichever generation model is configured above.
+  *Deploy caveat:* Azure's REST endpoint must accept the browser's audio format
+  (`audio/webm; codecs=opus`); verify on your first real recording and, if rejected, we'll
+  add a format conversion. Accuracy is unvalidated until the §11.3 calibration protocol
+  runs — output stays provisional.
 
 ## Troubleshooting
 

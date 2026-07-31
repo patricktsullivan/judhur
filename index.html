@@ -219,6 +219,9 @@
   .t1.no{color:var(--amber)}
   .t1.err{color:var(--coral)}
   .t1 .heard{font-family:var(--arabic);font-size:14px}
+  .coach{font-size:12.5px;color:var(--ink);line-height:1.6;margin-top:8px;max-width:320px;
+         background:var(--surface);border-radius:10px;padding:10px 12px;text-align:left}
+  .prov-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;max-width:320px;font-style:italic}
 
   .note{color:var(--muted);font-size:11px;line-height:1.5;margin-top:18px;
         border-top:1px solid var(--surface-lt);padding-top:12px}
@@ -771,10 +774,21 @@ function t1Line(cardId){
   var t = T1[cardId]; if(!t) return '';
   if(t.st==='rec')  return '<div class="t1">listening… tap the square to stop</div>';
   if(t.st==='busy') return '<div class="t1">checking…</div>';
-  if(t.st==='ok')   return '<div class="t1 ok">understood ✓ — heard <span class="heard">'+esc(t.heard)+'</span></div>';
-  if(t.st==='no')   return '<div class="t1 no">not understood — heard <span class="heard">'+esc(t.heard||'—')+'</span>. '
-                         + 'The listener may be at fault, not you. Try again or just move on.</div>';
-  return '<div class="t1 err">'+esc(t.msg||'speech check unavailable')+'</div>';
+  if(t.st==='err')  return '<div class="t1 err">'+esc(t.msg||'speech check unavailable')+'</div>';
+  var o = t.r || {};
+  if(o.tier===2){   /* Azure per-phoneme (§7.6) — provisional, precision-tuned */
+    var det = o.detected || [];
+    var head = det.length
+      ? '<div class="t1 no">Sounds to work on: '+det.map(function(d){return '<b class="heard">'+esc(d.phoneme)+'</b>';}).join(', ')+'</div>'
+      : '<div class="t1 ok">Those sounds came through clearly ✓</div>';
+    var coach = o.coaching ? '<div class="coach">'+esc(o.coaching).replace(/\n/g,'<br>')+'</div>' : '';
+    return head + coach + '<div class="prov-note">'+esc(o.note || 'Provisional — this checker misses some errors and isn’t the final word.')+'</div>';
+  }
+  /* tier 1 intelligibility */
+  return o.understood
+    ? '<div class="t1 ok">understood ✓ — heard <span class="heard">'+esc(o.heard)+'</span></div>'
+    : '<div class="t1 no">not understood — heard <span class="heard">'+esc(o.heard||'—')+'</span>. '
+      + 'The listener may be at fault, not you. Try again or just move on.</div>';
 }
 function cancelMic(){
   if(!REC) return;
@@ -828,16 +842,17 @@ function finishMic(){
     fetch(CFG.url.replace(/\/+$/,'')+'/assess', {
       method:'POST',
       headers:{'Authorization':'Bearer '+CFG.token, 'Content-Type':'application/json'},
-      body: JSON.stringify({expected:r.expected, audio:b64})
+      body: JSON.stringify({expected:r.expected, audio:b64, coach:true})
     }).then(function(res){
       if(!res.ok) return res.json().then(function(j){ throw new Error(j.error||('backend said '+res.status)); },
                                          function(){ throw new Error('backend said '+res.status); });
       return res.json();
     }).then(function(out){
-      T1[r.cardId] = {st: out.understood ? 'ok' : 'no', heard: out.heard || ''};
+      T1[r.cardId] = {st:'done', r: out};
+      var ok = out.tier===2 ? (out.detected ? out.detected.length===0 : null) : !!out.understood;
       if(!S.speech) S.speech = [];
       S.speech.push({k:Date.now().toString(36)+Math.random().toString(36).slice(2,7),
-                     d:today(), id:r.cardId, ok:!!out.understood});   // append-only [R-32]
+                     d:today(), id:r.cardId, tier:out.tier||1, ok:ok});   // append-only [R-32]
       persist(); render();
     }).catch(function(e){
       T1[r.cardId] = {st:'err', msg:'speech check unavailable — '+e.message+'. Studying continues.'};

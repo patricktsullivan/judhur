@@ -168,6 +168,72 @@ async function callModel(env, prompt) {
   throw new Error('no generation model configured');
 }
 
+/* ---------- Tier 2 pronunciation (Azure) + Tier 3 coaching (§7.6) ---------- */
+const MDD_FLAG_THRESHOLD = 40;   // conservative: flag a phoneme only if clearly low,
+                                 // tuned toward precision so false rejects stay rare [R-19]
+
+function b64utf8(str) {          // base64 of UTF-8 bytes (btoa alone breaks on Arabic)
+  const bytes = new TextEncoder().encode(str);
+  let bin = ''; bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin);
+}
+function b64ToBytes(b64) {
+  const bin = atob(b64); const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/* Reduce Azure's assessment JSON to per-word/phoneme scores + a flagged list.
+   Only clearly-low phonemes are flagged (precision over recall [R-19]). */
+export function parseAzureAssessment(j, threshold) {
+  const t = threshold == null ? MDD_FLAG_THRESHOLD : threshold;
+  const nb = j && j.NBest && j.NBest[0];
+  if (!nb) return { ok: false };
+  const words = (nb.Words || []).map(w => ({
+    word: w.Word,
+    accuracy: w.PronunciationAssessment ? w.PronunciationAssessment.AccuracyScore : null,
+    phonemes: (w.Phonemes || []).map(p => ({
+      phoneme: p.Phoneme,
+      score: p.PronunciationAssessment ? p.PronunciationAssessment.AccuracyScore : null
+    }))
+  }));
+  const detected = [];
+  words.forEach(w => w.phonemes.forEach(p => {
+    if (p.score != null && p.score < t) detected.push({ phoneme: p.phoneme, score: p.score, word: w.word });
+  }));
+  return { ok: true, overall: nb.PronunciationAssessment ? nb.PronunciationAssessment.AccuracyScore : null, words, detected };
+}
+
+/* Tier 3: the phoneme model said WHERE/WHAT; the LLM only says HOW to fix it —
+   it never receives audio, only this structured list [R-22][R-25]. */
+export function coachPrompt(word, detected) {
+  const list = detected.map(d => d.phoneme).join(', ');
+  return 'An Arabic learner said the word "' + word + '". A pronunciation checker flagged these sounds as possibly off: ' + list + '. ' +
+    'For each flagged sound, give ONE short, physical tip on how to produce it (tongue/throat/lip position). ' +
+    'Be brief and encouraging. Do NOT invent other errors — address only the listed sounds. Plain text, one line per sound.';
+}
+
+async function azureAssess(env, expected, audioBytes, contentType) {
+  const region = env.AZURE_SPEECH_REGION;
+  const cfg = b64utf8(JSON.stringify({
+    ReferenceText: expected, GradingSystem: 'HundredMark', Granularity: 'Phoneme', Dimension: 'Comprehensive'
+  }));
+  const url = 'https://' + region + '.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=' +
+    (env.AZURE_SPEECH_LOCALE || 'ar-SA') + '&format=detailed';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
+      'Pronunciation-Assessment': cfg,
+      'Content-Type': contentType || 'audio/webm; codecs=opus',
+      'Accept': 'application/json'
+    },
+    body: audioBytes
+  });
+  if (!res.ok) throw new Error('Azure assessment HTTP ' + res.status);
+  return res.json();
+}
+
 async function handleIngest(body) {
   if (body.text && body.text.trim()) {
     const text = body.text.trim().slice(0, MAX_INGEST_TEXT);
@@ -237,25 +303,51 @@ export default {
     }
 
     if (url.pathname === '/assess' && req.method === 'POST') {
-      if (!env.AI) return json({ error: 'ASR not configured — deploy with the "ai" binding in wrangler.jsonc' }, 503);
       let body;
       try { body = await req.json(); } catch (e) { return json({ error: 'invalid json' }, 400); }
       if (!body.expected || !body.audio) return json({ error: 'expected and audio are required' }, 400);
       if (body.audio.length > MAX_AUDIO_B64) return json({ error: 'audio too large' }, 413);
+
+      /* Tier 2a — Azure per-phoneme assessment when configured (§7.6). All output
+         is provisional [R-20][R-31] and precision-tuned [R-19]. */
+      if (env.AZURE_SPEECH_KEY && env.AZURE_SPEECH_REGION) {
+        let azure;
+        try {
+          azure = await azureAssess(env, body.expected, b64ToBytes(body.audio),
+                                     body.contentType || 'audio/webm; codecs=opus');
+        } catch (e) {
+          return json({ error: 'pronunciation assessment failed: ' + (e.message || 'unknown') }, 502);
+        }
+        const parsed = parseAzureAssessment(azure);
+        if (!parsed.ok) return json({ error: 'no speech detected in the recording' }, 200);
+
+        /* Tier 3 — LLM turns the detected phonemes into articulatory tips [R-22][R-25].
+           The model never sees audio, only the flagged list. */
+        let coaching = null;
+        if (body.coach && parsed.detected.length && (env.AI || (env.GEN_BASE_URL && env.GEN_API_KEY))) {
+          try { coaching = (await callModel(env, coachPrompt(body.expected, parsed.detected))).trim(); }
+          catch (e) { coaching = null; }
+        }
+        return json({
+          tier: 2, provisional: true,
+          note: 'Here is what the checker detected — it does not catch everything.',
+          overall: parsed.overall, words: parsed.words, detected: parsed.detected, coaching
+        }, 200);
+      }
+
+      /* Tier 1 — Whisper intelligibility fallback (no Azure). Never a score [R-23]. */
+      if (!env.AI) return json({ error: 'speech not configured — deploy with the "ai" binding, or set AZURE_SPEECH_KEY' }, 503);
       let heard = '';
       try {
         const out = await env.AI.run('@cf/openai/whisper-large-v3-turbo', {
-          audio: body.audio,          // base64
-          task: 'transcribe',         // pin against the translate-to-English failure mode (§7.4)
-          language: 'ar'
+          audio: body.audio, task: 'transcribe', language: 'ar'
         });
         heard = (out && out.text) || '';
       } catch (e) {
         return json({ error: 'ASR call failed: ' + (e.message || 'unknown') }, 502);
       }
       const verdict = tier1Verdict(body.expected, heard);
-      /* understood / not understood only — never a score [R-23] */
-      return json({ understood: verdict.understood, heard: heard.trim(), reason: verdict.reason || null }, 200);
+      return json({ tier: 1, understood: verdict.understood, heard: heard.trim(), reason: verdict.reason || null }, 200);
     }
 
     if (url.pathname === '/ingest' && req.method === 'POST') {
