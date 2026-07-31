@@ -64,3 +64,40 @@ for the "say it out loud" check.
   existing one from the dropdown list and keep going.
 - **Still stuck?** Nothing is lost — your progress is always safe on each device even
   without this. You can try again anytime.
+
+---
+
+## Optional: sharper pronunciation feedback (Azure)
+
+**You do not need this.** Speaking practice already works — it tells you whether a word
+came through clearly. This *extra* adds per-sound scoring ("your ح was off") and a tip for
+fixing each sound. It's the most involved setup here, and the only piece with a paid tier —
+so read the safety note first.
+
+> **Cost, honestly:** use the **free "F0" tier**. It needs **no credit card**, and it
+> **cannot bill you** — it's capped at 5 audio-hours a month (far more than one learner
+> uses) and simply stops at the cap instead of charging. The *only* way to be charged is to
+> pick the **"S0"** tier by mistake. Choose **F0** and you are safe.
+
+1. Make a **free Azure account** at [azure.microsoft.com/free](https://azure.microsoft.com/free)
+   (sign in with a Microsoft account).
+2. In the [Azure portal](https://portal.azure.com) → **Create a resource** → search
+   **"Speech"** → **Create**.
+3. **Pricing tier: choose Free F0** (this is the one choice that matters — *not* S0). Pick a
+   region near you (e.g. **East US**) and note it down.
+4. When it finishes, open the resource → **Keys and Endpoint** → copy **KEY 1** and the
+   **Location/Region** (like `eastus`).
+5. In Cloudflare → your Worker → **Settings → Variables and Secrets**, add two **Secrets**
+   (encrypted, like your password):
+   - `AZURE_SPEECH_KEY` = the key
+   - `AZURE_SPEECH_REGION` = the region (e.g. `eastus`)
+
+   Save. (No redeploy needed.)
+6. In speaking practice, you'll now see which sounds to work on and a tip for each.
+
+Notes:
+- **One F0 Speech resource per region** per account.
+- If your first recording errors with an audio-format complaint, tell the developer — Azure
+  may need the audio converted (a known, small fix).
+- Feedback here is **provisional** until a native speaker has checked it (design doc §11.3),
+  so treat it as a helpful hint, not a verdict.
