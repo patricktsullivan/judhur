@@ -17,7 +17,8 @@ failure mode (§11.6).
 | 3 | PWA: installable, offline study loop, offline audio | ✅ code · needs hosting enabled (below) |
 | 4 | Backend skeleton + `/state` cross-device sync | ✅ code · needs your own deploy ([SETUP.md](backend/SETUP.md)) |
 | 5 | Tier 1 speech: say it, hear back understood / not understood | ✅ code · live ASR needs your deploy (free, §11.9) |
-| 6+ | Content pipeline, pronunciation diagnosis | not started |
+| 6 | Content pipeline: URL/text → graded Arabic passage, new words into reviews | ✅ code · article + pasted text (YouTube deferred); needs your deploy |
+| 7+ | Pronunciation diagnosis (Azure), cross-vendor verification | not started |
 
 Building may run ahead of usage per `[R-34]` as amended (design doc v0.7); the hard
 stop is `[R-38]` — if the 30-day heatmap drops below 15 active days, building halts.

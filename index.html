@@ -168,6 +168,27 @@
   .cue-ar{font-family:var(--arabic);color:var(--ink);font-size:18px;direction:rtl}
   .covlist{max-height:150px;overflow-y:auto;font-size:12px;color:var(--muted);
            line-height:1.7;margin-top:8px;font-family:ui-monospace,monospace}
+  /* content ingestion */
+  .ing-wrap{flex:1;overflow-y:auto;padding:4px 2px 10px;display:flex;flex-direction:column}
+  textarea.inp{resize:vertical;line-height:1.5;font-size:14px}
+  .ing-or{text-align:center;color:var(--muted);font-size:12px;margin:10px 0}
+  .ing-load{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+            text-align:center;color:var(--ink);font-size:16px;padding:40px 0;line-height:1.6}
+  .prov{color:var(--teal);font-size:12px;font-weight:600;margin-top:6px}
+  .passage{font-family:var(--arabic);font-size:26px;direction:rtl;line-height:2;
+           color:var(--ink);margin:10px 0;background:var(--surface);border-radius:12px;padding:16px}
+  .p-tr{color:var(--muted);font-size:13px;line-height:1.6}
+  .p-en{font-size:14px;line-height:1.6;margin-top:8px}
+  .p-gr{color:var(--teal);font-size:12.5px;line-height:1.6;margin-top:8px;
+        border-top:1px solid var(--surface-lt);padding-top:8px}
+  .nw-h{font-family:var(--display);font-size:15px;font-weight:600;margin:16px 0 6px}
+  .nw{background:var(--bg-deep);border-radius:9px;padding:10px 12px;margin-bottom:6px}
+  .nw-ar{font-family:var(--arabic);font-size:19px;direction:rtl}
+  .nw-tr{color:var(--gold);font-size:12.5px}
+  .nw-en{color:var(--muted);font-size:12px;margin-top:2px}
+  .ing-note{color:var(--amber);font-size:11.5px;line-height:1.5;margin-top:12px;
+            background:rgba(184,147,90,.12);border-radius:8px;padding:9px 11px}
+  .ing-err{color:var(--coral);font-size:14px;line-height:1.55;margin:20px 0 4px;text-align:center}
   .inp{width:100%;background:var(--bg-deep);border:1px solid var(--surface-lt);
        border-radius:9px;color:var(--ink);font-family:var(--body);font-size:13px;
        padding:9px 11px;margin-top:8px}
@@ -663,6 +684,14 @@ function mergeStates(a,b){
     var key = at.k || JSON.stringify(at);
     if(!sk[key]){ sk[key]=1; m.speech.push(at); }
   });
+  /* ingested content: union by id (definitions travel between devices) */
+  function unionById(la, lb){
+    var out=[], seen={};
+    (la||[]).concat(lb||[]).forEach(function(x){ if(x && !seen[x.id]){ seen[x.id]=1; out.push(x); } });
+    return out;
+  }
+  m.userCards = unionById(a.userCards, b.userCards);
+  m.passages  = unionById(a.passages,  b.passages);
   return m;
 }
 function syncStatus(msg, cls){ SY.status=msg; SY.cls=cls||''; if(tab==='progress') render(); }
@@ -679,6 +708,8 @@ function syncNow(){
     })
     .then(function(remote){
       S = mergeStates(S, remote);
+      if(!S.userCards) S.userCards=[]; if(!S.passages) S.passages=[]; if(!S.prod) S.prod={};
+      mountUserCards();   /* surface any words that arrived from another device */
       persist();
       var body = JSON.stringify(S);
       return fetch(base+'/state', {method:'PUT', headers:hdrs, body:body});
@@ -801,7 +832,27 @@ function finishMic(){
 
 /* ---------- state ---------- */
 var S = load() || {xp:0,streak:0,best:0,last:null,history:[],progress:{}};
-if(!S.prod) S.prod = {};   /* production (speaking) track — separate from recognition [R-29] */
+if(!S.prod) S.prod = {};        /* production (speaking) track — separate from recognition [R-29] */
+if(!S.userCards) S.userCards = [];  /* words materialized from ingested content (§5) */
+if(!S.passages) S.passages = [];    /* generated reading passages, with provenance [R-14] */
+
+/* Fold user (ingested) words into the review deck as vocab cards. Called at
+   load and after any sync that may have pulled in new user cards. */
+function mountUserCards(){
+  DECK = DECK.filter(function(c){ return c.id.charAt(0) !== 'u'; });
+  (S.userCards||[]).forEach(function(w){
+    DECK.push({id:w.id, type:'vocab', d:{ar:w.ar, t:w.translit, en:w.en, a:'', reg:w.reg||'msa',
+      root:w.root||'', rootMeaning:w.root_meaning||'', source:w.source_title, source_ref:w.source_ref}});
+  });
+}
+/* Learner profile for /generate — what makes output personal (§5.3). */
+function learnerProfile(){
+  var words=[], roots={};
+  DECK.forEach(function(c){
+    if(c.type==='vocab' && reps(c.id)>=2){ words.push(c.d.ar); if(c.d.root) roots[c.d.root]=1; }
+  });
+  return {known_words:words.slice(0,60), known_roots:Object.keys(roots), register:'MSA', target_new_words:5};
+}
 var tab = 'home';
 var flipped = {};
 var openRoot = null;
@@ -811,7 +862,7 @@ function persist(){ save(S); }
 function reps(id){ var p=S.progress[id]; return p?p.reps:0; }
 function isDue(id){ var p=S.progress[id]; return p && p.due<=today(); }
 function lettersKnown(){ return ALPHABET.filter(function(a){return reps('a-'+a.id)>=2;}).length; }
-function wordsKnown(){ return DECK.filter(function(c){return c.type==='vocab'&&reps(c.id)>=2;}).length; }
+function wordsKnown(){ return DECK.filter(function(c){return c.type==='vocab'&&c.id.charAt(0)==='v'&&reps(c.id)>=2;}).length; }
 function dueList(filter){
   var due=[],fresh=[];
   DECK.forEach(function(c){
@@ -875,6 +926,7 @@ function viewHome(){
         ? '<button class="btn-teal" data-act="speak" style="margin-top:12px;margin-bottom:0">Speaking practice — '+n+' word'+(n>1?'s':'')+' ready</button>'
         : '<div class="note" style="margin-top:12px">Speaking practice unlocks once you’ve reviewed some words — then say them aloud here.</div>';
     })()
+  + '<button class="btn-teal" data-act="ing-open" style="margin-top:12px;margin-bottom:0">＋ Bring in content</button>'
   + starRow()
   + '<div class="grid2">'
   +   stat('Letters known', lettersKnown()+' / 28', null, 'var(--teal)')
@@ -1108,9 +1160,91 @@ function gradeOne(id,q){
   persist(); render();
 }
 
+/* ---------- content ingestion (§5) ---------- */
+var ing = null;
+function openIngest(){
+  if(!CFG.url || !CFG.token){
+    ing = {step:'error', msg:'Bringing in content needs your backend. Set it up in Progress → Sync first.'};
+  } else { ing = {step:'input'}; }
+  render();
+}
+function runIngest(){
+  var uEl=document.getElementById('ing-url'), tEl=document.getElementById('ing-text');
+  var url=(uEl?uEl.value:'').trim(), text=(tEl?tEl.value:'').trim();
+  if(!url && !text){ ing.step='error'; ing.msg='Paste some text or enter a URL first.'; render(); return; }
+  var base=CFG.url.replace(/\/+$/,''), hdrs={'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'};
+  ing.step='ingesting'; render();
+  fetch(base+'/ingest',{method:'POST',headers:hdrs,body:JSON.stringify(url?{url:url}:{text:text})})
+    .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.reason||j.error||('ingest failed ('+r.status+')')); return j; }); })
+    .then(function(ins){
+      ing.title=ins.title; ing.source_ref=ins.source_ref; ing.excerpt=ins.excerpt; ing.step='generating'; render();
+      return fetch(base+'/generate',{method:'POST',headers:hdrs,body:JSON.stringify({excerpt:ins.excerpt, profile:learnerProfile()})})
+        .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.error||('generation failed ('+r.status+')')); return j; }); });
+    })
+    .then(function(gen){ ing.result=gen; ing.step='result'; render(); })
+    .catch(function(e){ ing.step='error'; ing.msg=e.message; render(); });
+}
+function materialize(){
+  var g=ing.result||{}, stamp=Date.now().toString(36), n=0;
+  S.passages.push({id:'p-'+stamp, title:ing.title, source_ref:ing.source_ref, arabic:g.arabic,
+    translit:g.transliteration, gloss:g.english_gloss, grammar:g.grammar_notes, created:today()});
+  (g.new_words||[]).forEach(function(w,i){
+    if(!w || !w.ar) return;
+    S.userCards.push({id:'u-'+stamp+'-'+i, ar:w.ar, translit:w.translit||'', en:w.en||'',
+      root:w.root||'', root_meaning:w.root_meaning||'', reg:'msa',
+      source_title:ing.title, source_ref:ing.source_ref, added:today()});
+    n++;
+  });
+  mountUserCards(); persist(); syncNow();
+  ing.addedN=n; ing.step='added'; render();
+}
+function ingestHTML(){
+  var top='<div class="ov-top"><button data-act="ing-close">'+svg(IC.x)+'</button><div class="ov-ct">Bring in content</div></div>';
+  var b;
+  if(ing.step==='input'){
+    b='<p class="sub">Paste a paragraph, or an article link. It becomes a short passage in graded Arabic, and the new words join your reviews.</p>'
+      +'<input class="inp" id="ing-url" type="url" placeholder="https://an-article-url…">'
+      +'<div class="ing-or">— or —</div>'
+      +'<textarea class="inp" id="ing-text" rows="5" placeholder="paste text here…"></textarea>'
+      +'<button class="btn-gold" data-act="ing-run" style="margin-top:12px">Generate passage</button>'
+      +'<p class="sub" style="margin-top:10px">YouTube isn’t supported yet — paste a transcript instead.</p>';
+  } else if(ing.step==='ingesting'){ b='<div class="ing-load">Reading the source…</div>'; }
+  else if(ing.step==='generating'){ b='<div class="ing-load">Writing your Arabic passage…<br><span class="sub">this can take a few seconds</span></div>'; }
+  else if(ing.step==='result'){
+    var g=ing.result||{};
+    b='<div class="prov">from '+esc(ing.title||ing.source_ref||'your text')+'</div>'
+      +'<div class="passage">'+esc(g.arabic||'')+'</div>'
+      +(g.transliteration?'<div class="p-tr">'+esc(g.transliteration)+'</div>':'')
+      +(g.english_gloss?'<div class="p-en">'+esc(g.english_gloss)+'</div>':'')
+      +(g.grammar_notes?'<div class="p-gr">'+esc(g.grammar_notes)+'</div>':'')
+      +'<div class="nw-h">New words</div>';
+    (g.new_words||[]).forEach(function(w){
+      b+='<div class="nw"><div><span class="nw-ar">'+esc(w.ar||'')+'</span> <span class="nw-tr">'+esc(w.translit||'')+'</span></div>'
+        +'<div class="nw-en">'+esc(w.en||'')+(w.root?' · root '+esc(w.root):'')+'</div></div>';
+    });
+    var addable=(g.new_words||[]).filter(function(w){return w&&w.ar;}).length;
+    b+='<div class="ing-note">⚠ Auto-generated and not yet human-reviewed — diacritics may be imperfect.</div>'
+      +'<button class="btn-gold" data-act="ing-add" style="margin-top:12px">Add '+addable+' word'+(addable===1?'':'s')+' to my reviews</button>'
+      +'<button class="reset" data-act="ing-close" style="color:var(--muted)">Discard</button>';
+  } else if(ing.step==='added'){
+    return top+'<div class="ov-mid"><div class="done-wrap"><h2>Added</h2>'
+      +'<p>'+ing.addedN+' new word'+(ing.addedN===1?'':'s')+' joined your reviews, tagged with their source.</p>'
+      +'<div style="width:100%;max-width:320px"><button class="btn-gold" data-act="ing-close">Done</button></div></div></div>';
+  } else {
+    b='<div class="ing-err">'+esc(ing.msg||'Something went wrong.')+'</div>'
+      +'<button class="btn-teal" data-act="ing-open" style="margin-bottom:8px">Try again</button>'
+      +'<button class="reset" data-act="ing-close" style="color:var(--muted)">Close</button>';
+  }
+  return top+'<div class="ing-wrap">'+b+'</div>';
+}
+
 function renderOverlay(){
   var o = document.getElementById('ovl');
-  if(!sess){ o.className=''; o.innerHTML=''; return; }
+  if(!sess){
+    if(ing){ o.className='show'; o.innerHTML = ingestHTML(); }
+    else { o.className=''; o.innerHTML=''; }
+    return;
+  }
   o.className='show';
   if(sess.done){
     var verb = sess.mode==='speak' ? 'words practiced' : 'cards reviewed';
@@ -1159,6 +1293,7 @@ function renderOverlay(){
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
         + '<div class="q-word">'+d.ar+'</div>'
         + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.t)+'</div><div class="a2">'+esc(d.en)+'</div>'
+            + (d.source?'<div class="prov">from '+esc(d.source)+'</div>':'')
             + '<div class="ab-row">'+playBtn(wordSrc(d))+'</div>'
             + '</div>' : '');
   }
@@ -1224,6 +1359,10 @@ document.addEventListener('click', function(e){
     if(a==='start') startSession(null);
     else if(a==='start-vocab') startSession('vocab');
     else if(a==='speak') startSpeaking();
+    else if(a==='ing-open') openIngest();
+    else if(a==='ing-run') runIngest();
+    else if(a==='ing-add') materialize();
+    else if(a==='ing-close'){ ing=null; render(); }
     else if(a==='probe') probeCoverage();
     else if(a==='save-sync'){
       CFG.url = (document.getElementById('sync-url').value||'').trim();
@@ -1256,6 +1395,7 @@ document.addEventListener('keydown', function(e){
   else if(e.key==='Escape'){ sess=null; render(); }
 });
 
+mountUserCards();   /* fold any saved ingested words into the deck before first render */
 render();
 if(CFG.url && CFG.token) syncNow();   /* pull the other device's progress on open */
 
