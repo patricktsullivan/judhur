@@ -99,6 +99,7 @@ export function segment(text) {
    trailing prose containing a '}' doesn't corrupt the slice. */
 export function parseModelJson(txt) {
   if (!txt) return null;
+  if (typeof txt === 'object') return txt;   // provider already parsed the JSON for us
   const s = String(txt).replace(/```(?:json)?/gi, '');
   const start = s.indexOf('{');
   if (start < 0) return null;
@@ -274,7 +275,8 @@ export default {
       catch (e) { return json({ error: 'generation failed: ' + (e.message || 'unknown') }, 502); }
       const parsed = parseModelJson(raw);
       if (!parsed || !parsed.arabic) {
-        return json({ error: 'the model did not return usable JSON', raw: String(raw).slice(0, 400) }, 502);
+        const shown = (raw && typeof raw === 'object') ? JSON.stringify(raw) : String(raw);
+        return json({ error: 'the model did not return usable JSON', raw: shown.slice(0, 600) }, 502);
       }
       /* Tier 1: single strong model, no cross-vendor verification (§6.3) */
       return json({
