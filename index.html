@@ -188,7 +188,8 @@
   .nw-en{color:var(--muted);font-size:12px;margin-top:2px}
   .ing-note{color:var(--amber);font-size:11.5px;line-height:1.5;margin-top:12px;
             background:rgba(184,147,90,.12);border-radius:8px;padding:9px 11px}
-  .ing-err{color:var(--coral);font-size:14px;line-height:1.55;margin:20px 0 4px;text-align:center}
+  .ing-err{color:var(--coral);font-size:13px;line-height:1.5;margin:16px 0 8px;
+           white-space:pre-wrap;word-break:break-word;max-height:340px;overflow-y:auto}
   .inp{width:100%;background:var(--bg-deep);border:1px solid var(--surface-lt);
        border-radius:9px;color:var(--ink);font-family:var(--body);font-size:13px;
        padding:9px 11px;margin-top:8px}
@@ -1179,7 +1180,7 @@ function runIngest(){
     .then(function(ins){
       ing.title=ins.title; ing.source_ref=ins.source_ref; ing.excerpt=ins.excerpt; ing.step='generating'; render();
       return fetch(base+'/generate',{method:'POST',headers:hdrs,body:JSON.stringify({excerpt:ins.excerpt, profile:learnerProfile()})})
-        .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.error||('generation failed ('+r.status+')')); return j; }); });
+        .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error((j.error||('generation failed ('+r.status+')'))+(j.raw?'\n\nModel returned:\n'+j.raw:'')); return j; }); });
     })
     .then(function(gen){ ing.result=gen; ing.step='result'; render(); })
     .catch(function(e){ ing.step='error'; ing.msg=e.message; render(); });

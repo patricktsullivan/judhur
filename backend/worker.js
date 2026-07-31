@@ -94,13 +94,24 @@ export function segment(text) {
   return chunk;
 }
 
-/* Extract the JSON object from a model reply (may be fenced or prose-wrapped). */
+/* Extract the JSON object from a model reply — tolerant of code fences, prose
+   before/after, and trailing commas. Uses brace-balancing (not lastIndexOf) so
+   trailing prose containing a '}' doesn't corrupt the slice. */
 export function parseModelJson(txt) {
   if (!txt) return null;
-  let s = String(txt).trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-  const a = s.indexOf('{'), b = s.lastIndexOf('}');
-  if (a < 0 || b <= a) return null;
-  try { return JSON.parse(s.slice(a, b + 1)); } catch (e) { return null; }
+  const s = String(txt).replace(/```(?:json)?/gi, '');
+  const start = s.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0, inStr = false, esc = false, end = -1;
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; }
+    else if (ch === '"') inStr = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }
+  }
+  const body = (end >= 0 ? s.slice(start, end + 1) : s.slice(start)).replace(/,\s*([}\]])/g, '$1');
+  try { return JSON.parse(body); } catch (e) { return null; }
 }
 
 /* The §5.4 generation prompt. The prompt carries the load. */
@@ -129,14 +140,15 @@ export function genPrompt(excerpt, profile) {
 /* Provider-agnostic model call. Configured OpenAI-compatible provider wins
    (Gemini/Groq/OpenAI/…); otherwise Workers AI (free, zero-config). */
 async function callModel(env, prompt) {
+  const messages = [
+    { role: 'system', content: 'You output ONLY valid minified JSON in the exact shape requested — no prose, no markdown, no code fences.' },
+    { role: 'user', content: prompt }
+  ];
   if (env.GEN_BASE_URL && env.GEN_API_KEY) {
     const res = await fetch(env.GEN_BASE_URL.replace(/\/+$/, '') + '/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + env.GEN_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: env.GEN_MODEL || 'gpt-4o-mini', temperature: 0.3,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ model: env.GEN_MODEL || 'gpt-4o-mini', temperature: 0.3, messages })
     });
     if (!res.ok) throw new Error('model provider HTTP ' + res.status);
     const j = await res.json();
@@ -146,9 +158,10 @@ async function callModel(env, prompt) {
     // Default Workers AI model. IDs get deprecated periodically (this one replaced
     // llama-3.1-8b-instruct, retired 2026-05-30); override with GEN_WAI_MODEL when
     // Cloudflare rotates them, or to try a stronger-Arabic model (e.g.
-    // @cf/qwen/qwen3-30b-a3b-fp8).
+    // @cf/qwen/qwen3-30b-a3b-fp8). Diacritized Arabic is token-heavy, so keep the
+    // budget generous to avoid truncated (unparseable) JSON.
     const out = await env.AI.run(env.GEN_WAI_MODEL || '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
-      { messages: [{ role: 'user', content: prompt }], max_tokens: 1200 });
+      { messages, max_tokens: 2048 });
     return out.response || '';
   }
   throw new Error('no generation model configured');
