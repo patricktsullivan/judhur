@@ -18,7 +18,9 @@ failure mode (§11.6).
 | 4 | Backend skeleton + `/state` cross-device sync | ✅ code · needs your own deploy ([SETUP.md](backend/SETUP.md)) |
 | 5 | Tier 1 speech: say it, hear back understood / not understood | ✅ code · live ASR needs your deploy (free, §11.9) |
 | 6 | Content pipeline: URL/text → graded Arabic passage, new words into reviews | ✅ code · article + pasted text (YouTube deferred); needs your deploy |
-| 7+ | Pronunciation diagnosis (Azure), cross-vendor verification | not started |
+| 9 | Diacritic fade (full / fade-with-mastery / bare) + register display | ✅ built ahead of 7–8 (client-only, no accounts) |
+| 7, 8 | Azure pronunciation diagnosis + LLM coaching | not started (needs Azure + audio storage) |
+| 10 | Cross-vendor generation verification + dictionary-grounded roots | not started (needs a 2nd model vendor) |
 
 Building may run ahead of usage per `[R-34]` as amended (design doc v0.7); the hard
 stop is `[R-38]` — if the 30-day heatmap drops below 15 active days, building halts.

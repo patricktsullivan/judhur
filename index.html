@@ -190,6 +190,18 @@
             background:rgba(184,147,90,.12);border-radius:8px;padding:9px 11px}
   .ing-err{color:var(--coral);font-size:13px;line-height:1.5;margin:16px 0 8px;
            white-space:pre-wrap;word-break:break-word;max-height:340px;overflow-y:auto}
+  /* diacritic fade */
+  .fade-hint{color:var(--muted);font-size:12px;margin-top:8px;cursor:pointer}
+  .pinbtn{background:var(--bg-deep);border:1px solid var(--surface-lt);border-radius:99px;
+          color:var(--muted);font-size:12px;padding:8px 14px;margin-top:14px}
+  .pinbtn.on{color:var(--gold);border-color:var(--gold)}
+  .diac-opts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .diac-opt{display:flex;align-items:center;justify-content:space-between;gap:10px;
+            background:var(--bg-deep);border:1.5px solid transparent;border-radius:10px;
+            padding:11px 13px;text-align:left;width:100%}
+  .diac-opt.on{border-color:var(--gold)}
+  .diac-l{font-size:13.5px;font-weight:600;color:var(--ink)}
+  .diac-s{font-family:var(--arabic);font-size:16px;color:var(--muted);direction:rtl}
   .inp{width:100%;background:var(--bg-deep);border:1px solid var(--surface-lt);
        border-radius:9px;color:var(--ink);font-family:var(--body);font-size:13px;
        padding:9px 11px;margin-top:8px}
@@ -693,6 +705,10 @@ function mergeStates(a,b){
   }
   m.userCards = unionById(a.userCards, b.userCards);
   m.passages  = unionById(a.passages,  b.passages);
+  /* display prefs: settings shallow-merged; pinned-full union */
+  m.settings = Object.assign({}, a.settings || {}, b.settings || {});
+  m.pinFull = {};
+  [a.pinFull, b.pinFull].forEach(function(o){ Object.keys(o || {}).forEach(function(k){ if(o[k]) m.pinFull[k] = true; }); });
   return m;
 }
 function syncStatus(msg, cls){ SY.status=msg; SY.cls=cls||''; if(tab==='progress') render(); }
@@ -836,6 +852,26 @@ var S = load() || {xp:0,streak:0,best:0,last:null,history:[],progress:{}};
 if(!S.prod) S.prod = {};        /* production (speaking) track — separate from recognition [R-29] */
 if(!S.userCards) S.userCards = [];  /* words materialized from ingested content (§5) */
 if(!S.passages) S.passages = [];    /* generated reading passages, with provenance [R-14] */
+if(!S.settings) S.settings = {};    /* display prefs (e.g. diacritics stage) */
+if(!S.pinFull) S.pinFull = {};      /* per-card pin to full harakat [R-36] */
+
+/* Diacritic display (§11.2). Stored text is ALWAYS fully diacritized [R-35];
+   these strip harakat at RENDER time only. */
+var RE_HARAKAT = /[ً-ْٰ]/g;       // tanwin, short vowels, shadda, sukun, dagger alif
+var RE_SHORTV  = /[ً-ِْٰ]/g; // all of the above EXCEPT shadda (ّ)
+function stripHarakat(s){ return String(s).replace(RE_HARAKAT, ''); }
+function partialHarakat(s){ return String(s).replace(RE_SHORTV, ''); }  // keep shadda (approximate partial)
+function diacriticMode(){ return S.settings.diacritics || 'full'; }
+function wordStage(cardId){
+  if(S.pinFull[cardId]) return 'full';                 /* per-card override [R-36] */
+  var mode = diacriticMode();
+  if(mode !== 'auto') return mode;                     /* 'full' or 'bare' chosen explicitly */
+  var p = S.progress[cardId], iv = p ? p.interval : 0; /* fade on retention, not calendar [R-37] */
+  return iv < 7 ? 'full' : iv < 30 ? 'partial' : 'bare';
+}
+function arDisplay(text, stage){
+  return stage === 'bare' ? stripHarakat(text) : stage === 'partial' ? partialHarakat(text) : text;
+}
 
 /* Fold user (ingested) words into the review deck as vocab cards. Called at
    load and after any sync that may have pulled in new user cards. */
@@ -1042,8 +1078,29 @@ function viewProgress(){
        +   '<div style="font-size:13px;font-weight:600;margin-bottom:11px">Last 30 days</div>'
        +   '<div class="heat">'+cells+'</div>'
        + '</div>'
+       + diacriticCard()
        + covCard()
        + syncCard();
+}
+function diacriticCard(){
+  var mode = diacriticMode();
+  var opt = function(v,label,sub){
+    return '<button class="diac-opt'+(mode===v?' on':'')+'" data-diac="'+v+'">'
+         + '<span class="diac-l">'+label+'</span><span class="diac-s">'+sub+'</span></button>';
+  };
+  var sample = 'مَدْرَسَة';
+  return '<div class="card" style="padding:16px;margin-top:12px">'
+    + '<div style="font-size:13px;font-weight:600">Vowel marks (harakat)</div>'
+    + '<p class="sub">How much vowelling to show on words in review. Stored text stays fully '
+    + 'marked — this only changes the display.</p>'
+    + '<div class="diac-opts">'
+    +   opt('full','Always full', sample)
+    +   opt('auto','Fade with mastery', 'faded as a word sticks')
+    +   opt('bare','Bare (tap to reveal)', stripHarakat(sample))
+    + '</div>'
+    + '<p class="sub" style="margin-top:9px">In a review you can tap a faded word to reveal its '
+    + 'vowels, or pin any single word to stay fully marked.</p>'
+    + '</div>';
 }
 function syncCard(){
   var status = SY.status ||
@@ -1145,6 +1202,7 @@ function grade(q){
   sess.reviewed++; sess.xp += gain;
   sess.i++;
   sess.show = false;
+  sess.showVowels = false;   /* reset the tap-to-reveal for the next card */
   if(sess.i >= sess.q.length) sess.done = true;
   persist(); render();
   if(sess.done) syncNow();   /* fire-and-forget; offline just reports unavailable */
@@ -1291,11 +1349,16 @@ function renderOverlay(){
             + '<div class="ab-row">'+playBtn(letterSrc(d.id))+'</div>'
             + '</div>' : '');
   } else {
+    var vstage = wordStage(c.id);
+    var showFull = sess.show || sess.showVowels || vstage === 'full';
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
-        + '<div class="q-word">'+d.ar+'</div>'
+        + '<div class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+(showFull?d.ar:arDisplay(d.ar,vstage))+'</div>'
+        + (showFull ? '' : '<div class="fade-hint" data-vowels="1">'+(vstage==='bare'?'no vowel marks':'vowels faded')+' — tap to reveal</div>')
         + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.t)+'</div><div class="a2">'+esc(d.en)+'</div>'
             + (d.source?'<div class="prov">from '+esc(d.source)+'</div>':'')
             + '<div class="ab-row">'+playBtn(wordSrc(d))+'</div>'
+            + '<button class="pinbtn'+(S.pinFull[c.id]?' on':'')+'" data-pin="'+c.id+'">'
+            +   (S.pinFull[c.id]?'📌 vowels pinned on':'📌 always show vowels for this word')+'</button>'
             + '</div>' : '');
   }
   var foot = sess.show
@@ -1339,6 +1402,12 @@ function render(){
 /* ---------- one delegated listener ---------- */
 document.addEventListener('click', function(e){
   var el;
+  if((el = e.target.closest('[data-vowels]'))){ if(sess){ sess.showVowels = true; render(); } return; }
+  if((el = e.target.closest('[data-pin]'))){
+    var pid = el.dataset.pin; S.pinFull[pid] = !S.pinFull[pid]; if(!S.pinFull[pid]) delete S.pinFull[pid];
+    persist(); render(); return;
+  }
+  if((el = e.target.closest('[data-diac]'))){ S.settings.diacritics = el.dataset.diac; persist(); render(); return; }
   if((el = e.target.closest('[data-mic]'))){ toggleMic(el.dataset.mic); return; }
   if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play); return; }
   if((el = e.target.closest('[data-gs]'))){ gradeSpeak(parseInt(el.dataset.gs,10)); return; }
