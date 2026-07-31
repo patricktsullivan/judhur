@@ -10,7 +10,7 @@
   // Progress storage. The deploy button provisions a namespace and replaces
   // this placeholder id automatically; by hand, create one and paste its id here.
   "kv_namespaces": [
-    { "binding": "JUDHUR_KV", "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID" }
+    { "binding": "JUDHUR_KV", "id": "judhur-backend" }
   ],
 
   // Keep the free public web address (https://<name>.<you>.workers.dev) turned on,
