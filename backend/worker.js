@@ -143,7 +143,11 @@ async function callModel(env, prompt) {
     return (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
   }
   if (env.AI) {
-    const out = await env.AI.run(env.GEN_WAI_MODEL || '@cf/meta/llama-3.1-8b-instruct',
+    // Default Workers AI model. IDs get deprecated periodically (this one replaced
+    // llama-3.1-8b-instruct, retired 2026-05-30); override with GEN_WAI_MODEL when
+    // Cloudflare rotates them, or to try a stronger-Arabic model (e.g.
+    // @cf/qwen/qwen3-30b-a3b-fp8).
+    const out = await env.AI.run(env.GEN_WAI_MODEL || '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
       { messages: [{ role: 'user', content: prompt }], max_tokens: 1200 });
     return out.response || '';
   }

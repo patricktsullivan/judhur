@@ -67,12 +67,13 @@ npx wrangler deploy                             # prints the https://...workers.
   wiped when a repo auto-deploy uploads config with no matching var. A Secret is hidden
   and survives every deploy.
 - **Generation model (`/generate`)** — defaults to **Workers AI** (free, zero-config; uses
-  the `ai` binding). Its Arabic/diacritics are the roughest of the options, so generated
-  content especially warrants the native-speaker review (README content note). To use a
-  stronger model, set these Worker secrets/vars and no code changes are needed:
-  `GEN_BASE_URL` (any OpenAI-compatible endpoint, e.g. Gemini's or Groq's), `GEN_MODEL`,
-  and `GEN_API_KEY`. Optionally `GEN_WAI_MODEL` overrides the Workers AI model id. Keys
-  live here as secrets, never in the client ([R-10], [R-41]).
+  the `ai` binding), model `@cf/meta/llama-3.3-70b-instruct-fp8-fast`. Workers AI model ids
+  get deprecated periodically; if generation returns a "model was deprecated" error, set
+  `GEN_WAI_MODEL` to a current id (no code change needed). For better Arabic, try
+  `GEN_WAI_MODEL=@cf/qwen/qwen3-30b-a3b-fp8`, or point at a stronger provider (below).
+  To use a non-Cloudflare model, set `GEN_BASE_URL` (any OpenAI-compatible endpoint, e.g.
+  Gemini's or Groq's), `GEN_MODEL`, and `GEN_API_KEY` — keys live here as secrets, never in
+  the client ([R-10], [R-41]).
 
 ## Troubleshooting
 
