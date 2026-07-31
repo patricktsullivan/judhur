@@ -25,7 +25,7 @@
     --arabic:'Noto Naskh Arabic','Traditional Arabic','Geeza Pro',serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0;background:var(--bg-deep);color:var(--ink);font-family:var(--body)}
+  html,body{margin:0;padding:0;background:var(--bg-deep);color:var(--ink);font-family:var(--body);font-size:16px}
   body{min-height:100vh}
   button{font-family:inherit;border:none;cursor:pointer;color:inherit}
   #app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);
@@ -37,8 +37,8 @@
   .brand-en{font-family:var(--display);font-size:12.5px;letter-spacing:.6px;opacity:.65;margin-top:2px}
   .chips{display:flex;gap:8px}
   .chip{display:flex;align-items:center;gap:6px;background:var(--surface);
-        padding:5px 11px;border-radius:99px;font-size:13px;font-weight:600}
-  .chip svg{width:13px;height:13px;display:block}
+        padding:6px 12px;border-radius:99px;font-size:14.5px;font-weight:600}
+  .chip svg{width:15px;height:15px;display:block}
 
   /* body / nav */
   main{flex:1;overflow-y:auto;padding:4px 20px 96px}
@@ -46,13 +46,13 @@
       background:var(--bg-deep);border-top:1px solid var(--surface-lt);z-index:5}
   .nav-in{max-width:480px;width:100%;display:grid;grid-template-columns:repeat(5,1fr)}
   nav button{background:none;display:flex;flex-direction:column;align-items:center;
-             gap:4px;padding:10px 0 12px;color:var(--muted);font-size:10px;font-weight:600}
+             gap:4px;padding:12px 0 14px;color:var(--muted);font-size:11.5px;font-weight:600}
   nav button.on{color:var(--gold)}
-  nav svg{width:19px;height:19px}
+  nav svg{width:23px;height:23px}
 
   /* generic */
   h1.tt{font-family:var(--display);font-size:22px;font-weight:600;margin:8px 0 0}
-  p.sub{color:var(--muted);font-size:12.5px;line-height:1.5;margin:4px 0 0}
+  p.sub{color:var(--muted);font-size:13.5px;line-height:1.5;margin:4px 0 0}
   .card{background:var(--surface);border-radius:14px}
   .stars{display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 0}
   .stars svg{width:10px;height:10px;opacity:.35}
@@ -76,17 +76,17 @@
 
   /* alphabet grid */
   .alpha{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
-  .tile{background:var(--surface);border-radius:12px;min-height:100px;padding:10px;
+  .tile{background:var(--surface);border-radius:12px;min-height:120px;padding:12px;
         display:flex;flex-direction:column;align-items:center;justify-content:center;
         text-align:center;border:1.5px solid transparent;cursor:pointer}
   .tile.known{border-color:var(--gold)}
-  .tile .big{font-family:var(--arabic);font-size:31px}
-  .tile .nm{font-size:10.5px;color:var(--muted);margin-top:4px}
+  .tile .big{font-family:var(--arabic);font-size:40px}
+  .tile .nm{font-size:12px;color:var(--muted);margin-top:5px}
   .tile .ex{font-family:var(--arabic);font-size:15px;color:var(--gold);direction:rtl}
   .tile .exs{font-size:9.5px;color:var(--muted);margin-top:3px;line-height:1.3}
-  .tile .row{display:flex;gap:6px;margin-top:7px}
-  .tile .row button{background:var(--bg-deep);border-radius:6px;padding:4px 6px;display:flex}
-  .tile .row svg{width:11px;height:11px}
+  .tile .row{display:flex;gap:8px;margin-top:9px}
+  .tile .row button{background:var(--bg-deep);border-radius:8px;padding:8px 10px;display:flex}
+  .tile .row svg{width:16px;height:16px}
 
   /* roots */
   .rootlist{display:flex;flex-direction:column;gap:9px;margin-top:12px}
@@ -99,9 +99,9 @@
   .root-bd{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px}
   .word{background:var(--bg-deep);border-radius:9px;padding:10px;
         display:flex;align-items:center;justify-content:space-between}
-  .word .w-ar{font-family:var(--arabic);font-size:16px;direction:rtl}
-  .word .w-en{font-size:11px;color:var(--muted);margin-top:1px}
-  .pill{font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:99px}
+  .word .w-ar{font-family:var(--arabic);font-size:19px;direction:rtl}
+  .word .w-en{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .pill{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px}
 
   /* roadmap */
   .phase{padding:16px;margin-bottom:11px}
@@ -139,9 +139,9 @@
   .ans .a3{font-family:var(--arabic);font-size:21px;direction:rtl;margin-top:18px}
   .ans .a4{color:var(--muted);font-size:12px;margin-top:4px}
   .reveal{width:100%;background:var(--surface);color:var(--ink);font-weight:600;
-          font-size:15px;padding:15px;border-radius:12px}
+          font-size:16.5px;padding:17px;border-radius:12px}
   .grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  .grades button{padding:13px 0;border-radius:12px;font-size:12.5px;font-weight:700}
+  .grades button{padding:16px 0;border-radius:12px;font-size:14.5px;font-weight:700}
   .done-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
   .done-wrap h2{font-family:var(--display);font-size:27px;font-weight:600;margin:14px 0 0}
   .done-wrap p{color:var(--muted);font-size:14px;margin:8px 0 0}
@@ -156,10 +156,17 @@
   .regtag{display:inline-block;font-size:8.5px;font-weight:700;color:var(--teal);
           background:rgba(79,138,139,.16);border-radius:99px;padding:1px 6px;
           letter-spacing:.4px;vertical-align:1px}
-  .playbtn{background:var(--bg-deep);border-radius:8px;padding:6px 8px;display:flex;color:var(--gold)}
-  .playbtn svg{width:13px;height:13px}
+  .playbtn{background:var(--bg-deep);border-radius:11px;min-width:46px;min-height:46px;
+           padding:11px 14px;display:inline-flex;align-items:center;justify-content:center;color:var(--gold)}
+  .playbtn svg{width:20px;height:20px}
   .playbtn.miss{color:var(--muted);opacity:.45}
-  .covlist{max-height:150px;overflow-y:auto;font-size:11px;color:var(--muted);
+  .ab-row{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:14px}
+  .cue{font-size:13px;color:var(--muted);line-height:1.55;max-width:300px;
+       margin:14px auto 0;text-align:center}
+  .cue-h{display:block;font-weight:700;color:var(--teal);font-size:12px;
+         letter-spacing:.3px;margin-bottom:3px}
+  .cue-ar{font-family:var(--arabic);color:var(--ink);font-size:18px;direction:rtl}
+  .covlist{max-height:150px;overflow-y:auto;font-size:12px;color:var(--muted);
            line-height:1.7;margin-top:8px;font-family:ui-monospace,monospace}
   .inp{width:100%;background:var(--bg-deep);border:1px solid var(--surface-lt);
        border-radius:9px;color:var(--ink);font-family:var(--body);font-size:13px;
@@ -168,8 +175,9 @@
   .sync-status{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.5}
   .sync-status.err{color:var(--coral)}
   .sync-status.okk{color:var(--teal)}
-  .micbtn{background:var(--bg-deep);border-radius:8px;padding:6px 9px;display:flex;color:var(--teal)}
-  .micbtn svg{width:14px;height:14px}
+  .micbtn{background:var(--bg-deep);border-radius:11px;min-width:46px;min-height:46px;
+          padding:11px 14px;display:inline-flex;align-items:center;justify-content:center;color:var(--teal)}
+  .micbtn svg{width:20px;height:20px}
   .micbtn.rec{color:var(--coral);animation:mpulse 1s infinite}
   @keyframes mpulse{50%{opacity:.4}}
   .t1{font-size:12px;margin-top:10px;line-height:1.55;max-width:320px}
@@ -701,6 +709,15 @@ function micBtn(cardId){
        + (recing?'stop recording':'say it aloud — checks whether you were understood')+'">'
        + svg(recing?IC.stop:IC.mic)+'</button>';
 }
+function speechCue(c){
+  if(!speechReady()) return '';
+  var isLetter = c.type==='alphabet';
+  var target = expectedFor(c);
+  var what = isLetter ? 'the letter’s name' : 'this word';
+  return '<div class="cue"><span class="cue-h">🎙️ Speaking practice (optional)</span>'
+       + 'Tap the mic and say ' + what + ' — <span class="cue-ar">'+target+'</span> — '
+       + 'and it will check whether you were understood.</div>';
+}
 function t1Line(cardId){
   var t = T1[cardId]; if(!t) return '';
   if(t.st==='rec')  return '<div class="t1">listening… tap the square to stop</div>';
@@ -1068,14 +1085,16 @@ function renderOverlay(){
             + (LETTER_META[d.id].guttural?'<span class="gutt">throat sound</span>':'')
             + '<div class="a3">'+d.ex+'</div>'
             + '<div class="a4">'+esc(d.exT)+' \u00b7 '+esc(d.exE)+'</div>'
-            + '<div style="display:flex;justify-content:center;gap:10px;margin-top:12px">'+playBtn(letterSrc(d.id))+micBtn(c.id)+'</div>'
+            + speechCue(c)
+            + '<div class="ab-row">'+playBtn(letterSrc(d.id))+micBtn(c.id)+'</div>'
             + t1Line(c.id)
             + '</div>' : '');
   } else {
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
         + '<div class="q-word">'+d.ar+'</div>'
         + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.t)+'</div><div class="a2">'+esc(d.en)+'</div>'
-            + '<div style="display:flex;justify-content:center;gap:10px;margin-top:14px">'+playBtn(wordSrc(d))+micBtn(c.id)+'</div>'
+            + speechCue(c)
+            + '<div class="ab-row">'+playBtn(wordSrc(d))+micBtn(c.id)+'</div>'
             + t1Line(c.id)
             + '</div>' : '');
   }
