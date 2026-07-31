@@ -2,7 +2,7 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.9 · July 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice)*
+Version 0.10 · July 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking)*
 
 ---
 
@@ -61,7 +61,7 @@ The Foreign Service Institute places Arabic in its hardest tier for English spea
 | Challenge | Design response |
 |---|---|
 | Unfamiliar right-to-left script | Phase 0 is script-only, completed before vocabulary volume |
-| Guttural sounds absent from English (ح ع خ غ ق) | Flagged on those cards; Phase 0 gates on *producing* them, not reading them (§7) |
+| Guttural sounds absent from English (ح ع خ غ ق) | Flagged on those cards; heard via reference audio and external alphabet resources. Isolated-letter *production* is not automatically assessable (ASR needs words, not bare consonants — §11.10), so Phase 0 gates on recognition, and production is practised at the word level |
 | Root-and-pattern morphology | Used as the core organizing principle rather than treated as a hurdle |
 | MSA vs. dialect split | Integrated from Phase 1 (§11.1), tagged per card, never blended |
 | Verb conjugation complexity | Deferred to Phase 2, after comprehension rewards exist |
@@ -407,7 +407,7 @@ Advancement gates on evidence, not elapsed time.
 
 | Phase | Focus | Advancement criterion |
 |---|---|---|
-| 0 | Script & sound | 28/28 letters at ≥3 successful reps, interval ≥7 days, **and each produced aloud at Tier 2 pass** |
+| 0 | Script & sound | 28/28 letters at ≥3 successful reps, interval ≥7 days (recognition; letter *production* is not gated — §11.10) |
 | 1 | Root vocabulary + survival phrases; **Egyptian layered in for listening** | ~150 MSA words retained; 30 root families with ≥2 words each; ~40 dialect items recognized by ear |
 | 2 | Core grammar | Grammar checklist cleared; parses unseen simple sentences |
 | 3 | Conversation, both registers | Sustained basic exchange in Egyptian; MSA reading unaided |
@@ -655,6 +655,22 @@ Free is weighted extremely high: anyone copying this project should be able to r
 
 **Tier 1 ASR decision (supersedes an implicit Azure-first assumption):** Workers AI Whisper wins on the two criteria that now dominate — $0 and zero additional signup (the learner's Cloudflare account already exists from Step 4). Whisper's documented Arabic weaknesses (§7.4) are acceptable at Tier 1 *because* Tier 1 is a yes/no intelligibility probe whose failure mode is explicitly "may be the model's fault" (`[R-23]`), and `task:"transcribe"` pins it against the translate-to-English failure. If it proves too weak even for the probe, Azure STT is the documented escalation — and arrives at Step 7 regardless.
 
+### 11.10 Speaking is a standalone words-only activity; letters are recognition-only
+
+*(Added v0.10, July 2026 — owner decision after live testing.)*
+
+Testing Tier 1 on **isolated letters failed by construction.** ASR transcribes words, not bare phonemes: saying ف is transcribed as ف, never the letter's name فاء, so a correct production reads as "not understood." The grapheme-to-phoneme gap (§7.3) is worst exactly here. A learner also can't tell whether they mispronounced or the model failed — the trust-corroding case `[R-20]`/`[R-23]` warn about.
+
+The decision:
+
+- **The alphabet is a recognition target.** Phase 0 gates on recognising letters and their sounds, not on automated production scoring. Learners hear the sound via reference audio (`[R-24]`) and the abundant external alphabet resources; there is no automated letter-pronunciation feedback.
+- **Speaking practice is its own activity, over words only.** It is separated from recognition review (the review loop has no microphone), honouring `[R-29]`'s separate-tracks requirement with an independent production schedule.
+- **The Tier 1 verdict is advisory, never a gate.** In speaking practice the learner self-grades; the understood/not-understood result is information, not an auto-grade — consistent with `[R-31]` (provisional feedback must not gate) and the precision-over-recall posture.
+
+**`[R-46]`** Automated pronunciation feedback MUST operate at the word level, never on isolated letters. Letter cards MUST NOT present production assessment.
+
+**What would change it:** a genuine phoneme-level MDD path (Tier 2b, §11.4) could assess isolated sounds — but that contingency is not scheduled, and word-level production plus human review (§12) covers the need meanwhile.
+
 ---
 
 ## 12. `[HUMAN]` The reviewer role
@@ -753,6 +769,7 @@ Not pending decisions — questions only answerable by running the system.
 | Append-only review and speech logs | Scheduler changes can be replayed against real history |
 | Content depth before pipeline sophistication | A thin deck with a smart pipeline is a demo |
 | Production tracked separately from recognition | Different skills, different decay rates |
+| Speaking is a standalone, words-only activity; letters recognition-only | Isolated letters don't round-trip through ASR; recognition is the goal for the alphabet (§11.10) |
 | Assessment tuned toward precision | False rejects destroy trust and compound with `[R-8]` |
 | Phoneme model detects, LLM explains | A text model asked to judge audio confabulates fluently |
 | Recorded audio for core, TTS for generated | Synthesis is least trustworthy on the pharyngeals |

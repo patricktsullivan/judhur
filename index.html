@@ -637,16 +637,21 @@ function mergeStates(a,b){
   var seen={};
   (a.history||[]).concat(b.history||[]).forEach(function(d){ if(!seen[d]){seen[d]=1; m.history.push(d);} });
   m.history.sort();
-  var ids={};
-  Object.keys(a.progress||{}).forEach(function(k){ids[k]=1;});
-  Object.keys(b.progress||{}).forEach(function(k){ids[k]=1;});
-  Object.keys(ids).forEach(function(id){
-    var pa=(a.progress||{})[id], pb=(b.progress||{})[id];
-    if(!pa){ m.progress[id]=pb; return; }
-    if(!pb){ m.progress[id]=pa; return; }
-    /* more reps wins; tie → later due date (the more recent review) */
-    m.progress[id] = pb.reps>pa.reps ? pb : pa.reps>pb.reps ? pa : (pb.due>pa.due?pb:pa);
-  });
+  /* per-card merge: more reps wins; tie → later due date (more recent review) */
+  function mergeMap(ma, mb){
+    var out={}, ids={};
+    Object.keys(ma||{}).forEach(function(k){ids[k]=1;});
+    Object.keys(mb||{}).forEach(function(k){ids[k]=1;});
+    Object.keys(ids).forEach(function(id){
+      var pa=(ma||{})[id], pb=(mb||{})[id];
+      if(!pa){ out[id]=pb; return; }
+      if(!pb){ out[id]=pa; return; }
+      out[id] = pb.reps>pa.reps ? pb : pa.reps>pb.reps ? pa : (pb.due>pa.due?pb:pa);
+    });
+    return out;
+  }
+  m.progress = mergeMap(a.progress, b.progress);   /* recognition track */
+  m.prod = mergeMap(a.prod, b.prod);               /* production track [R-29] */
   var runs = histRuns(m.history);
   m.last = runs.last;
   m.streak = runs.current;
@@ -709,14 +714,10 @@ function micBtn(cardId){
        + (recing?'stop recording':'say it aloud — checks whether you were understood')+'">'
        + svg(recing?IC.stop:IC.mic)+'</button>';
 }
-function speechCue(c){
-  if(!speechReady()) return '';
-  var isLetter = c.type==='alphabet';
-  var target = expectedFor(c);
-  var what = isLetter ? 'the letter’s name' : 'this word';
-  return '<div class="cue"><span class="cue-h">🎙️ Speaking practice (optional)</span>'
-       + 'Tap the mic and say ' + what + ' — <span class="cue-ar">'+target+'</span> — '
-       + 'and it will check whether you were understood.</div>';
+function speakPrompt(){
+  return speechReady()
+    ? '<div class="cue"><span class="cue-h">🎙️ Say it aloud</span>Read the word, tap the mic to check whether you’re understood, then grade yourself.</div>'
+    : '<div class="cue"><span class="cue-h">🗣️ Say it aloud</span>Read the word out loud, then grade yourself. Set up your backend in <b>Progress → Sync</b> for an automatic check.</div>';
 }
 function t1Line(cardId){
   var t = T1[cardId]; if(!t) return '';
@@ -800,6 +801,7 @@ function finishMic(){
 
 /* ---------- state ---------- */
 var S = load() || {xp:0,streak:0,best:0,last:null,history:[],progress:{}};
+if(!S.prod) S.prod = {};   /* production (speaking) track — separate from recognition [R-29] */
 var tab = 'home';
 var flipped = {};
 var openRoot = null;
@@ -867,6 +869,12 @@ function viewHome(){
   +   '<p>Capped at '+n+' cards, about 5\u20138 minutes. Short enough to actually finish, every day.</p>'
   +   '<button class="btn-gold" data-act="start">Start session</button>'
   + '</div>'
+  + (function(){
+      var n = prodDue().length;
+      return n
+        ? '<button class="btn-teal" data-act="speak" style="margin-top:12px;margin-bottom:0">Speaking practice — '+n+' word'+(n>1?'s':'')+' ready</button>'
+        : '<div class="note" style="margin-top:12px">Speaking practice unlocks once you’ve reviewed some words — then say them aloud here.</div>';
+    })()
   + starRow()
   + '<div class="grid2">'
   +   stat('Letters known', lettersKnown()+' / 28', null, 'var(--teal)')
@@ -1031,6 +1039,43 @@ function startSession(filter){
   sess = {q:q,i:0,show:false,done:false,reviewed:0,xp:0};
   render();
 }
+/* ---------- speaking practice (production track, words only) ---------- */
+function prodDue(){
+  var due=[], fresh=[];
+  DECK.forEach(function(c){
+    if(c.type!=='vocab') return;
+    if(!S.progress[c.id]) return;   /* only practice words you've started learning to read */
+    var p = S.prod[c.id];
+    if(!p) fresh.push(c);
+    else if(p.due<=today()) due.push(c);
+  });
+  due.sort(function(x,y){return S.prod[x.id].due < S.prod[y.id].due ? -1 : 1;});
+  return due.concat(fresh);
+}
+function startSpeaking(){
+  var q = prodDue().slice(0,MAX_SESSION);
+  if(!q.length) return;
+  sess = {mode:'speak', q:q, i:0, done:false, reviewed:0, xp:0};
+  render();
+}
+function gradeSpeak(q){
+  cancelMic();
+  var card = sess.q[sess.i];
+  S.prod[card.id] = schedule(S.prod[card.id], q);   /* independent of recognition */
+  var td = today();
+  if(S.last !== td){
+    if(S.last && dayDiff(S.last,td)===1) S.streak++; else S.streak=1;
+    if(S.streak>S.best) S.best=S.streak;
+    S.history.push(td); S.last = td;
+  }
+  var gain = q===0 ? 1 : 5;
+  S.xp += gain; sess.reviewed++; sess.xp += gain;
+  delete T1[card.id];
+  sess.i++;
+  if(sess.i >= sess.q.length) sess.done = true;
+  persist(); render();
+  if(sess.done) syncNow();
+}
 function grade(q){
   cancelMic();   /* grading moves on; discard any in-flight recording */
   var card = sess.q[sess.i];
@@ -1068,11 +1113,34 @@ function renderOverlay(){
   if(!sess){ o.className=''; o.innerHTML=''; return; }
   o.className='show';
   if(sess.done){
+    var verb = sess.mode==='speak' ? 'words practiced' : 'cards reviewed';
     o.innerHTML = '<div class="done-wrap">'+starRow()
       + '<h2>Nice work</h2>'
-      + '<p>'+sess.reviewed+' cards reviewed \u00b7 +'+sess.xp+' xp</p>'
+      + '<p>'+sess.reviewed+' '+verb+' \u00b7 +'+sess.xp+' xp</p>'
       + '<div style="width:100%;max-width:320px"><button class="btn-gold" data-act="close">Done</button></div>'
       + '</div>';
+    return;
+  }
+  if(sess.mode==='speak'){
+    var sc = sess.q[sess.i], sd = sc.d, spct = (sess.i/sess.q.length)*100;
+    var smid = '<div class="q-root">root: <span>'+sd.root+'</span> ('+esc(sd.rootMeaning)+') '+regTag(sd.reg)+'</div>'
+      + '<div class="q-word">'+sd.ar+'</div>'
+      + '<div class="ans"><div class="a1">'+esc(sd.t)+'</div><div class="a2">'+esc(sd.en)+'</div>'
+      + speakPrompt()
+      + '<div class="ab-row">'+playBtn(wordSrc(sd))+micBtn(sc.id)+'</div>'
+      + t1Line(sc.id)
+      + '</div>';
+    var sfoot = '<div class="grades" style="grid-template-columns:repeat(2,1fr)">'
+      + '<button data-gs="0" style="background:rgba(193,89,46,.16);color:var(--coral)">Try again</button>'
+      + '<button data-gs="2" style="background:rgba(79,138,139,.16);color:var(--teal)">Got it</button>'
+      + '</div>';
+    o.innerHTML = '<div class="ov-top">'
+      + '<button data-act="close">'+svg(IC.x)+'</button>'
+      + '<div class="ov-ct">'+(sess.i+1)+' / '+sess.q.length+' \u00b7 speaking</div>'
+      + '</div>'
+      + '<div class="bar"><i style="width:'+spct+'%"></i></div>'
+      + '<div class="ov-mid">'+smid+'</div>'
+      + '<div style="padding-bottom:6px">'+sfoot+'</div>';
     return;
   }
   var c = sess.q[sess.i], d = c.d, pct = (sess.i/sess.q.length)*100;
@@ -1085,17 +1153,13 @@ function renderOverlay(){
             + (LETTER_META[d.id].guttural?'<span class="gutt">throat sound</span>':'')
             + '<div class="a3">'+d.ex+'</div>'
             + '<div class="a4">'+esc(d.exT)+' \u00b7 '+esc(d.exE)+'</div>'
-            + speechCue(c)
-            + '<div class="ab-row">'+playBtn(letterSrc(d.id))+micBtn(c.id)+'</div>'
-            + t1Line(c.id)
+            + '<div class="ab-row">'+playBtn(letterSrc(d.id))+'</div>'
             + '</div>' : '');
   } else {
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
         + '<div class="q-word">'+d.ar+'</div>'
         + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.t)+'</div><div class="a2">'+esc(d.en)+'</div>'
-            + speechCue(c)
-            + '<div class="ab-row">'+playBtn(wordSrc(d))+micBtn(c.id)+'</div>'
-            + t1Line(c.id)
+            + '<div class="ab-row">'+playBtn(wordSrc(d))+'</div>'
             + '</div>' : '');
   }
   var foot = sess.show
@@ -1141,6 +1205,7 @@ document.addEventListener('click', function(e){
   var el;
   if((el = e.target.closest('[data-mic]'))){ toggleMic(el.dataset.mic); return; }
   if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play); return; }
+  if((el = e.target.closest('[data-gs]'))){ gradeSpeak(parseInt(el.dataset.gs,10)); return; }
   if((el = e.target.closest('[data-g]'))){ grade(parseInt(el.dataset.g,10)); return; }
   if((el = e.target.closest('[data-grade]'))){
     var parts = el.dataset.grade.split('|');
@@ -1158,6 +1223,7 @@ document.addEventListener('click', function(e){
     var a = el.dataset.act;
     if(a==='start') startSession(null);
     else if(a==='start-vocab') startSession('vocab');
+    else if(a==='speak') startSpeaking();
     else if(a==='probe') probeCoverage();
     else if(a==='save-sync'){
       CFG.url = (document.getElementById('sync-url').value||'').trim();
@@ -1178,6 +1244,13 @@ document.addEventListener('click', function(e){
 });
 document.addEventListener('keydown', function(e){
   if(!sess || sess.done) return;
+  if(sess.mode==='speak'){
+    if(e.key===' '){ e.preventDefault(); toggleMic(sess.q[sess.i].id); }
+    else if(e.key==='1'){ gradeSpeak(0); }
+    else if(e.key==='2'){ gradeSpeak(2); }
+    else if(e.key==='Escape'){ cancelMic(); sess=null; render(); }
+    return;
+  }
   if(e.key===' '||e.key==='Enter'){ e.preventDefault(); if(!sess.show){ sess.show=true; render(); } }
   else if(sess.show && e.key>='1' && e.key<='4'){ grade(parseInt(e.key,10)-1); }
   else if(e.key==='Escape'){ sess=null; render(); }
