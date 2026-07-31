@@ -71,32 +71,39 @@ for the "say it out loud" check.
 
 **You do not need this.** Speaking practice already works — it tells you whether a word
 came through clearly. This *extra* adds per-sound scoring ("your ح was off") and a tip for
-fixing each sound. It's the most involved setup here, and the only piece with a paid tier —
-so read the safety note first.
+fixing each sound. It's by far the most involved setup here.
 
-> **Cost, honestly:** use the **free "F0" tier**. It needs **no credit card**, and it
-> **cannot bill you** — it's capped at 5 audio-hours a month (far more than one learner
-> uses) and simply stops at the cap instead of charging. The *only* way to be charged is to
-> pick the **"S0"** tier by mistake. Choose **F0** and you are safe.
+> **Cost, honestly:** Azure **requires a credit card to create the account** (for identity
+> verification) — unlike everything else here. But the **Free "F0" tier does not charge
+> that card**: it's hard-capped at 5 audio-hours a month (far more than one learner uses)
+> and simply stops at the cap. The *only* way to actually be billed is to pick the **"S0"**
+> tier by mistake. Choose **F0** and no charge can happen. If a required credit card is a
+> dealbreaker, skip this whole section — Tier-1 speaking practice stays free and card-free.
 
-1. Make a **free Azure account** at [azure.microsoft.com/free](https://azure.microsoft.com/free)
-   (sign in with a Microsoft account).
-2. In the [Azure portal](https://portal.azure.com) → **Create a resource** → search
-   **"Speech"** → **Create**.
-3. **Pricing tier: choose Free F0** (this is the one choice that matters — *not* S0). Pick a
-   region near you (e.g. **East US**) and note it down.
-4. When it finishes, open the resource → **Keys and Endpoint** → copy **KEY 1** and the
-   **Location/Region** (like `eastus`).
-5. In Cloudflare → your Worker → **Settings → Variables and Secrets**, add two **Secrets**
-   (encrypted, like your password):
-   - `AZURE_SPEECH_KEY` = the key
-   - `AZURE_SPEECH_REGION` = the region (e.g. `eastus`)
+*(No screenshots here — pair these steps with Microsoft's illustrated quickstart:*
+*<https://learn.microsoft.com/azure/ai-services/speech-service/get-started>.)*
 
-   Save. (No redeploy needed.)
-6. In speaking practice, you'll now see which sounds to work on and a tip for each.
+1. Create a **free Azure account** at [azure.microsoft.com/free](https://azure.microsoft.com/free)
+   (Microsoft sign-in; a credit card is required to verify the account).
+2. Sign in to the [Azure portal](https://portal.azure.com) → **Create a resource** → search
+   the Marketplace for **Speech** → choose **Speech** (by Microsoft) → **Create**.
+3. On the **Basics** form:
+   - **Subscription:** your subscription.
+   - **Resource group:** **Create new**, name it e.g. `judhur`.
+   - **Region:** one near you, e.g. **East US** — note it down.
+   - **Name:** any unique name, e.g. `judhur-speech`.
+   - **Pricing tier:** choose **Free F0** — *this is the choice that matters; not S0.*
+     (One F0 per region per account; if it's taken, use another region.)
+4. **Review + create → Create**, wait ~1 minute, then **Go to resource**.
+5. Left menu → **Keys and Endpoint**. Copy:
+   - **KEY 1** → this is your `AZURE_SPEECH_KEY`.
+   - the region code **from the Endpoint URL** (`https://eastus.api...` → `eastus`) → this
+     is `AZURE_SPEECH_REGION`. Use the short lowercase form (no spaces), *not* "East US".
+6. In Cloudflare → your Worker → **Settings → Variables and Secrets**, add two **Secrets**
+   (encrypted, like your password): `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION`. Save.
+7. In speaking practice, you'll now see which sounds to work on and a tip for each.
 
 Notes:
-- **One F0 Speech resource per region** per account.
 - If your first recording errors with an audio-format complaint, tell the developer — Azure
   may need the audio converted (a known, small fix).
 - Feedback here is **provisional** until a native speaker has checked it (design doc §11.3),
