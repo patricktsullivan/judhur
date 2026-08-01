@@ -185,23 +185,33 @@ function b64ToBytes(b64) {
 
 /* Reduce Azure's assessment JSON to per-word/phoneme scores + a flagged list.
    Only clearly-low phonemes are flagged (precision over recall [R-19]). */
+function pickScore(o) {   // scores sit directly on the node (live shape) or nested (docs)
+  if (!o) return null;
+  if (o.AccuracyScore != null) return o.AccuracyScore;
+  if (o.PronunciationAssessment && o.PronunciationAssessment.AccuracyScore != null) return o.PronunciationAssessment.AccuracyScore;
+  return null;
+}
 export function parseAzureAssessment(j, threshold) {
   const t = threshold == null ? MDD_FLAG_THRESHOLD : threshold;
   const nb = j && j.NBest && j.NBest[0];
   if (!nb) return { ok: false };
   const words = (nb.Words || []).map(w => ({
     word: w.Word,
-    accuracy: w.PronunciationAssessment ? w.PronunciationAssessment.AccuracyScore : null,
-    phonemes: (w.Phonemes || []).map(p => ({
-      phoneme: p.Phoneme,
-      score: p.PronunciationAssessment ? p.PronunciationAssessment.AccuracyScore : null
-    }))
+    accuracy: pickScore(w),
+    errorType: w.ErrorType || null,
+    phonemes: (w.Phonemes || []).map(p => ({ phoneme: p.Phoneme || '', score: pickScore(p) }))
   }));
   const detected = [];
   words.forEach(w => w.phonemes.forEach(p => {
     if (p.score != null && p.score < t) detected.push({ phoneme: p.phoneme, score: p.score, word: w.word });
   }));
-  return { ok: true, overall: nb.PronunciationAssessment ? nb.PronunciationAssessment.AccuracyScore : null, words, detected };
+  /* named = flagged sounds Azure actually labelled (ar-SA often returns empty labels) */
+  const named = detected.filter(d => d.phoneme);
+  return {
+    ok: true, overall: pickScore(nb), pron: nb.PronScore != null ? nb.PronScore : null,
+    completeness: nb.CompletenessScore != null ? nb.CompletenessScore : null,
+    status: j.RecognitionStatus || null, words, detected, named
+  };
 }
 
 /* Tier 3: the phoneme model said WHERE/WHAT; the LLM only says HOW to fix it —
@@ -331,17 +341,19 @@ export default {
             note: 'Couldn’t make out the word from the recording.', debug }, 200);
         }
 
-        /* Tier 3 — LLM turns the detected phonemes into articulatory tips [R-22][R-25].
-           The model never sees audio, only the flagged list. */
+        /* Tier 3 — LLM turns the *labelled* flagged phonemes into articulatory tips
+           [R-22][R-25]. The model never sees audio, only the flagged list. Arabic
+           (ar-SA) often returns unlabelled phonemes, so we can only coach named ones. */
         let coaching = null;
-        if (body.coach && parsed.detected.length && (env.AI || (env.GEN_BASE_URL && env.GEN_API_KEY))) {
-          try { coaching = (await callModel(env, coachPrompt(body.expected, parsed.detected))).trim(); }
+        if (body.coach && parsed.named.length && (env.AI || (env.GEN_BASE_URL && env.GEN_API_KEY))) {
+          try { coaching = (await callModel(env, coachPrompt(body.expected, parsed.named))).trim(); }
           catch (e) { coaching = null; }
         }
         return json({
           tier: 2, provisional: true,
           note: 'Here is what the checker detected — it does not catch everything.',
-          overall: parsed.overall, words: parsed.words, detected: parsed.detected, coaching, debug
+          overall: parsed.overall, pron: parsed.pron, completeness: parsed.completeness,
+          words: parsed.words, detected: parsed.detected, named: parsed.named, coaching, debug
         }, 200);
       }
 
