@@ -226,7 +226,10 @@ export function coachPrompt(word, detected) {
 async function azureAssess(env, expected, audioBytes, contentType) {
   const region = env.AZURE_SPEECH_REGION;
   const cfg = b64utf8(JSON.stringify({
-    ReferenceText: expected, GradingSystem: 'HundredMark', Granularity: 'Phoneme', Dimension: 'Comprehensive'
+    ReferenceText: expected, GradingSystem: 'HundredMark', Granularity: 'Phoneme', Dimension: 'Comprehensive',
+    // Ask for IPA symbols: the default SAPI alphabet has no Arabic mapping, so ar-SA
+    // returned empty phoneme labels — IPA is universal and may populate them (§7.6).
+    PhonemeAlphabet: 'IPA'
   }));
   const url = 'https://' + region + '.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=' +
     (env.AZURE_SPEECH_LOCALE || 'ar-SA') + '&format=detailed';
