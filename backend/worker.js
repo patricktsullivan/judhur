@@ -230,8 +230,9 @@ async function azureAssess(env, expected, audioBytes, contentType) {
     },
     body: audioBytes
   });
-  if (!res.ok) throw new Error('Azure assessment HTTP ' + res.status);
-  return res.json();
+  /* Return status + raw text (don't throw) so we can see exactly what Azure said. */
+  const text = await res.text();
+  return { status: res.status, text };
 }
 
 async function handleIngest(body) {
@@ -311,15 +312,24 @@ export default {
       /* Tier 2a — Azure per-phoneme assessment when configured (§7.6). All output
          is provisional [R-20][R-31] and precision-tuned [R-19]. */
       if (env.AZURE_SPEECH_KEY && env.AZURE_SPEECH_REGION) {
-        let azure;
+        let az;
         try {
-          azure = await azureAssess(env, body.expected, b64ToBytes(body.audio),
-                                     body.contentType || 'audio/webm; codecs=opus');
+          az = await azureAssess(env, body.expected, b64ToBytes(body.audio),
+                                  body.contentType || 'audio/webm; codecs=opus');
         } catch (e) {
-          return json({ error: 'pronunciation assessment failed: ' + (e.message || 'unknown') }, 502);
+          return json({ error: 'pronunciation assessment call failed: ' + (e.message || 'unknown') }, 502);
         }
-        const parsed = parseAzureAssessment(azure);
-        if (!parsed.ok) return json({ error: 'no speech detected in the recording' }, 200);
+        let azure = null;
+        try { azure = JSON.parse(az.text); } catch (e) { /* non-JSON body */ }
+        /* TEMPORARY diagnostic: prove the call happened and expose the real shape. */
+        const debug = { azure_status: az.status, region: env.AZURE_SPEECH_REGION,
+                        azure_raw: (az.text || '(empty body)').slice(0, 1600) };
+        const parsed = azure ? parseAzureAssessment(azure) : { ok: false };
+        if (!parsed.ok) {
+          /* No usable assessment — Azure error, or it couldn't match the word (mumble). */
+          return json({ tier: 2, provisional: true, notRecognized: true,
+            note: 'Couldn’t make out the word from the recording.', debug }, 200);
+        }
 
         /* Tier 3 — LLM turns the detected phonemes into articulatory tips [R-22][R-25].
            The model never sees audio, only the flagged list. */
@@ -331,7 +341,7 @@ export default {
         return json({
           tier: 2, provisional: true,
           note: 'Here is what the checker detected — it does not catch everything.',
-          overall: parsed.overall, words: parsed.words, detected: parsed.detected, coaching
+          overall: parsed.overall, words: parsed.words, detected: parsed.detected, coaching, debug
         }, 200);
       }
 
