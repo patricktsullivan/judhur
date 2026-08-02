@@ -191,16 +191,30 @@ function pickScore(o) {   // scores sit directly on the node (live shape) or nes
   if (o.PronunciationAssessment && o.PronunciationAssessment.AccuracyScore != null) return o.PronunciationAssessment.AccuracyScore;
   return null;
 }
+/* The Arabic letters of a word, minus harakat/tatweel — i.e. the consonant +
+   long-vowel skeleton. Azure scores exactly this sequence (short vowels dropped),
+   so its per-phoneme scores line up with these letters positionally [Option B]. */
+export function arLetters(s) {
+  return (s || '').replace(/[ً-ْٰـ]/g, '').split('').filter(ch => /[ء-ي]/.test(ch));
+}
 export function parseAzureAssessment(j, threshold) {
   const t = threshold == null ? MDD_FLAG_THRESHOLD : threshold;
   const nb = j && j.NBest && j.NBest[0];
   if (!nb) return { ok: false };
-  const words = (nb.Words || []).map(w => ({
-    word: w.Word,
-    accuracy: pickScore(w),
-    errorType: w.ErrorType || null,
-    phonemes: (w.Phonemes || []).map(p => ({ phoneme: p.Phoneme || '', score: pickScore(p) }))
-  }));
+  const words = (nb.Words || []).map(w => {
+    const phonemes = (w.Phonemes || []).map(p => ({ phoneme: p.Phoneme || '', score: pickScore(p) }));
+    /* Azure (ar-SA + default SAPI alphabet) returns empty phoneme labels. When its
+       segment count matches the word's letter skeleton, name each score by position
+       so Tier 2 can say *which* sound was off even without Azure's own label. If the
+       counts diverge (e.g. sun-letter assimilation), we don't guess — labels stay
+       empty and the client falls back to a word-level score. IPA labels, if present,
+       are kept as-is (more precise than our letter map). */
+    const letters = arLetters(w.Word);
+    if (letters.length === phonemes.length && phonemes.some(p => !p.phoneme)) {
+      phonemes.forEach((p, i) => { if (!p.phoneme) p.phoneme = letters[i]; });
+    }
+    return { word: w.Word, accuracy: pickScore(w), errorType: w.ErrorType || null, phonemes };
+  });
   const detected = [];
   words.forEach(w => w.phonemes.forEach(p => {
     if (p.score != null && p.score < t) detected.push({ phoneme: p.phoneme, score: p.score, word: w.word });

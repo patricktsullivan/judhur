@@ -812,14 +812,24 @@ function t1Line(cardId){
       note = esc(o.note||'');
     } else {
       var named = o.named || [], det = o.detected || [];
-      var sc = (o.overall!=null) ? ' — '+Math.round(o.overall)+'/100' : '';
-      if(named.length){
+      /* Headline the composite PronScore (accuracy+completeness+fluency) — it separates
+         a good word from a mumble far more sharply than raw accuracy (§7.6, Option C).
+         Fall back to overall accuracy, then to phoneme flags, if it's absent. */
+      var scoreVal = (o.pron!=null) ? o.pron : (o.overall!=null ? o.overall : null);
+      var sc = (scoreVal!=null) ? ' — '+Math.round(scoreVal)+'/100' : '';
+      var good = (scoreVal!=null) ? (scoreVal>=70 && det.length===0) : (det.length===0);
+      if(scoreVal!=null && scoreVal<30){   /* barely intelligible — listing every sound is noise */
+        head = '<div class="t1 no">Needs work'+sc+'</div>';
+        note = 'Hard to make out — say it once more, clearly and a touch slower.';
+      } else if(named.length){             /* specific sounds we can name (Azure IPA or our letter map) */
         head = '<div class="t1 no">Sounds to work on: '+named.map(function(d){return '<b class="heard">'+esc(d.phoneme)+'</b>';}).join(', ')+'</div>';
         coach = o.coaching ? '<div class="coach">'+esc(o.coaching).replace(/\n/g,'<br>')+'</div>' : '';
         note = esc(o.note || 'This is what was detected — it doesn’t catch everything.');
-      } else if(det.length){   /* low scores but Azure didn't label the sound (common for Arabic) */
+      } else if(!good){                    /* low/mediocre but no single sound pinned down */
         head = '<div class="t1 no">Needs work'+sc+'</div>';
-        note = 'The checker scored the word low but didn’t pinpoint which sound — treat this as a rough hint.';
+        note = det.length
+          ? 'The checker scored the word low but didn’t pinpoint which sound — treat this as a rough hint.'
+          : 'Close, but the checker wasn’t fully convinced — try saying it once more.';
       } else {
         head = '<div class="t1 ok">Came through clearly'+sc+' ✓</div>';
         note = 'Nothing was flagged — but the checker misses some errors, so take this as encouragement, not a guarantee.';
