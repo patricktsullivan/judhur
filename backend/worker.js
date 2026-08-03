@@ -437,9 +437,11 @@ export default {
         const detail = await res.text().catch(() => '');
         return json({ error: 'Azure TTS returned ' + res.status, detail: detail.slice(0, 300) }, 502);
       }
+      /* no-store: the response varies by POST body (the word), so it must never be
+         cached by URL — doing so would replay one word's audio for every word. */
       return new Response(res.body, {
         status: 200,
-        headers: { ...CORS, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=86400' }
+        headers: { ...CORS, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' }
       });
     }
 

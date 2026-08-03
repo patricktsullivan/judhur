@@ -699,6 +699,30 @@ function browserSpeak(text){
   }catch(e){ return {ok:false, err:String(e.message||e)}; }
 }
 function playTtsUrl(url){ if(!ttsAudio) ttsAudio=new Audio(); ttsAudio.src=url; var p=ttsAudio.play(); if(p&&p.catch) p.catch(function(){}); }
+function playBuf(buf){ playTtsUrl(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}))); }
+/* Decisive TTS diagnostic: synthesize two words that must sound different and compare
+   the audio Azure returns. Byte-identical output = the bug is upstream of the voice
+   (same text reaching Azure, or Azure normalizing them together); different bytes =
+   Azure is distinguishing them and any remaining sameness is the voice/perception. */
+function ttsCompare(){
+  if(!(CFG.url && CFG.token)){ ttsLast={via:'warn',detail:'No backend configured — comparison needs Azure (Sync, above).'}; render(); return; }
+  var base = CFG.url.replace(/\/+$/,''), words = ['مَكْتَب','مَكْتَبَة'];
+  ttsLast = {via:'test', detail:'testing…'}; render();
+  Promise.all(words.map(function(w){
+    return fetch(base+'/tts',{method:'POST',headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},body:JSON.stringify({text:w})})
+      .then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+' '+t.slice(0,120)); }); return r.arrayBuffer(); })
+      .then(function(buf){ return {w:w, bytes:buf.byteLength, buf:buf}; });
+  })).then(function(res){
+    var a=res[0], b=res[1], same = a.bytes===b.bytes;
+    if(same){ var va=new Uint8Array(a.buf), vb=new Uint8Array(b.buf); for(var i=0;i<va.length;i++){ if(va[i]!==vb[i]){ same=false; break; } } }
+    ttsLast = {via: same?'warn':'azure',
+      detail: 'مَكْتَب '+a.bytes+' B vs مَكْتَبَة '+b.bytes+' B — '
+            + (same ? 'Azure returned IDENTICAL audio for both. The two words are reaching Azure the same, or the voice is collapsing them — this is a real bug, not your device.'
+                    : 'Azure returned DIFFERENT audio for each (playing both now). If they still sound alike, it’s the voice, not the text — try a different voice.')};
+    render();
+    playBuf(a.buf); setTimeout(function(){ playBuf(b.buf); }, 1500);
+  }).catch(function(e){ ttsLast={via:'warn', detail:'Test failed: '+String(e.message||e)}; render(); });
+}
 function speakText(text, diag){
   if(!S.settings.tts || !text) return;
   var done = function(via, detail){ ttsLast = {via:via, detail:detail||''}; if(diag && tab==='settings') render(); };
@@ -1334,7 +1358,7 @@ function ttsCard(){
     + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word from its fully-vowelled spelling. Always marked <em>synthetic</em> — a human recording replaces it when available.</p></div>'
     + '<button class="toggle'+(on?' on':'')+'" data-set="tts" role="switch" aria-checked="'+on+'"><span></span></button></div>'
     + (on?'<div class="tts-status '+statusCls+'">'+statusTxt+'</div>'
-        + '<button class="btn-teal" style="margin:10px 0 0" data-act="tts-test">▶ Test voice — say مَكْتَبَة</button>'
+        + '<button class="btn-teal" style="margin:10px 0 0" data-act="tts-test">▶ Compare مَكْتَب vs مَكْتَبَة</button>'
         + (ttsLast?'<div class="tts-status '+(ttsLast.via==='azure'?'ok':(ttsLast.via==='device'?'ok':'warn'))+'">Last played via: '+esc(ttsLast.detail||ttsLast.via)+'</div>':'')
       :'')
     + '</div>';
@@ -1810,7 +1834,7 @@ document.addEventListener('click', function(e){
       saveCfg(); syncNow();
     }
     else if(a==='sync-now') syncNow();
-    else if(a==='tts-test') speakText('مَكْتَبَة', true);
+    else if(a==='tts-test') ttsCompare();
     else if(a==='reveal'){ sess.show=true; render(); }
     else if(a==='close'){ cancelMic(); sess=null; render(); }
     else if(a==='reset'){
