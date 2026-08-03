@@ -78,11 +78,17 @@ npx wrangler deploy                             # prints the https://...workers.
   enable Azure per-phoneme assessment, set Worker secrets `AZURE_SPEECH_KEY` and
   `AZURE_SPEECH_REGION` (e.g. `eastus`); optionally `AZURE_SPEECH_LOCALE` (`ar-SA` default,
   `ar-EG` also valid — §7.6.1). Azure's **F0 free tier** covers single-learner volume.
-  The Tier 3 coaching text reuses whichever generation model is configured above.
-  *Deploy caveat:* Azure's REST endpoint must accept the browser's audio format
-  (`audio/webm; codecs=opus`); verify on your first real recording and, if rejected, we'll
-  add a format conversion. Accuracy is unvalidated until the §11.3 calibration protocol
-  runs — output stays provisional.
+  The Tier 3 coaching text reuses whichever generation model is configured above. The
+  client captures **16 kHz mono PCM WAV** (Web Audio, not MediaRecorder) — Azure decoded
+  the old WebM/Opus with broken duration metadata (SNR ~1, garbage scores), so WAV is
+  required, not optional. The headline number is Azure's composite **PronScore** (accuracy
+  + completeness + fluency), which separates a said word from a mumble far more sharply
+  than raw accuracy. **Per-sound naming:** `ar-SA` returns per-phoneme *scores* but empty
+  phoneme *labels* (confirmed — neither the SAPI nor the IPA alphabet populates them), so
+  `parseAzureAssessment` names each flagged score positionally from the reference word's
+  consonant/long-vowel skeleton, and declines to name when Azure's segment count diverges
+  from the skeleton (e.g. sun-letter assimilation). Accuracy is unvalidated until the
+  §11.3 calibration protocol runs — output stays provisional.
 
 ## Troubleshooting
 

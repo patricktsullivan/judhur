@@ -222,9 +222,6 @@
   .coach{font-size:12.5px;color:var(--ink);line-height:1.6;margin-top:8px;max-width:320px;
          background:var(--surface);border-radius:10px;padding:10px 12px;text-align:left}
   .prov-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;max-width:320px;font-style:italic}
-  .dbg{font-family:ui-monospace,monospace;font-size:10px;color:var(--muted);line-height:1.45;
-       white-space:pre-wrap;word-break:break-all;margin-top:12px;max-width:330px;max-height:260px;
-       overflow-y:auto;background:var(--bg-deep);border:1px solid var(--surface-lt);border-radius:8px;padding:8px}
 
   .note{color:var(--muted);font-size:11px;line-height:1.5;margin-top:18px;
         border-top:1px solid var(--surface-lt);padding-top:12px}
@@ -835,9 +832,7 @@ function t1Line(cardId){
         note = 'Nothing was flagged — but the checker misses some errors, so take this as encouragement, not a guarantee.';
       }
     }
-    var dbg = o.debug ? '<div class="dbg">azure '+esc(String(o.debug.azure_status))+' @ '+esc(o.debug.region||'')
-                      + '\n'+esc(o.debug.azure_raw||'')+'</div>' : '';
-    return head + coach + '<div class="prov-note">'+note+'</div>' + dbg;
+    return head + coach + '<div class="prov-note">'+note+'</div>';
   }
   /* tier 1 intelligibility */
   return o.understood

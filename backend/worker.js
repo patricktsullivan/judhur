@@ -241,8 +241,10 @@ async function azureAssess(env, expected, audioBytes, contentType) {
   const region = env.AZURE_SPEECH_REGION;
   const cfg = b64utf8(JSON.stringify({
     ReferenceText: expected, GradingSystem: 'HundredMark', Granularity: 'Phoneme', Dimension: 'Comprehensive',
-    // Ask for IPA symbols: the default SAPI alphabet has no Arabic mapping, so ar-SA
-    // returned empty phoneme labels — IPA is universal and may populate them (§7.6).
+    // Ask for IPA symbols. Confirmed: ar-SA returns empty phoneme labels regardless
+    // (neither SAPI nor IPA populates them), so per-sound naming comes from the letter
+    // skeleton instead (Option B). Kept because it's harmless and ar-EG/future locales
+    // may honor it, in which case those real labels take precedence (§7.6).
     PhonemeAlphabet: 'IPA'
   }));
   const url = 'https://' + region + '.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=' +
@@ -346,21 +348,26 @@ export default {
         } catch (e) {
           return json({ error: 'pronunciation assessment call failed: ' + (e.message || 'unknown') }, 502);
         }
+        /* A non-2xx from Azure is a configuration/format failure (bad key, wrong
+           region, unsupported audio) — surface it honestly, don't pass it off as an
+           unrecognized recording. */
+        if (az.status < 200 || az.status >= 300) {
+          return json({ error: 'Azure pronunciation service returned ' + az.status +
+            ' — check AZURE_SPEECH_KEY and AZURE_SPEECH_REGION.' }, 502);
+        }
         let azure = null;
         try { azure = JSON.parse(az.text); } catch (e) { /* non-JSON body */ }
-        /* TEMPORARY diagnostic: prove the call happened and expose the real shape. */
-        const debug = { azure_status: az.status, region: env.AZURE_SPEECH_REGION,
-                        azure_raw: (az.text || '(empty body)').slice(0, 1600) };
         const parsed = azure ? parseAzureAssessment(azure) : { ok: false };
         if (!parsed.ok) {
-          /* No usable assessment — Azure error, or it couldn't match the word (mumble). */
+          /* 200 but no usable assessment — Azure heard nothing matchable (a mumble). */
           return json({ tier: 2, provisional: true, notRecognized: true,
-            note: 'Couldn’t make out the word from the recording.', debug }, 200);
+            note: 'Couldn’t make out the word from the recording.' }, 200);
         }
 
-        /* Tier 3 — LLM turns the *labelled* flagged phonemes into articulatory tips
-           [R-22][R-25]. The model never sees audio, only the flagged list. Arabic
-           (ar-SA) often returns unlabelled phonemes, so we can only coach named ones. */
+        /* Tier 3 — LLM turns the flagged phonemes into articulatory tips [R-22][R-25].
+           The model never sees audio, only the flagged list. ar-SA returns no phoneme
+           labels, so the flagged sounds are named positionally from the word's letter
+           skeleton (parseAzureAssessment, Option B) before they reach the coach. */
         let coaching = null;
         if (body.coach && parsed.named.length && (env.AI || (env.GEN_BASE_URL && env.GEN_API_KEY))) {
           try { coaching = (await callModel(env, coachPrompt(body.expected, parsed.named))).trim(); }
@@ -370,7 +377,7 @@ export default {
           tier: 2, provisional: true,
           note: 'Here is what the checker detected — it does not catch everything.',
           overall: parsed.overall, pron: parsed.pron, completeness: parsed.completeness,
-          words: parsed.words, detected: parsed.detected, named: parsed.named, coaching, debug
+          words: parsed.words, detected: parsed.detected, named: parsed.named, coaching
         }, 200);
       }
 

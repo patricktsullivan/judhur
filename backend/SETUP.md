@@ -104,7 +104,7 @@ fixing each sound. It's by far the most involved setup here.
 7. In speaking practice, you'll now see which sounds to work on and a tip for each.
 
 Notes:
-- If your first recording errors with an audio-format complaint, tell the developer — Azure
-  may need the audio converted (a known, small fix).
+- You'll now see a **0–100 score** for each word, and if a specific sound comes out weak
+  it's named (e.g. "Sounds to work on: **ت**") with a quick tip for fixing it.
 - Feedback here is **provisional** until a native speaker has checked it (design doc §11.3),
   so treat it as a helpful hint, not a verdict.
