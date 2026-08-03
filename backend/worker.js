@@ -265,27 +265,22 @@ async function azureAssess(env, expected, audioBytes, contentType) {
 }
 
 /* Azure Neural TTS (§7, amended [R-24]) — synthetic preview audio, clearly labeled
-   client-side. Returns MP3 bytes. ar-SA neural voice; region/key reuse the Speech
-   resource. Free F0 tier covers single-learner volume. */
+   client-side. Returns MP3 bytes. An isolated word is voiced in pausal form (the final
+   short vowel is dropped: كَتَبَ→"katab"), which is the natural isolation pronunciation.
+   The voice ignores harakat, <phoneme>, and <prosody volume>, so those are not used.
+   Voice: AZURE_TTS_VOICE or ar-SA-HamedNeural. Key/region reuse the Speech resource;
+   the free F0 tier covers single-learner volume. */
 function xmlEscape(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 }
-async function azureTTS(env, text, voiceOverride, ipa, tail) {
+async function azureTTS(env, text) {
   const region = env.AZURE_SPEECH_REGION;
-  const voice = (/^ar-[A-Z]{2}-\w+Neural$/.test(voiceOverride || '') ? voiceOverride : null)
-    || env.AZURE_TTS_VOICE || 'ar-SA-HamedNeural';
-  const locale = (env.AZURE_SPEECH_LOCALE || 'ar-SA');
-  let inner = ipa
-    ? "<phoneme alphabet='ipa' ph='" + xmlEscape(ipa) + "'>" + xmlEscape(text) + "</phoneme>"
-    : xmlEscape(text);
-  /* A trailing filler would put the word in connected speech (final vowel voiced), but
-     this voice ignores <prosody volume='silent'> and speaks the filler aloud — so it's
-     OFF by default (tail:true only for the diagnostic). Isolated words stay pausal. */
-  if (tail === true) inner += "<prosody volume='silent'> شَيْء</prosody>";
+  const voice = env.AZURE_TTS_VOICE || 'ar-SA-HamedNeural';
+  const locale = env.AZURE_SPEECH_LOCALE || 'ar-SA';
   const ssml = "<speak version='1.0' xml:lang='" + locale + "'><voice name='" + voice + "'>" +
-    inner + "</voice></speak>";
-  const res = await fetch('https://' + region + '.tts.speech.microsoft.com/cognitiveservices/v1', {
+    xmlEscape(text) + "</voice></speak>";
+  return fetch('https://' + region + '.tts.speech.microsoft.com/cognitiveservices/v1', {
     method: 'POST',
     headers: {
       'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
@@ -295,7 +290,6 @@ async function azureTTS(env, text, voiceOverride, ipa, tail) {
     },
     body: ssml
   });
-  return res;
 }
 
 async function handleIngest(body) {
@@ -436,15 +430,10 @@ export default {
       }
       let body;
       try { body = await req.json(); } catch (e) { return json({ error: 'invalid json' }, 400); }
-      let text = (body.text || '').toString().slice(0, 400);   // one word/phrase, not an essay
+      const text = (body.text || '').toString().slice(0, 400);   // one word/phrase, not an essay
       if (!text.trim()) return json({ error: 'text is required' }, 400);
-      /* Keep the diacritics by default — they carry the final short vowel a learner
-         needs to hear (كَتَبَ → "kataba", not "katab"). Strip only when explicitly asked
-         (diagnostic A/B), since stripping removes exactly that ending. */
-      if (body.strip === true) text = text.replace(/[ً-ْٰـ]/g, '');
-      const ipa = (body.ipa || '').toString().slice(0, 200) || null;
       let res;
-      try { res = await azureTTS(env, text, body.voice, ipa, body.tail); }
+      try { res = await azureTTS(env, text); }
       catch (e) { return json({ error: 'tts call failed: ' + (e.message || 'unknown') }, 502); }
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
