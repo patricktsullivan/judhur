@@ -685,8 +685,9 @@ function arVoice(){
   }
   return pick;
 }
+var ttsLast = null;   /* {via, detail} — what the last speakText actually did (for the Settings diagnostic) */
 function browserSpeak(text){
-  if(!('speechSynthesis' in window)) return false;
+  if(!('speechSynthesis' in window)) return {ok:false, err:'this browser has no speech synthesis'};
   try{
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(text);
@@ -694,23 +695,37 @@ function browserSpeak(text){
     var v = arVoice();
     if(v){ u.voice = v; u.lang = v.lang; }   /* no Arabic voice → let the OS try ar-SA itself */
     window.speechSynthesis.speak(u);
-    return true;
-  }catch(e){ return false; }
+    return {ok:true, voice: v ? v.name : null};
+  }catch(e){ return {ok:false, err:String(e.message||e)}; }
 }
 function playTtsUrl(url){ if(!ttsAudio) ttsAudio=new Audio(); ttsAudio.src=url; var p=ttsAudio.play(); if(p&&p.catch) p.catch(function(){}); }
-function speakText(text){
+function speakText(text, diag){
   if(!S.settings.tts || !text) return;
+  var done = function(via, detail){ ttsLast = {via:via, detail:detail||''}; if(diag && tab==='settings') render(); };
+  var fallback = function(prefix){
+    var r = browserSpeak(text);
+    done(r.voice ? 'device' : (r.ok ? 'device-default' : 'none'),
+         (prefix||'') + (r.voice ? ('device voice “'+r.voice+'”')
+                                 : (r.ok ? 'a non-Arabic device voice (no Arabic voice installed)'
+                                         : ('no voice — '+(r.err||'unavailable')))));
+  };
   if(CFG.url && CFG.token){
-    if(ttsCache[text]){ playTtsUrl(ttsCache[text]); return; }
+    if(ttsCache[text]){ playTtsUrl(ttsCache[text]); done('azure','Azure neural voice (cached)'); return; }
     fetch(CFG.url.replace(/\/+$/,'')+'/tts', {method:'POST',
       headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
       body:JSON.stringify({text:text})})
-      .then(function(r){ if(!r.ok) throw new Error('tts '+r.status); return r.blob(); })
-      .then(function(b){ var url=URL.createObjectURL(b); ttsCache[text]=url; playTtsUrl(url); })
-      .catch(function(){ browserSpeak(text); });   /* fall back to the free device voice */
+      .then(function(r){
+        if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+(t?': '+t.slice(0,140):'')); });
+        return r.blob();
+      })
+      .then(function(b){
+        if(!b || b.size < 200) throw new Error('empty audio from /tts');
+        var url=URL.createObjectURL(b); ttsCache[text]=url; playTtsUrl(url); done('azure','Azure neural voice');
+      })
+      .catch(function(e){ fallback('Azure /tts failed ('+String(e.message||e)+') → '); });   /* free device voice */
     return;
   }
-  browserSpeak(text);
+  fallback('no backend configured → ');
 }
 function allAudio(){
   var list = [];
@@ -1318,7 +1333,10 @@ function ttsCard(){
     + '<div class="set-row"><div><div style="font-size:13px;font-weight:600">Synthetic voice</div>'
     + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word from its fully-vowelled spelling. Always marked <em>synthetic</em> — a human recording replaces it when available.</p></div>'
     + '<button class="toggle'+(on?' on':'')+'" data-set="tts" role="switch" aria-checked="'+on+'"><span></span></button></div>'
-    + (on?'<div class="tts-status '+statusCls+'">'+statusTxt+'</div>':'')
+    + (on?'<div class="tts-status '+statusCls+'">'+statusTxt+'</div>'
+        + '<button class="btn-teal" style="margin:10px 0 0" data-act="tts-test">▶ Test voice — say مَكْتَبَة</button>'
+        + (ttsLast?'<div class="tts-status '+(ttsLast.via==='azure'?'ok':(ttsLast.via==='device'?'ok':'warn'))+'">Last played via: '+esc(ttsLast.detail||ttsLast.via)+'</div>':'')
+      :'')
     + '</div>';
 }
 function diacriticCard(){
@@ -1792,6 +1810,7 @@ document.addEventListener('click', function(e){
       saveCfg(); syncNow();
     }
     else if(a==='sync-now') syncNow();
+    else if(a==='tts-test') speakText('مَكْتَبَة', true);
     else if(a==='reveal'){ sess.show=true; render(); }
     else if(a==='close'){ cancelMic(); sess=null; render(); }
     else if(a==='reset'){
