@@ -706,22 +706,29 @@ function playBuf(buf){ playTtsUrl(URL.createObjectURL(new Blob([buf],{type:'audi
    Azure is distinguishing them and any remaining sameness is the voice/perception. */
 function ttsCompare(){
   if(!(CFG.url && CFG.token)){ ttsLast={via:'warn',detail:'No backend configured — comparison needs Azure (Sync, above).'}; render(); return; }
-  var base = CFG.url.replace(/\/+$/,''), words = ['مَكْتَب','مَكْتَبَة'];
+  var base = CFG.url.replace(/\/+$/,'');
   ttsLast = {via:'test', detail:'testing…'}; render();
-  Promise.all(words.map(function(w){
-    return fetch(base+'/tts',{method:'POST',headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},body:JSON.stringify({text:w})})
-      .then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+' '+t.slice(0,120)); }); return r.arrayBuffer(); })
-      .then(function(buf){ return {w:w, bytes:buf.byteLength, buf:buf}; });
-  })).then(function(res){
-    var a=res[0], b=res[1], same = a.bytes===b.bytes;
-    if(same){ var va=new Uint8Array(a.buf), vb=new Uint8Array(b.buf); for(var i=0;i<va.length;i++){ if(va[i]!==vb[i]){ same=false; break; } } }
-    ttsLast = {via: same?'warn':'azure',
-      detail: 'مَكْتَب '+a.bytes+' B vs مَكْتَبَة '+b.bytes+' B — '
-            + (same ? 'Azure returned IDENTICAL audio for both. The two words are reaching Azure the same, or the voice is collapsing them — this is a real bug, not your device.'
-                    : 'Azure returned DIFFERENT audio for each (playing both now). If they still sound alike, it’s the voice, not the text — try a different voice.')};
-    render();
-    playBuf(a.buf); setTimeout(function(){ playBuf(b.buf); }, 1500);
-  }).catch(function(e){ ttsLast={via:'warn', detail:'Test failed: '+String(e.message||e)}; render(); });
+  function synth(text, strip){
+    return fetch(base+'/tts',{method:'POST',headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
+      body:JSON.stringify({text:text, strip:strip})})
+      .then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+' '+t.slice(0,120)); }); return r.arrayBuffer(); });
+  }
+  /* Synthesize each word WITH and WITHOUT harakat. If stripping makes مكتبة meaningfully
+     longer than مكتب (the extra syllable), diacritics were the problem — that's now the
+     default. Play the stripped pair so the difference is audible. */
+  Promise.all([ synth('مَكْتَب',false), synth('مَكْتَبَة',false), synth('مَكْتَب',true), synth('مَكْتَبَة',true) ])
+   .then(function(r){
+     var b=r.map(function(x){return x.byteLength;});
+     var dDiac=Math.abs(b[0]-b[1]), dPlain=Math.abs(b[2]-b[3]);
+     var helped = dPlain > Math.max(dDiac*1.5, dDiac+400);
+     ttsLast = {via: helped?'azure':'warn',
+       detail: 'with harakat: مَكْتَب '+b[0]+' B vs مَكْتَبَة '+b[1]+' B (Δ '+dDiac+'). '
+             + 'without harakat: مكتب '+b[2]+' B vs مكتبة '+b[3]+' B (Δ '+dPlain+'). '
+             + (helped ? 'Stripping harakat makes مكتبة clearly longer — now the default. Playing the stripped pair; they should differ.'
+                       : 'Stripping did not clearly separate them — likely the voice itself; I can switch voices next.')};
+     render();
+     playBuf(r[2]); setTimeout(function(){ playBuf(r[3]); }, 1500);
+   }).catch(function(e){ ttsLast={via:'warn', detail:'Test failed: '+String(e.message||e)}; render(); });
 }
 function speakText(text, diag){
   if(!S.settings.tts || !text) return;
@@ -1355,7 +1362,7 @@ function ttsCard(){
   else { statusTxt = 'No Arabic voice was found on this device, so words may sound wrong (a non-Arabic voice reading Arabic). Install an Arabic voice in your system settings, or set up Azure (Sync, above) for a proper neural voice.'; statusCls='warn'; }
   return '<div class="card" style="padding:16px;margin-top:12px">'
     + '<div class="set-row"><div><div style="font-size:13px;font-weight:600">Synthetic voice</div>'
-    + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word from its fully-vowelled spelling. Always marked <em>synthetic</em> — a human recording replaces it when available.</p></div>'
+    + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word aloud. Always marked <em>synthetic</em> — a human recording replaces it when available.</p></div>'
     + '<button class="toggle'+(on?' on':'')+'" data-set="tts" role="switch" aria-checked="'+on+'"><span></span></button></div>'
     + (on?'<div class="tts-status '+statusCls+'">'+statusTxt+'</div>'
         + '<button class="btn-teal" style="margin:10px 0 0" data-act="tts-test">▶ Compare مَكْتَب vs مَكْتَبَة</button>'

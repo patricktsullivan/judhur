@@ -271,9 +271,10 @@ function xmlEscape(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 }
-async function azureTTS(env, text) {
+async function azureTTS(env, text, voiceOverride) {
   const region = env.AZURE_SPEECH_REGION;
-  const voice = env.AZURE_TTS_VOICE || 'ar-SA-HamedNeural';
+  const voice = (/^ar-[A-Z]{2}-\w+Neural$/.test(voiceOverride || '') ? voiceOverride : null)
+    || env.AZURE_TTS_VOICE || 'ar-SA-HamedNeural';
   const locale = (env.AZURE_SPEECH_LOCALE || 'ar-SA');
   const ssml = "<speak version='1.0' xml:lang='" + locale + "'><voice name='" + voice + "'>" +
     xmlEscape(text) + "</voice></speak>";
@@ -428,10 +429,14 @@ export default {
       }
       let body;
       try { body = await req.json(); } catch (e) { return json({ error: 'invalid json' }, 400); }
-      const text = (body.text || '').toString().slice(0, 400);   // one word/phrase, not an essay
+      let text = (body.text || '').toString().slice(0, 400);   // one word/phrase, not an essay
       if (!text.trim()) return json({ error: 'text is required' }, 400);
+      /* Azure's ar-* neural voices are trained on UNDIACRITIZED text and do their own
+         vowelling; feeding full harakat can make them swallow endings. Strip on request
+         (and by default) so مَكْتَبَة is read with its full final syllable. */
+      if (body.strip !== false) text = text.replace(/[ً-ْٰـ]/g, '');
       let res;
-      try { res = await azureTTS(env, text); }
+      try { res = await azureTTS(env, text, body.voice); }
       catch (e) { return json({ error: 'tts call failed: ' + (e.message || 'unknown') }, 502); }
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
