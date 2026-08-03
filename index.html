@@ -647,21 +647,22 @@ var AUDIO_MISSING = {};
 var audioEl = null;
 function letterSrc(id){ return 'audio/letters/'+LETTER_META[id].key+'.mp3'; }
 function wordSrc(w){ return 'audio/words/'+w.a+'.mp3'; }
-function playAudio(src, text){
-  if(AUDIO_MISSING[src]){ if(text) speakText(text); return; }   /* known-missing → synthetic */
+function playAudio(src, text, ipa){
+  if(AUDIO_MISSING[src]){ if(text) speakText(text, ipa); return; }   /* known-missing → synthetic */
   if(!audioEl) audioEl = new Audio();
-  var fail = function(){ if(!AUDIO_MISSING[src]) AUDIO_MISSING[src]=true; if(text){ speakText(text); } else render(); };
+  var fail = function(){ if(!AUDIO_MISSING[src]) AUDIO_MISSING[src]=true; if(text){ speakText(text, ipa); } else render(); };
   audioEl.onerror = fail;
   audioEl.src = src;
   var p = audioEl.play();
   if(p && p.catch) p.catch(fail);
 }
-function playBtn(src, text){
+function playBtn(src, text, ipa){
   var miss = AUDIO_MISSING[src], canSay = !!text && !!S.settings.tts, muted = miss && !canSay;
   var title = muted ? 'no recording yet — see Settings → Audio coverage'
             : (miss ? 'synthetic voice — no human recording yet' : 'play recording');
   return '<button class="playbtn'+(muted?' miss':'')+(miss&&canSay?' syn':'')+'" data-play="'+src+'"'
-       + (text?' data-say-fb="'+esc(text)+'"':'')+' title="'+title+'">'+svg(IC.spk)+'</button>';
+       + (text?' data-say-fb="'+esc(text)+'"':'')+(ipa?' data-ipa="'+esc(ipa)+'"':'')
+       + ' title="'+title+'">'+svg(IC.spk)+'</button>';
 }
 /* Synthetic speech (§7, amended [R-24]) — always a fallback, never the gold standard.
    Azure neural voice when the backend is configured (cached per text); otherwise the
@@ -686,6 +687,28 @@ function arVoice(){
   return pick;
 }
 var ttsLast = null;   /* {via, detail} — what the last speakText actually did (for the Settings diagnostic) */
+/* Convert our romanization (kataba, kitāb, ḥalīb, ʿayn…) to IPA, so Azure can be told
+   the exact pronunciation via <phoneme> and stop dropping final short vowels. Approximate
+   but good enough to fix the endings — multi-char sequences matched before single chars. */
+function translitToIpa(t){
+  if(!t) return '';
+  t = String(t).toLowerCase().trim();
+  var two = {'th':'θ','dh':'ð','sh':'ʃ','kh':'x','gh':'ɣ'};
+  var one = {'ā':'aː','ī':'iː','ū':'uː','ḥ':'ħ','ṣ':'sˤ','ḍ':'dˤ','ṭ':'tˤ','ẓ':'ðˤ',
+    'ʿ':'ʕ','ʾ':'ʔ',"'":'ʔ','ʼ':'ʔ','ʔ':'ʔ',
+    'b':'b','t':'t','j':'d͡ʒ','d':'d','r':'r','z':'z','s':'s','f':'f','q':'q','k':'k',
+    'l':'l','m':'m','n':'n','h':'h','w':'w','y':'j','g':'ɡ','p':'p','v':'v',
+    'a':'a','i':'i','u':'u','e':'e','o':'o'};
+  var out='', i=0;
+  while(i<t.length){
+    var d=t.substr(i,2);
+    if(two[d]){ out+=two[d]; i+=2; continue; }
+    var c=t.charAt(i);
+    if(one[c]!==undefined) out+=one[c];
+    i++;
+  }
+  return out;
+}
 function browserSpeak(text){
   if(!('speechSynthesis' in window)) return {ok:false, err:'this browser has no speech synthesis'};
   try{
@@ -707,47 +730,48 @@ function playBuf(buf){ playTtsUrl(URL.createObjectURL(new Blob([buf],{type:'audi
 function ttsCompare(){
   if(!(CFG.url && CFG.token)){ ttsLast={via:'warn',detail:'No backend configured — comparison needs Azure (Sync, above).'}; render(); return; }
   ttsCache = {};   /* bust the session cache so this reflects the live worker */
-  var base = CFG.url.replace(/\/+$/,''), diac = 'كَتَبَ', plain = diac.replace(/[ً-ْٰـ]/g,'');   /* كتب */
+  var base = CFG.url.replace(/\/+$/,'');
   ttsLast = {via:'test', detail:'testing…'}; render();
-  /* Strip on the CLIENT and send strip:false, so the A/B is real even if the worker
-     hasn't redeployed: does Azure pronounce the final fatḥa (كَتَبَ) or drop it (كتب)? */
-  function synth(text){
+  /* Does the IPA <phoneme> hint force the final vowel? كتب plain (Azure guesses → "katab")
+     vs كتب with ipa "kataba" (should say the final "-a"). Bigger = the ending is voiced. */
+  function synth(text, ipa){
     return fetch(base+'/tts',{method:'POST',headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
-      body:JSON.stringify({text:text, strip:false})})
+      body:JSON.stringify({text:text, ipa:ipa||undefined})})
       .then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+' '+t.slice(0,120)); }); return r.arrayBuffer(); });
   }
-  Promise.all([ synth(diac), synth(plain) ]).then(function(r){
-    var a=r[0].byteLength, b=r[1].byteLength;
-    ttsLast = {via: a>b+400 ? 'azure':'warn',
-      detail: 'كَتَبَ (with vowels) '+a+' B vs كتب (bare) '+b+' B. '
-            + (a>b+400 ? 'The vowelled form is longer — Azure IS saying the final "-a". Playing both: vowelled first, then bare.'
-                       : 'Nearly equal — Azure is reading both as pausal "katab" and dropping the final short vowel even when it is written. That is an Azure isolation-form limit, not the text; next step is IPA-guided pronunciation. Playing both.')};
+  Promise.all([ synth('كتب', null), synth('كتب', 'kataba') ]).then(function(r){
+    var a=r[0].byteLength, b=r[1].byteLength, works = b > a+400;
+    ttsLast = {via: works ? 'azure':'warn',
+      detail: 'كتب plain '+a+' B vs IPA-guided "kataba" '+b+' B. '
+            + (works ? 'The IPA version is longer — Azure honors the <phoneme> hint and now says the final "-a". This is wired into every word. Playing plain then IPA.'
+                     : 'Still ~equal — this Azure voice ignores <phoneme> too. I’ll switch to a voice that supports it, or fall back. Playing both.')};
     render();
     playBuf(r[0]); setTimeout(function(){ playBuf(r[1]); }, 1500);
   }).catch(function(e){ ttsLast={via:'warn', detail:'Test failed: '+String(e.message||e)}; render(); });
 }
-function speakText(text, diag){
+function speakText(text, ipa){
   if(!S.settings.tts || !text) return;
-  var done = function(via, detail){ ttsLast = {via:via, detail:detail||''}; if(diag && tab==='settings') render(); };
+  var key = text + (ipa?('|'+ipa):'');
+  var done = function(via, detail){ ttsLast = {via:via, detail:detail||''}; if(tab==='settings') render(); };
   var fallback = function(prefix){
-    var r = browserSpeak(text);
+    var r = browserSpeak(text);   /* device voice can't take IPA — it gets the plain word */
     done(r.voice ? 'device' : (r.ok ? 'device-default' : 'none'),
          (prefix||'') + (r.voice ? ('device voice “'+r.voice+'”')
                                  : (r.ok ? 'a non-Arabic device voice (no Arabic voice installed)'
                                          : ('no voice — '+(r.err||'unavailable')))));
   };
   if(CFG.url && CFG.token){
-    if(ttsCache[text]){ playTtsUrl(ttsCache[text]); done('azure','Azure neural voice (cached)'); return; }
+    if(ttsCache[key]){ playTtsUrl(ttsCache[key]); done('azure','Azure neural voice (cached)'); return; }
     fetch(CFG.url.replace(/\/+$/,'')+'/tts', {method:'POST',
       headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
-      body:JSON.stringify({text:text})})
+      body:JSON.stringify({text:text, ipa:ipa||undefined})})
       .then(function(r){
         if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+(t?': '+t.slice(0,140):'')); });
         return r.blob();
       })
       .then(function(b){
         if(!b || b.size < 200) throw new Error('empty audio from /tts');
-        var url=URL.createObjectURL(b); ttsCache[text]=url; playTtsUrl(url); done('azure','Azure neural voice');
+        var url=URL.createObjectURL(b); ttsCache[key]=url; playTtsUrl(url); done('azure','Azure neural voice');
       })
       .catch(function(e){ fallback('Azure /tts failed ('+String(e.message||e)+') → '); });   /* free device voice */
     return;
@@ -1275,7 +1299,7 @@ function viewVocab(){
         out += '<div class="word"><div><div class="w-ar">'+w.ar+'</div>'
              + '<div class="w-en">'+esc(w.t)+' \u00b7 '+esc(w.en)+' '+regTag(w.reg)+'</div></div>'
              + '<div style="display:flex;align-items:center;gap:8px">'
-             +   playBtn(wordSrc(w), w.ar)
+             +   playBtn(wordSrc(w), w.ar, translitToIpa(w.t))
              +   '<span class="pill" style="color:'+PILL[0]+';background:'+PILL[1]+'">'+st+'</span>'
              + '</div></div>';
       });
@@ -1690,7 +1714,7 @@ function renderOverlay(){
       + '<div class="q-word">'+sd.ar+'</div>'
       + '<div class="ans"><div class="a1">'+esc(sd.t)+'</div><div class="a2">'+esc(sd.en)+'</div>'
       + speakPrompt()
-      + '<div class="ab-row">'+playBtn(wordSrc(sd), sd.ar)+micBtn(sc.id)+'</div>'
+      + '<div class="ab-row">'+playBtn(wordSrc(sd), sd.ar, translitToIpa(sd.t))+micBtn(sc.id)+'</div>'
       + t1Line(sc.id)
       + '</div>';
     var sfoot = '<div class="grades" style="grid-template-columns:repeat(2,1fr)">'
@@ -1727,7 +1751,7 @@ function renderOverlay(){
         + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.en)+'</div>'
             + (trShown() ? '<div class="a2 tr-read">'+esc(d.t)+'</div>' : '')
             + (d.source?'<div class="prov">from '+esc(d.source)+'</div>':'')
-            + '<div class="ab-row">'+playBtn(wordSrc(d), d.ar)+'</div>'
+            + '<div class="ab-row">'+playBtn(wordSrc(d), d.ar, translitToIpa(d.t))+'</div>'
             + '</div>' : '');
   }
   var foot = sess.show
@@ -1796,7 +1820,7 @@ document.addEventListener('click', function(e){
   if((el = e.target.closest('[data-say]'))){ speakText(el.dataset.say); if(el.dataset.selword!==undefined){ libSel = libSel===el.dataset.selword ? null : el.dataset.selword; render(); } return; }
   if((el = e.target.closest('[data-tr-lib]'))){ libTr = !libTr; render(); return; }
   if((el = e.target.closest('[data-mic]'))){ toggleMic(el.dataset.mic); return; }
-  if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play, el.dataset.sayFb); return; }
+  if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play, el.dataset.sayFb, el.dataset.ipa); return; }
   if((el = e.target.closest('[data-gs]'))){ gradeSpeak(parseInt(el.dataset.gs,10)); return; }
   if((el = e.target.closest('[data-g]'))){ grade(parseInt(el.dataset.g,10)); return; }
   if((el = e.target.closest('[data-grade]'))){

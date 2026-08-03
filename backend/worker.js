@@ -271,13 +271,18 @@ function xmlEscape(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 }
-async function azureTTS(env, text, voiceOverride) {
+async function azureTTS(env, text, voiceOverride, ipa) {
   const region = env.AZURE_SPEECH_REGION;
   const voice = (/^ar-[A-Z]{2}-\w+Neural$/.test(voiceOverride || '') ? voiceOverride : null)
     || env.AZURE_TTS_VOICE || 'ar-SA-HamedNeural';
   const locale = (env.AZURE_SPEECH_LOCALE || 'ar-SA');
+  /* With an IPA hint, force the exact pronunciation via <phoneme> — Azure otherwise
+     reads an isolated word in pausal form and drops the final short vowel (كَتَبَ→"katab"). */
+  const inner = ipa
+    ? "<phoneme alphabet='ipa' ph='" + xmlEscape(ipa) + "'>" + xmlEscape(text) + "</phoneme>"
+    : xmlEscape(text);
   const ssml = "<speak version='1.0' xml:lang='" + locale + "'><voice name='" + voice + "'>" +
-    xmlEscape(text) + "</voice></speak>";
+    inner + "</voice></speak>";
   const res = await fetch('https://' + region + '.tts.speech.microsoft.com/cognitiveservices/v1', {
     method: 'POST',
     headers: {
@@ -435,8 +440,9 @@ export default {
          needs to hear (كَتَبَ → "kataba", not "katab"). Strip only when explicitly asked
          (diagnostic A/B), since stripping removes exactly that ending. */
       if (body.strip === true) text = text.replace(/[ً-ْٰـ]/g, '');
+      const ipa = (body.ipa || '').toString().slice(0, 200) || null;
       let res;
-      try { res = await azureTTS(env, text, body.voice); }
+      try { res = await azureTTS(env, text, body.voice, ipa); }
       catch (e) { return json({ error: 'tts call failed: ' + (e.message || 'unknown') }, 502); }
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
