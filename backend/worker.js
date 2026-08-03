@@ -279,11 +279,10 @@ async function azureTTS(env, text, voiceOverride, ipa, tail) {
   let inner = ipa
     ? "<phoneme alphabet='ipa' ph='" + xmlEscape(ipa) + "'>" + xmlEscape(text) + "</phoneme>"
     : xmlEscape(text);
-  /* Azure reads an isolated word in PAUSAL form and clips the final short vowel
-     (كَتَبَ→"katab"); it ignores harakat and <phoneme> for ar-*. Following the word with
-     a silent-volume filler puts it in connected speech, where the final vowel IS voiced,
-     while the filler stays inaudible. Default on; tail:false opts out (diagnostic). */
-  if (tail !== false) inner += "<prosody volume='silent'> شَيْء</prosody>";
+  /* A trailing filler would put the word in connected speech (final vowel voiced), but
+     this voice ignores <prosody volume='silent'> and speaks the filler aloud — so it's
+     OFF by default (tail:true only for the diagnostic). Isolated words stay pausal. */
+  if (tail === true) inner += "<prosody volume='silent'> شَيْء</prosody>";
   const ssml = "<speak version='1.0' xml:lang='" + locale + "'><voice name='" + voice + "'>" +
     inner + "</voice></speak>";
   const res = await fetch('https://' + region + '.tts.speech.microsoft.com/cognitiveservices/v1', {
