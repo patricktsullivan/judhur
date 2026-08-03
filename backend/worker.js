@@ -431,10 +431,10 @@ export default {
       try { body = await req.json(); } catch (e) { return json({ error: 'invalid json' }, 400); }
       let text = (body.text || '').toString().slice(0, 400);   // one word/phrase, not an essay
       if (!text.trim()) return json({ error: 'text is required' }, 400);
-      /* Azure's ar-* neural voices are trained on UNDIACRITIZED text and do their own
-         vowelling; feeding full harakat can make them swallow endings. Strip on request
-         (and by default) so مَكْتَبَة is read with its full final syllable. */
-      if (body.strip !== false) text = text.replace(/[ً-ْٰـ]/g, '');
+      /* Keep the diacritics by default — they carry the final short vowel a learner
+         needs to hear (كَتَبَ → "kataba", not "katab"). Strip only when explicitly asked
+         (diagnostic A/B), since stripping removes exactly that ending. */
+      if (body.strip === true) text = text.replace(/[ً-ْٰـ]/g, '');
       let res;
       try { res = await azureTTS(env, text, body.voice); }
       catch (e) { return json({ error: 'tts call failed: ' + (e.message || 'unknown') }, 502); }

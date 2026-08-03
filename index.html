@@ -706,29 +706,25 @@ function playBuf(buf){ playTtsUrl(URL.createObjectURL(new Blob([buf],{type:'audi
    Azure is distinguishing them and any remaining sameness is the voice/perception. */
 function ttsCompare(){
   if(!(CFG.url && CFG.token)){ ttsLast={via:'warn',detail:'No backend configured — comparison needs Azure (Sync, above).'}; render(); return; }
-  var base = CFG.url.replace(/\/+$/,'');
+  ttsCache = {};   /* bust the session cache so this reflects the live worker */
+  var base = CFG.url.replace(/\/+$/,''), diac = 'كَتَبَ', plain = diac.replace(/[ً-ْٰـ]/g,'');   /* كتب */
   ttsLast = {via:'test', detail:'testing…'}; render();
-  function synth(text, strip){
+  /* Strip on the CLIENT and send strip:false, so the A/B is real even if the worker
+     hasn't redeployed: does Azure pronounce the final fatḥa (كَتَبَ) or drop it (كتب)? */
+  function synth(text){
     return fetch(base+'/tts',{method:'POST',headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
-      body:JSON.stringify({text:text, strip:strip})})
+      body:JSON.stringify({text:text, strip:false})})
       .then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+' '+t.slice(0,120)); }); return r.arrayBuffer(); });
   }
-  /* Synthesize each word WITH and WITHOUT harakat. If stripping makes مكتبة meaningfully
-     longer than مكتب (the extra syllable), diacritics were the problem — that's now the
-     default. Play the stripped pair so the difference is audible. */
-  Promise.all([ synth('مَكْتَب',false), synth('مَكْتَبَة',false), synth('مَكْتَب',true), synth('مَكْتَبَة',true) ])
-   .then(function(r){
-     var b=r.map(function(x){return x.byteLength;});
-     var dDiac=Math.abs(b[0]-b[1]), dPlain=Math.abs(b[2]-b[3]);
-     var helped = dPlain > Math.max(dDiac*1.5, dDiac+400);
-     ttsLast = {via: helped?'azure':'warn',
-       detail: 'with harakat: مَكْتَب '+b[0]+' B vs مَكْتَبَة '+b[1]+' B (Δ '+dDiac+'). '
-             + 'without harakat: مكتب '+b[2]+' B vs مكتبة '+b[3]+' B (Δ '+dPlain+'). '
-             + (helped ? 'Stripping harakat makes مكتبة clearly longer — now the default. Playing the stripped pair; they should differ.'
-                       : 'Stripping did not clearly separate them — likely the voice itself; I can switch voices next.')};
-     render();
-     playBuf(r[2]); setTimeout(function(){ playBuf(r[3]); }, 1500);
-   }).catch(function(e){ ttsLast={via:'warn', detail:'Test failed: '+String(e.message||e)}; render(); });
+  Promise.all([ synth(diac), synth(plain) ]).then(function(r){
+    var a=r[0].byteLength, b=r[1].byteLength;
+    ttsLast = {via: a>b+400 ? 'azure':'warn',
+      detail: 'كَتَبَ (with vowels) '+a+' B vs كتب (bare) '+b+' B. '
+            + (a>b+400 ? 'The vowelled form is longer — Azure IS saying the final "-a". Playing both: vowelled first, then bare.'
+                       : 'Nearly equal — Azure is reading both as pausal "katab" and dropping the final short vowel even when it is written. That is an Azure isolation-form limit, not the text; next step is IPA-guided pronunciation. Playing both.')};
+    render();
+    playBuf(r[0]); setTimeout(function(){ playBuf(r[1]); }, 1500);
+  }).catch(function(e){ ttsLast={via:'warn', detail:'Test failed: '+String(e.message||e)}; render(); });
 }
 function speakText(text, diag){
   if(!S.settings.tts || !text) return;
