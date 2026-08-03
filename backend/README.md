@@ -1,112 +1,103 @@
 # Backend — developer reference
 
-> **Just want to turn on syncing/speech as a user? → [SETUP.md](SETUP.md).**
-> This file is the technical reference for maintainers and contributors.
+> End users turning on syncing or speech should read **[SETUP.md](SETUP.md)**. This file
+> is the technical reference.
 
-A single Cloudflare Worker (`worker.js`) providing the optional cloud features. The study
-app is fully usable without it; it adds cross-device state sync (`/state`) and Tier 1
-speech intelligibility (`/assess`). Per design doc §11.7, each learner deploys their own —
-no shared infrastructure, keys, or data.
+A single Cloudflare Worker (`worker.js`) provides the app's optional cloud features. The
+study app in `index.html` is fully usable without it. Each learner deploys their own
+Worker; there is no shared infrastructure, key, or data (design doc §11.7).
 
 ## Endpoints
 
+All requests require `Authorization: Bearer <SYNC_TOKEN>` (timing-safe compare). With
+`SYNC_TOKEN` unset, the Worker rejects everything — it never runs open ([R-41]). State
+merging is done in the client; the Worker is deliberately dumb storage ([R-42]).
+
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `/state` | GET | Return the stored learner profile (or `null`) |
-| `/state` | PUT | Store the learner profile (JSON, ≤512 KB) |
-| `/assess` | POST | Pronunciation. `{expected, audio(base64), coach?}`. **Tier 2** when Azure is configured: per-phoneme scores via Azure Pronunciation Assessment (`ar-SA`), returning only clearly-low phonemes (precision-tuned [R-19]), plus optional LLM articulatory coaching from the flagged list only ([R-25]) — all marked provisional ([R-20][R-31]). **Tier 1** fallback (no Azure): Workers AI Whisper intelligibility, `{understood, heard}`, never a score ([R-23]). |
-| `/ingest` | POST | `{url}` or `{text}` → `{title, excerpt, source_ref}`. Extracts article text (paste + article URLs; YouTube not yet). Extraction failures return a specific `reason` ([R-13]). |
-| `/generate` | POST | `{excerpt, profile}` → graded fully-diacritized MSA `{arabic, transliteration, english_gloss, new_words[], grammar_notes}`. Tier-1 verification = single pass, no cross-vendor check yet (§6.3). |
-| `/tts` | POST | `{text}` → **MP3 audio** of the word/phrase in a neural Arabic voice (Azure, `ar-SA-HamedNeural` by default). Synthetic preview only, clearly labeled client-side; a human recording always supersedes it ([R-24] amended). `501` when Azure isn't configured — the client then uses the device's built-in voice (Web Speech API). |
-| `/verify` `/speak` | — | `501` stubs — later build steps (§4, §10) |
+| `/state` | GET / PUT | Read or store the learner profile (JSON, ≤512 KB). Single key, single learner by design. |
+| `/assess` | POST | Pronunciation. `{expected, audio(base64), coach?}`. With Azure configured: per-phoneme scoring via Azure Pronunciation Assessment (`ar-SA`), returning `PronScore` plus phonemes scored below threshold, and optional LLM articulatory coaching from the flagged list only. Without Azure: Workers AI Whisper intelligibility, `{understood, heard}`, never a score ([R-23]). Output is provisional ([R-20][R-31]). |
+| `/tts` | POST | `{text}` → MP3 of the word in a neural Arabic voice (Azure). `501` when Azure isn't configured; the client then uses the device's own voice. |
+| `/ingest` | POST | `{url}` or `{text}` → `{title, excerpt, source_ref}`. Extracts article text. Extraction failures return a specific `reason` ([R-13]). |
+| `/generate` | POST | `{excerpt, profile}` → graded, fully-diacritized MSA `{arabic, transliteration, english_gloss, new_words[], grammar_notes}`. Single-model pass; no cross-vendor verification yet (§6.3). |
+| `/verify` `/speak` | — | `501` — later build steps (§4, §10). |
 
-Auth on every request: `Authorization: Bearer <SYNC_TOKEN>` (timing-safe compare). If
-`SYNC_TOKEN` is unset the Worker refuses everything — it never runs open ([R-41]).
-Merging is done client-side; the Worker is deliberately dumb storage ([R-42]).
+## Deploy
 
-## What the one-click deploy button does
+One-click, from the repo: the **Deploy to Cloudflare** button (see SETUP.md) copies the
+repo to the user's GitHub, connects Workers Builds for auto-deploy on every push, reads
+`wrangler.jsonc` to provision the KV namespace and Workers AI binding, and exposes the
+`*.workers.dev` URL. It does **not** set `SYNC_TOKEN`; that one post-deploy step is
+unavoidable (see below).
 
-`https://deploy.workers.cloudflare.com/?url=<repo>` — on click it:
-
-1. Copies this repo into the user's GitHub as `judhur-backend` and connects it for
-   auto-deploy (Workers Builds).
-2. Reads `wrangler.jsonc` and provisions declared resources: a **KV namespace**
-   (`JUDHUR_KV`, progress storage) and the **Workers AI** binding (`AI`, speech).
-3. Deploys and exposes the `*.workers.dev` URL (kept on via `workers_dev: true`).
-
-It does **not** set the runtime secret. Confirmed by testing: the deploy wizard's
-"variable name / value" fields (even with encrypt on) are **build-time** variables — they
-feed the build container, not the Worker's runtime `env`, so a `SYNC_TOKEN` entered there
-yields a 401 at runtime. The token must be set as a runtime secret **on the Worker**
-(Settings → Variables and Secrets, or `wrangler secret put`) *after* deploy. This is why
-`SYNC_TOKEN` is not declared `required` in config — doing so only made the build fail
-before the user could reach that step. One post-deploy step is unavoidable through the
-button.
-
-## Deploy from the command line
-
-Prerequisites: a Cloudflare account and Node.js.
+From the command line:
 
 ```sh
 npx wrangler login
-npx wrangler kv namespace create JUDHUR_KV      # paste the id into wrangler.jsonc
-npx wrangler secret put SYNC_TOKEN              # encrypted secret; the safe way
-npx wrangler deploy                             # prints the https://...workers.dev URL
+npx wrangler kv namespace create JUDHUR_KV     # paste the id into wrangler.jsonc
+npx wrangler secret put SYNC_TOKEN             # encrypted secret
+npx wrangler deploy                            # prints the https://…workers.dev URL
 ```
 
-## Configuration notes (`wrangler.jsonc`)
+## Configuration and the reasoning behind it
 
-- **`kv_namespaces`** — one namespace per learner, **reused across their redeploys** (the
-  same store holds their progress). The button provisions it named after the Worker; a
-  second deploy on the same account collides on that name — select the existing namespace
-  from the dropdown rather than creating a new one, or you orphan the data.
-- **`ai`** — Workers AI binding; no resource to provision.
-- **`workers_dev: true` / `preview_urls: false`** — keep the public URL on for fresh
-  deploys; skip per-version preview URLs (unneeded for a personal backend).
-- **`SYNC_TOKEN`** — set as a Secret (dashboard or `wrangler secret put`), **not** declared
-  in config. Storing it as a plain variable is unsafe: it appears in build logs and is
-  wiped when a repo auto-deploy uploads config with no matching var. A Secret is hidden
-  and survives every deploy.
-- **Generation model (`/generate`)** — defaults to **Workers AI** (free, zero-config; uses
-  the `ai` binding), model `@cf/meta/llama-3.3-70b-instruct-fp8-fast`. Workers AI model ids
-  get deprecated periodically; if generation returns a "model was deprecated" error, set
-  `GEN_WAI_MODEL` to a current id (no code change needed). For better Arabic, try
-  `GEN_WAI_MODEL=@cf/qwen/qwen3-30b-a3b-fp8`, or point at a stronger provider (below).
-  To use a non-Cloudflare model, set `GEN_BASE_URL` (any OpenAI-compatible endpoint, e.g.
-  Gemini's or Groq's), `GEN_MODEL`, and `GEN_API_KEY` — keys live here as secrets, never in
-  the client ([R-10], [R-41]).
-- **Pronunciation Tier 2 (`/assess`)** — off by default (Tier 1 Whisper runs instead). To
-  enable Azure per-phoneme assessment, set Worker secrets `AZURE_SPEECH_KEY` and
-  `AZURE_SPEECH_REGION` (e.g. `eastus`); optionally `AZURE_SPEECH_LOCALE` (`ar-SA` default,
-  `ar-EG` also valid — §7.6.1). Azure's **F0 free tier** covers single-learner volume.
-  The Tier 3 coaching text reuses whichever generation model is configured above.
-  The same Azure Speech key also powers **`/tts`** (synthetic preview audio); override the
-  voice with `AZURE_TTS_VOICE` (default `ar-SA-HamedNeural`; `ar-SA-ZariyahNeural` is a
-  female alternative). Without Azure, the client falls back to the browser's own Arabic
-  voice, so TTS needs no configuration to work — Azure just sounds better. The
-  client captures **16 kHz mono PCM WAV** (Web Audio, not MediaRecorder) — Azure decoded
-  the old WebM/Opus with broken duration metadata (SNR ~1, garbage scores), so WAV is
-  required, not optional. The headline number is Azure's composite **PronScore** (accuracy
-  + completeness + fluency), which separates a said word from a mumble far more sharply
-  than raw accuracy. **Per-sound naming:** `ar-SA` returns per-phoneme *scores* but empty
-  phoneme *labels* (confirmed — neither the SAPI nor the IPA alphabet populates them), so
-  `parseAzureAssessment` names each flagged score positionally from the reference word's
-  consonant/long-vowel skeleton, and declines to name when Azure's segment count diverges
-  from the skeleton (e.g. sun-letter assimilation). Accuracy is unvalidated until the
-  §11.3 calibration protocol runs — output stays provisional.
+- **`SYNC_TOKEN` is a Secret, not a config variable, and is not declared `required`.**
+  The deploy wizard's "variable" fields are build-time variables — they feed the build
+  container, not the Worker's runtime `env`, so a token entered there yields a 401 at
+  runtime. It must be set as a runtime Secret on the Worker after deploy. Declaring it
+  `required` only made the build fail before the user could reach that step.
+
+- **One KV namespace per learner, reused across their redeploys.** It holds their
+  progress. A second deploy on the same account collides on the namespace name; select the
+  existing one rather than creating a new one, or the old progress is orphaned.
+
+- **`workers_dev: true`, `preview_urls: false`.** Keep the public URL on for fresh
+  deploys; per-version preview URLs aren't needed for a personal backend.
+
+- **Generation model (`/generate`).** Defaults to Workers AI (free, uses the `ai` binding),
+  model `@cf/meta/llama-3.3-70b-instruct-fp8-fast`. Workers AI model ids are retired
+  periodically; if generation returns a "model deprecated" error, set `GEN_WAI_MODEL` to a
+  current id (no code change). `@cf/qwen/qwen3-30b-a3b-fp8` is a stronger-Arabic option. To
+  use a non-Cloudflare model, set `GEN_BASE_URL` (any OpenAI-compatible endpoint),
+  `GEN_MODEL`, and `GEN_API_KEY`. Keys live here as Secrets, never in the client
+  ([R-10][R-41]).
+
+- **Pronunciation (`/assess`).** Off unless `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION`
+  are set (then Tier 2; otherwise Tier 1 Whisper). Optional `AZURE_SPEECH_LOCALE` (`ar-SA`
+  default, `ar-EG` also valid — §7.6.1). The client sends **16 kHz mono PCM WAV**;
+  MediaRecorder's WebM/Opus reached Azure with broken duration metadata and produced
+  garbage scores, so WAV is required. `ar-SA` returns per-phoneme scores but empty phoneme
+  labels (no SAPI/IPA phone set for Arabic), so flagged sounds are named positionally from
+  the reference word's consonant/long-vowel skeleton; when Azure's segment count doesn't
+  match the skeleton, the sound is left unnamed rather than guessed. Azure's F0 free tier
+  covers single-learner volume.
+
+- **Speech (`/tts`).** Uses the same Azure key. Voice: `AZURE_TTS_VOICE` (default
+  `ar-SA-HamedNeural`). The response is `Cache-Control: no-store` because it varies by POST
+  body. Azure's `ar-*` neural voices ignore harakat, `<phoneme>`, and `<prosody volume>`,
+  and read an isolated word in pausal form (final short vowel dropped: كَتَبَ → "katab").
+  That is the natural isolation pronunciation and is accepted as-is; synthetic audio is a
+  stopgap until human recordings exist ([R-24]).
+
+## Client behavior worth knowing
+
+- **Audio priority.** Human recording (`audio/words/<a>.mp3`, `audio/letters/<key>.mp3`)
+  first; on miss, synthetic voice — Azure `/tts` when the backend is configured (cached
+  per word in-session), else the device's Web Speech voice. All synthetic audio is labeled
+  synthetic in the UI.
+- **Ingested content.** `/generate` output is saved to the client's **Library**, not the
+  review deck. New words enter daily reviews only when the learner opts them in
+  (per word or per passage).
+- Existing deployments are point-in-time copies with auto-deploy on push. Re-sync from
+  `patricktsullivan/judhur` to pick up new endpoints; the app served by GitHub Pages
+  updates on reload (the service worker is network-first for the page).
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `404` from the Worker URL | `*.workers.dev` route disabled on an existing Worker | Worker → Settings → Domains & Routes → enable `*.workers.dev` (fresh deploys keep it on via config) |
-| `401` on every request | `SYNC_TOKEN` unset, or app token ≠ Worker secret | Set/align the secret |
-| Deploy: `required secrets have not been set` | An older config still declared `SYNC_TOKEN` required | Pull latest `wrangler.jsonc` (requirement removed), or set the secret and redeploy |
-| KV name "already exists" on deploy | Re-deploying on an account that already has the namespace | Select the existing namespace; do not create a new one |
-
-## Notes
-
-- Later features (generation, pronunciation) add their own API keys here as Cloudflare
-  secrets — never in the client ([R-10], [R-41]).
-- Existing deployments are point-in-time copies; they don't auto-receive changes pushed to
-  this source repo. Re-sync from `patricktsullivan/judhur` to pick up new endpoints.
+| `404` from the Worker URL | `*.workers.dev` route disabled | Worker → Settings → Domains & Routes → enable `*.workers.dev` |
+| `401` on every request | `SYNC_TOKEN` unset, or app token ≠ Worker secret | Set/align the Secret |
+| `required secrets have not been set` at deploy | Old config declared `SYNC_TOKEN` required | Pull latest `wrangler.jsonc` |
+| KV name "already exists" at deploy | Namespace exists on this account | Select the existing namespace; don't create a new one |
+| Generation: "model was deprecated" | Workers AI retired the default model | Set `GEN_WAI_MODEL` to a current id |

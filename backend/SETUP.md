@@ -1,110 +1,110 @@
 # Turn on syncing and speaking practice
 
-The study app works fine on its own. This adds two extras:
+The study app works on its own with nothing to set up. This guide adds two things:
 
-- your progress on **all your devices**, and
-- the **"say it out loud"** microphone check in practice.
+- your progress on **all your devices**, kept in step, and
+- the **microphone check** in speaking practice, which listens to a word you say and
+  tells you whether it came through clearly.
 
 It's **free** and takes about **ten minutes**, once.
 
 ## What you need
 
-- A free **GitHub account**. Don't have one? Make one at
-  [github.com/signup](https://github.com/signup) — about two minutes. You'll use it to
-  sign in everywhere below, so there's nothing else to sign up for.
-- A **password you make up** and write down. You'll type it a few times.
+- A **GitHub account** — free to create at [github.com/signup](https://github.com/signup)
+  if you don't have one. You'll sign in with it everywhere below, so there's nothing else
+  to sign up for.
+- A **password you choose** and write down. You'll type it a few times.
 
 ## Steps
 
-**1. Click this button** to start:
+**1. Start the setup.** Click this button:
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/patricktsullivan/judhur)
 
-When it asks you to sign in, **sign in with your GitHub account**. That signs you into
-Cloudflare too — you don't need a separate Cloudflare account.
+When it asks you to sign in, **sign in with GitHub**. That also signs you into Cloudflare,
+the service that runs your helper — there's no separate account to make.
 
-**2. Let it set up.** It makes your own copy of the helper and gets it ready. Accept the
-options it suggests and keep going.
+**2. Let it build.** It makes your own private copy of the helper and gets it running.
+Accept the options it suggests and continue.
 
-> If the setup offers **"variable"** boxes along the way, **leave them blank.** They don't
-> set your password — you'll do that in the next step, on the helper itself. (Putting the
-> password there looks like it works but won't.)
+> If it offers boxes for **variables** along the way, **leave them empty.** Your password
+> goes in during the next step, directly on the helper. A password entered here looks
+> accepted but won't take effect.
 
-When it finishes, it shows a **web address that ends in `.workers.dev`**. **Copy it and
-keep it somewhere** — you'll need it in step 4.
+When it finishes, it shows a web address ending in **`.workers.dev`**. **Copy it and keep
+it somewhere** — you'll need it in step 4.
 
-**3. Set your password.** This is the one spot it has to go. In Cloudflare, find your list
-of Workers (look for **"Workers & Pages"**, possibly under a **"Compute"** menu) and open
-the one called **`judhur-backend`**. Then:
+**3. Set your password.** In Cloudflare, open **Workers & Pages** (it may sit under a
+**Compute** menu) and open the worker named **`judhur-backend`**. Then:
 
-- Go to **Settings**, then **Variables and Secrets**.
+- Open **Settings → Variables and Secrets**.
 - Click **Add**.
-- Name: type exactly **`SYNC_TOKEN`**
+- Name: type exactly **`SYNC_TOKEN`**.
 - Value: type **your password**.
-- Turn on the **Encrypt** / **Secret** option.
+- Turn on the **Encrypt** (Secret) option.
 - Click **Save**.
 
-**4. Turn on syncing in the app.** Open the study app → **Progress** → **Sync across
-devices**. Paste in the **web address** and your **password**, then tap **Save & sync**.
+**4. Connect the app.** Open the study app → **Settings → Sync across devices**. Paste in
+the **web address** and your **password**, then tap **Save & sync**.
 
-**5. Repeat step 4 on your other device**, using the same web address and password.
-That's what links them together.
+**5. Repeat step 4 on your other device**, using the same web address and password. That's
+what links them.
 
-Done. Your progress now travels with you, and practice sessions have a microphone button
-for the "say it out loud" check.
+Done. Your progress now travels with you, and speaking practice has a microphone button.
 
 ## If something isn't working
 
-- **It says "backend error 404."** Your web address is switched off. In Cloudflare, open
-  **`judhur-backend` → Settings → Domains & Routes**, and turn **on** the address that
-  ends in `.workers.dev`. Then try **Save & sync** again.
-- **It says "token rejected."** The password in the app doesn't match the one you set in
-  Cloudflare. Type the **same** password in both places.
-- **It says a storage name is "already taken."** You've set this up before. Just pick the
-  existing one from the dropdown list and keep going.
+- **"backend error 404."** The web address is switched off. In Cloudflare, open
+  **`judhur-backend` → Settings → Domains & Routes** and switch **on** the address ending
+  in `.workers.dev`. Then tap **Save & sync** again.
+- **"token rejected."** The password in the app doesn't match the one set in Cloudflare.
+  Use the same password in both places.
+- **A storage name is "already taken."** You've set this up before. Pick the existing name
+  from the list and continue.
 - **Still stuck?** Nothing is lost — your progress is always safe on each device even
-  without this. You can try again anytime.
+  without syncing. You can try again anytime.
 
 ---
 
-## Optional: sharper pronunciation feedback (Azure)
+## Optional: spoken words and sharper pronunciation feedback (Azure)
 
-**You do not need this.** Speaking practice already works — it tells you whether a word
-came through clearly. This *extra* adds per-sound scoring ("your ح was off") and a tip for
-fixing each sound. It's by far the most involved setup here.
+Everything above works without this. Two extras become available when you add a Microsoft
+Azure speech key:
 
-> **Cost, honestly:** Azure **requires a credit card to create the account** (for identity
-> verification) — unlike everything else here. But the **Free "F0" tier does not charge
-> that card**: it's hard-capped at 5 audio-hours a month (far more than one learner uses)
-> and simply stops at the cap. The *only* way to actually be billed is to pick the **"S0"**
-> tier by mistake. Choose **F0** and no charge can happen. If a required credit card is a
-> dealbreaker, skip this whole section — Tier-1 speaking practice stays free and card-free.
+- **A spoken voice** for words that don't have a human recording yet. It's marked
+  *synthetic*, and a real recording replaces it later. A word on its own is read the way
+  it's said in isolation, so a final short vowel isn't sounded (كَتَبَ is read "katab").
+- **Per-sound pronunciation scoring** in speaking practice — a 0–100 score for a word and,
+  when a sound comes out weak, which sound it was.
 
-*(No screenshots here — pair these steps with Microsoft's illustrated quickstart:*
-*<https://learn.microsoft.com/azure/ai-services/speech-service/get-started>.)*
+**About cost.** Azure asks for a credit card to open the account, for identity checks. The
+**Free (F0)** speech tier does not charge that card: it's capped well above one learner's
+use and simply stops at the cap. The only way to be billed is to pick the paid **S0** tier
+by mistake. Choose **F0** and there is no charge. If a required card is a dealbreaker, skip
+this section — speaking practice still works without it.
 
-1. Create a **free Azure account** at [azure.microsoft.com/free](https://azure.microsoft.com/free)
-   (Microsoft sign-in; a credit card is required to verify the account).
-2. Sign in to the [Azure portal](https://portal.azure.com) → **Create a resource** → search
-   the Marketplace for **Speech** → choose **Speech** (by Microsoft) → **Create**.
-3. On the **Basics** form:
-   - **Subscription:** your subscription.
-   - **Resource group:** **Create new**, name it e.g. `judhur`.
+Steps (pair these with Microsoft's illustrated quickstart:
+<https://learn.microsoft.com/azure/ai-services/speech-service/get-started>):
+
+1. Create an Azure account at [azure.microsoft.com/free](https://azure.microsoft.com/free)
+   (a credit card is required to verify it).
+2. In the [Azure portal](https://portal.azure.com): **Create a resource** → search for
+   **Speech** → **Create**.
+3. On the form:
+   - **Resource group:** Create new, name it e.g. `judhur`.
    - **Region:** one near you, e.g. **East US** — note it down.
    - **Name:** any unique name, e.g. `judhur-speech`.
-   - **Pricing tier:** choose **Free F0** — *this is the choice that matters; not S0.*
-     (One F0 per region per account; if it's taken, use another region.)
-4. **Review + create → Create**, wait ~1 minute, then **Go to resource**.
-5. Left menu → **Keys and Endpoint**. Copy:
-   - **KEY 1** → this is your `AZURE_SPEECH_KEY`.
-   - the region code **from the Endpoint URL** (`https://eastus.api...` → `eastus`) → this
-     is `AZURE_SPEECH_REGION`. Use the short lowercase form (no spaces), *not* "East US".
-6. In Cloudflare → your Worker → **Settings → Variables and Secrets**, add two **Secrets**
-   (encrypted, like your password): `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION`. Save.
-7. In speaking practice, you'll now see which sounds to work on and a tip for each.
+   - **Pricing tier:** **Free F0** — this is the choice that matters, not S0. (One F0 per
+     region per account; if it's taken, pick another region.)
+4. **Review + create → Create**, wait about a minute, then **Go to resource**.
+5. Open **Keys and Endpoint** and copy:
+   - **KEY 1** → your `AZURE_SPEECH_KEY`.
+   - the region from the endpoint (`https://eastus.api…` → `eastus`) → your
+     `AZURE_SPEECH_REGION`. Use the short lowercase form, not "East US".
+6. In Cloudflare → **`judhur-backend` → Settings → Variables and Secrets**, add two
+   **Secrets** (encrypted, like your password): `AZURE_SPEECH_KEY` and
+   `AZURE_SPEECH_REGION`. Save.
+7. Reload the app. Words now speak, and speaking practice shows which sounds to work on.
 
-Notes:
-- You'll now see a **0–100 score** for each word, and if a specific sound comes out weak
-  it's named (e.g. "Sounds to work on: **ت**") with a quick tip for fixing it.
-- Feedback here is **provisional** until a native speaker has checked it (design doc §11.3),
-  so treat it as a helpful hint, not a verdict.
+Pronunciation feedback is a helpful hint, not a verdict — it's marked provisional until a
+native speaker has confirmed it.
