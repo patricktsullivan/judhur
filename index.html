@@ -160,6 +160,9 @@
                background:var(--muted);transition:transform .15s,background .15s}
   .toggle.on{background:rgba(79,138,139,.4);border-color:var(--teal)}
   .toggle.on span{transform:translateX(18px);background:var(--teal)}
+  .tts-status{margin-top:11px;font-size:12px;line-height:1.5;padding:9px 11px;border-radius:8px}
+  .tts-status.ok{color:var(--muted);background:var(--bg-deep)}
+  .tts-status.warn{color:var(--amber);background:rgba(184,147,90,.12);border:1px solid rgba(184,147,90,.3)}
   .subback{background:none;border:none;color:var(--teal);font-size:13px;font-weight:600;cursor:pointer;
            display:flex;align-items:center;gap:4px;padding:6px 0;margin-top:4px}
   .subback svg{width:18px;height:18px}
@@ -663,15 +666,33 @@ function playBtn(src, text){
 /* Synthetic speech (§7, amended [R-24]) — always a fallback, never the gold standard.
    Azure neural voice when the backend is configured (cached per text); otherwise the
    device's built-in Arabic voice via the Web Speech API (free, offline). */
-var ttsAudio = null, ttsCache = {};
+var ttsAudio = null, ttsCache = {}, TTS_VOICES = [];
+/* getVoices() is populated asynchronously — it returns [] on the first synchronous
+   call, which is why an Arabic voice was being missed and a Latin voice mangled the
+   text. Cache the list and refresh on 'voiceschanged'. */
+function loadVoices(){ try{ TTS_VOICES = window.speechSynthesis.getVoices() || []; }catch(e){ TTS_VOICES = []; } }
+if('speechSynthesis' in window){
+  loadVoices();
+  try{ window.speechSynthesis.onvoiceschanged = loadVoices; }catch(e){}
+}
+function arVoice(){
+  if(!TTS_VOICES.length) loadVoices();
+  /* prefer a full Arabic voice; skip low-quality "compact" ones when a better exists */
+  var pick = null;
+  for(var i=0;i<TTS_VOICES.length;i++){
+    var v = TTS_VOICES[i];
+    if(/^ar($|[-_])/i.test(v.lang || '')){ if(!pick) pick = v; if(!/compact/i.test(v.name||'')) return v; }
+  }
+  return pick;
+}
 function browserSpeak(text){
   if(!('speechSynthesis' in window)) return false;
   try{
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ar-SA'; u.rate = 0.9;
-    var vs = window.speechSynthesis.getVoices();
-    for(var i=0;i<vs.length;i++){ if(/^ar/i.test(vs[i].lang)){ u.voice = vs[i]; break; } }
+    u.lang = 'ar-SA'; u.rate = 0.85;
+    var v = arVoice();
+    if(v){ u.voice = v; u.lang = v.lang; }   /* no Arabic voice → let the OS try ar-SA itself */
     window.speechSynthesis.speak(u);
     return true;
   }catch(e){ return false; }
@@ -1287,10 +1308,17 @@ function readingCard(){
 }
 function ttsCard(){
   var on = !!S.settings.tts;
+  var azure = !!(CFG.url && CFG.token);
+  var v = arVoice();
+  var statusTxt, statusCls;
+  if(azure){ statusTxt = 'Using your backend’s Azure neural voice (best quality). Falls back to the device voice if the backend is unreachable.'; statusCls='ok'; }
+  else if(v){ statusTxt = 'Using this device’s Arabic voice: “'+esc(v.name)+'”. Set up Azure (Sync, above) for markedly clearer audio.'; statusCls='ok'; }
+  else { statusTxt = 'No Arabic voice was found on this device, so words may sound wrong (a non-Arabic voice reading Arabic). Install an Arabic voice in your system settings, or set up Azure (Sync, above) for a proper neural voice.'; statusCls='warn'; }
   return '<div class="card" style="padding:16px;margin-top:12px">'
     + '<div class="set-row"><div><div style="font-size:13px;font-weight:600">Synthetic voice</div>'
-    + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word. Your device’s built-in Arabic voice is used offline; if your backend has Azure set up, its higher-quality voice is used instead. Always marked <em>synthetic</em> — a human recording replaces it when available.</p></div>'
+    + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word from its fully-vowelled spelling. Always marked <em>synthetic</em> — a human recording replaces it when available.</p></div>'
     + '<button class="toggle'+(on?' on':'')+'" data-set="tts" role="switch" aria-checked="'+on+'"><span></span></button></div>'
+    + (on?'<div class="tts-status '+statusCls+'">'+statusTxt+'</div>':'')
     + '</div>';
 }
 function diacriticCard(){
