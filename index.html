@@ -731,22 +731,21 @@ function ttsCompare(){
   if(!(CFG.url && CFG.token)){ ttsLast={via:'warn',detail:'No backend configured — comparison needs Azure (Sync, above).'}; render(); return; }
   ttsCache = {};   /* bust the session cache so this reflects the live worker */
   var base = CFG.url.replace(/\/+$/,'');
-  ttsLast = {via:'test', detail:'testing…'}; render();
-  /* Does the IPA <phoneme> hint force the final vowel? كتب plain (Azure guesses → "katab")
-     vs كتب with ipa "kataba" (should say the final "-a"). Bigger = the ending is voiced. */
-  function synth(text, ipa){
+  ttsLast = {via:'test', detail:'testing… listen for the ending'}; render();
+  /* Judge by EAR, not bytes (the silent tail adds silence either way): does the
+     connected-speech version voice the final "-a"? First clip = old pausal "katab",
+     second = with the silent-filler fix, should be "kataba". */
+  function synth(tail){
     return fetch(base+'/tts',{method:'POST',headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
-      body:JSON.stringify({text:text, ipa:ipa||undefined})})
+      body:JSON.stringify({text:'كَتَبَ', tail:tail})})
       .then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+' '+t.slice(0,120)); }); return r.arrayBuffer(); });
   }
-  Promise.all([ synth('كتب', null), synth('كتب', 'kataba') ]).then(function(r){
-    var a=r[0].byteLength, b=r[1].byteLength, works = b > a+400;
-    ttsLast = {via: works ? 'azure':'warn',
-      detail: 'كتب plain '+a+' B vs IPA-guided "kataba" '+b+' B. '
-            + (works ? 'The IPA version is longer — Azure honors the <phoneme> hint and now says the final "-a". This is wired into every word. Playing plain then IPA.'
-                     : 'Still ~equal — this Azure voice ignores <phoneme> too. I’ll switch to a voice that supports it, or fall back. Playing both.')};
-    render();
-    playBuf(r[0]); setTimeout(function(){ playBuf(r[1]); }, 1500);
+  synth(false).then(function(a){
+    playBuf(a);
+    return new Promise(function(res){ setTimeout(res, 2000); }).then(function(){ return synth(true); });
+  }).then(function(b){
+    ttsLast = {via:'test', detail:'Played two clips: 1st is the old form (should sound like “katab”), 2nd has the fix (should sound like “kataba”, final “-a” voiced). If the 2nd is right, it’s now the default everywhere. Tap again to replay the 2nd.'};
+    render(); playBuf(b);
   }).catch(function(e){ ttsLast={via:'warn', detail:'Test failed: '+String(e.message||e)}; render(); });
 }
 function speakText(text, ipa){
@@ -1385,7 +1384,7 @@ function ttsCard(){
     + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word aloud. Always marked <em>synthetic</em> — a human recording replaces it when available.</p></div>'
     + '<button class="toggle'+(on?' on':'')+'" data-set="tts" role="switch" aria-checked="'+on+'"><span></span></button></div>'
     + (on?'<div class="tts-status '+statusCls+'">'+statusTxt+'</div>'
-        + '<button class="btn-teal" style="margin:10px 0 0" data-act="tts-test">▶ Compare مَكْتَب vs مَكْتَبَة</button>'
+        + '<button class="btn-teal" style="margin:10px 0 0" data-act="tts-test">▶ Test the word ending (كَتَبَ)</button>'
         + (ttsLast?'<div class="tts-status '+(ttsLast.via==='azure'?'ok':(ttsLast.via==='device'?'ok':'warn'))+'">Last played via: '+esc(ttsLast.detail||ttsLast.via)+'</div>':'')
       :'')
     + '</div>';

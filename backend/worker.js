@@ -271,16 +271,19 @@ function xmlEscape(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 }
-async function azureTTS(env, text, voiceOverride, ipa) {
+async function azureTTS(env, text, voiceOverride, ipa, tail) {
   const region = env.AZURE_SPEECH_REGION;
   const voice = (/^ar-[A-Z]{2}-\w+Neural$/.test(voiceOverride || '') ? voiceOverride : null)
     || env.AZURE_TTS_VOICE || 'ar-SA-HamedNeural';
   const locale = (env.AZURE_SPEECH_LOCALE || 'ar-SA');
-  /* With an IPA hint, force the exact pronunciation via <phoneme> — Azure otherwise
-     reads an isolated word in pausal form and drops the final short vowel (كَتَبَ→"katab"). */
-  const inner = ipa
+  let inner = ipa
     ? "<phoneme alphabet='ipa' ph='" + xmlEscape(ipa) + "'>" + xmlEscape(text) + "</phoneme>"
     : xmlEscape(text);
+  /* Azure reads an isolated word in PAUSAL form and clips the final short vowel
+     (كَتَبَ→"katab"); it ignores harakat and <phoneme> for ar-*. Following the word with
+     a silent-volume filler puts it in connected speech, where the final vowel IS voiced,
+     while the filler stays inaudible. Default on; tail:false opts out (diagnostic). */
+  if (tail !== false) inner += "<prosody volume='silent'> شَيْء</prosody>";
   const ssml = "<speak version='1.0' xml:lang='" + locale + "'><voice name='" + voice + "'>" +
     inner + "</voice></speak>";
   const res = await fetch('https://' + region + '.tts.speech.microsoft.com/cognitiveservices/v1', {
@@ -442,7 +445,7 @@ export default {
       if (body.strip === true) text = text.replace(/[ً-ْٰـ]/g, '');
       const ipa = (body.ipa || '').toString().slice(0, 200) || null;
       let res;
-      try { res = await azureTTS(env, text, body.voice, ipa); }
+      try { res = await azureTTS(env, text, body.voice, ipa, body.tail); }
       catch (e) { return json({ error: 'tts call failed: ' + (e.message || 'unknown') }, 502); }
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
