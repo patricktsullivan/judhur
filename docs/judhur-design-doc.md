@@ -2,7 +2,7 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.10 · July 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists)*
+Version 0.12 · August 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists; 0.12 adds §7.5.1, measured Azure TTS limits + pausal decision, and refreshes §3 to the current build)*
 
 ---
 
@@ -104,13 +104,24 @@ Findings:
 
 ---
 
-## 3. Current state (v0)
+## 3. Current state
 
-Working prototype: `judhur-arabic-study.html`, single self-contained file.
+Two files: `index.html` (the self-contained study app) and `backend/worker.js` (the optional Cloudflare Worker). The app runs fully offline; the Worker adds cloud features when a learner deploys and connects it.
 
-**Implemented:** 28 letter cards (name, transliteration, sound description, example word) · 10 root families / 30 words, browsable by root · SM-2-style scheduler with 4-point grading · session runner with 12-card cap and completion screen · streak, XP, level, 30-day heatmap · 5-phase roadmap reference · `localStorage` persistence with in-memory fallback · keyboard shortcuts (space reveals, 1–4 grades, Esc exits).
+**Built:**
 
-**Absent by design:** audio, letter-form variants (initial/medial/final/isolated), grammar content, AI features, network calls beyond web fonts.
+- **Content.** 28 letters with all four positional forms; ~146 words across ~30 root families, browsable by family. Recorded human audio is wired in but the clip files are not yet supplied (the HUMAN track, §12); missing clips fall back to synthetic audio.
+- **Study loop.** SM-2-style scheduler, 4-point grading, 12-card session cap, completion screen, streak/XP/level, 30-day heatmap. Session selection shuffles within a due date so the same cards don't dominate. Recognition and production are separate tracks ([R-29]).
+- **PWA.** Installable, offline study and audio, service worker (network-first for the page).
+- **Backend.** `/state` sync across devices; `/assess` (Azure Tier 2 pronunciation, Whisper Tier 1 fallback); `/tts`; `/ingest` + `/generate`. Keys live only on the Worker.
+- **Pronunciation.** Azure per-phoneme scoring with positional sound-naming; LLM articulatory coaching from the flagged list; all provisional ([R-20][R-31]).
+- **Content pipeline.** Article/text ingestion → graded diacritized MSA passage + new words, saved to a **Library**; new words enter reviews on opt-in.
+- **Display.** Three-stage diacritic fade (retention-linked), per-card vowel pinning, register tags, romanization hidden by default.
+- **Navigation.** Today · Vocab · Library · Progress (with Alphabet and Roadmap sub-pages) · Settings (sync, harakat, romanization default, synthetic voice, audio coverage).
+
+**Not yet built:** cross-vendor generation verification and dictionary-grounded roots (Step 10); the tutor calibration pool's audio retention and stratified sampling ([R-33], §11.3). The self-hosted MDD contingency (§11.4) remains `[PENDING]` and unlikely.
+
+**Human track, not code:** native-speaker recordings for the letters and core words; native review of generated content and of pronunciation feedback (§12).
 
 ---
 
@@ -365,7 +376,17 @@ Arabic ASR is also weaker than English ASR. As of July 2026, Cohere's open-sourc
 | **ArTST** (open source) | SpeechT5-style unified text/speech transformer, MSA-focused |
 | **MMS-TTS-Ara** (Meta, open source) | VITS-based, weakly supervised. A baseline, not a best option. |
 
-**`[R-24]`** *(amended v0.11)* Recorded human audio remains the **gold standard** for the 28 letters and core vocabulary — pharyngeal and uvular consonants are where synthesis is least trustworthy and what the learner most needs to imitate. Source from Common Voice Arabic or record with a native speaker. When a human recording does **not yet exist**, the app MAY fall back to synthetic speech so a word is still audible, provided it is **clearly labeled synthetic** and is always superseded by the human clip once recorded (§7.5). Rationale for the amendment: gating audio entirely on human recordings left most words silent for a solo learner and for classmates before recording sessions happen; a labeled synthetic fallback preserves the study loop (hearing the word) without letting synthesis masquerade as the reference. The fallback uses the device's own Arabic voice (Web Speech API — free, offline) by default, or the learner's configured Azure neural voice when available. Synthetic audio is never sent to the tutor calibration pool (§11.3) as a reference.
+**`[R-24]`** *(amended v0.11)* Recorded human audio remains the **gold standard** for the 28 letters and core vocabulary — pharyngeal and uvular consonants are where synthesis is least trustworthy and what the learner most needs to imitate. Source from Common Voice Arabic or record with a native speaker. When a human recording does **not yet exist**, the app MAY fall back to synthetic speech so a word is still audible, provided it is **clearly labeled synthetic** and is always superseded by the human clip once recorded. The fallback uses the learner's configured Azure neural voice when available, or the device's own Arabic voice (Web Speech API — free, offline) otherwise. Synthetic audio is never sent to the tutor calibration pool (§11.3) as a reference.
+
+#### 7.5.1 Implemented behavior and its limits (v0.12)
+
+The synthetic fallback uses Azure Neural TTS (`ar-SA-HamedNeural`) via the backend, reusing the Speech key. Measured facts about this voice, established by testing:
+
+- It **ignores harakat**: diacritized and undiacritized input produce byte-identical audio. The "diacritization is the gating factor" premise above holds for TTS engines generally but not for this voice.
+- It **ignores `<phoneme>` (IPA and SAPI) and `<prosody volume>`**. This is consistent with §7.6.1's finding that Azure exposes no Arabic phone set.
+- It reads an isolated word in **pausal form**, dropping the final short vowel (كَتَبَ → "katab"). This is the natural way a word is pronounced on its own and is accepted as-is.
+
+**Approaches tried and set aside** (recorded so they are not re-attempted): stripping harakat (no effect, and it removes the ending); IPA `<phoneme>` built from the stored transliteration (ignored); a silent-volume trailing filler to force connected-speech vowelling (the voice spoke the filler aloud). Forcing citation forms would require trimming audio using Azure's word-boundary stream or a different vendor — out of scope for a stopgap. Human recordings, which can be citation or pausal by choice, are the intended resolution.
 
 ### 7.6 Tiered assessment
 
@@ -478,19 +499,19 @@ Each step must be independently usable. Nothing depends on a later step to deliv
 
 **`[R-34]`** *(amended v0.7, July 2026 — owner decision)* Building MAY proceed ahead of usage. The original rule — no step begins until its predecessor has 14 consecutive days of daily use — was retired three days into Step 2's usage window, on the owner's judgment that ADHD momentum cuts both ways: the activation cost of *resuming* a shelved build is the same cost the rest of this document works to avoid, so finishing the app while motivation is high is the better long-run bet. `[R-38]` remains fully binding and is now the sole usage safeguard: if the 30-day heatmap drops below 15 active days, all building stops. The original rule's intent — a system nobody studies with has failed — stands unchanged; only the enforcement mechanism moved.
 
-| Step | Deliverable | Acceptance criteria |
+| Step | Deliverable | Status |
 |---|---|---|
-| **1** | v0 HTML in daily use | ✅ Complete |
-| **2** | Content expansion: all letter forms (initial/medial/final/isolated), ~30 root families, recorded core audio | All 28 letters show 4 positional forms; ≥90 words across ≥30 roots; every letter and core word has recorded human audio playable offline |
-| **3** | PWA | Installs to home screen on Android (tested); study loop fully functional in airplane mode; audio plays offline. iOS install best-effort per §11.8 |
-| **4** | Backend skeleton + `/state` | No key in client bundle (grep-verifiable); profile syncs across two devices; client degrades gracefully when backend unreachable; backend deploys from the repo as a template with keys as env vars, and the client's only credentials are backend URL + access token (§11.7) |
-| **5** | `/speak` + Tier 1 intelligibility | Mic capture works on Android Chrome and desktop Chrome (§11.8); ASR round-trip returns understood/not-understood; result never displayed as a score |
-| **6** | `/ingest` + `/generate`, verification Tier 1 | YouTube URL and article URL both produce a graded passage; output is fully diacritized; new words enter the review queue with provenance; extraction failures report a specific reason |
-| **7** | Tier 2a Azure assessment + calibration pool | Per-phoneme results returned against `ar-SA`; pool populates with correct flagged/passed stratification; all output marked provisional; phase advancement unaffected |
-| **8** | Tier 3 LLM coaching | Receives structured MDD output only, never raw audio; produces articulatory guidance; inherits the provisional label |
-| **9** | Diacritic fade + register tagging UI | Three display stages selectable and phase-linked; per-card override works; stored data remains fully diacritized (verifiable); register visible on every card |
-| **10** | Cross-vendor verification + dictionary grounding | Verifier is a different vendor than the generator; root claims validated by lookup; only if measured error rates warrant |
-| **—** | *Contingency:* Tier 2b self-hosted MDD | Not scheduled. Trigger defined in §11.4. |
+| **1** | v0 HTML in daily use | ✅ Built |
+| **2** | Content expansion: all letter forms, ~30 root families, recorded core audio | ✅ Built — 28 letters × 4 forms, ~146 words across ~30 roots. Human audio *files* pending (HUMAN track); missing clips fall back to synthetic. |
+| **3** | PWA | ✅ Built — installable, offline study + audio, service worker. iOS best-effort per §11.8. |
+| **4** | Backend skeleton + `/state` | ✅ Built — no key in client (grep-verifiable); cross-device sync; graceful offline degradation; deploys from the repo with keys as Secrets ([R-41]). |
+| **5** | Tier 1 intelligibility | ✅ Built — WAV mic capture on Chrome; Whisper round-trip; understood/not-understood, never a score. |
+| **6** | `/ingest` + `/generate`, verification Tier 1 | ✅ Built for article/paste; fully-diacritized output with provenance; specific extraction failures. **YouTube not supported** (returns a reason). |
+| **7** | Tier 2a Azure assessment + calibration pool | ◑ Partial — Azure per-phoneme assessment built (provisional, advancement-safe). **Calibration pool ([R-33]) not built.** |
+| **8** | Tier 3 LLM coaching | ✅ Built — structured flagged list in, articulatory text out, never raw audio; provisional. |
+| **9** | Diacritic fade + register tagging UI | ✅ Built — three stages, per-card pin, register on every card, stored data stays diacritized. |
+| **10** | Cross-vendor verification + dictionary grounding | ⬜ Not built — needs a second model vendor; do only if measured error rates warrant. |
+| **—** | *Contingency:* Tier 2b self-hosted MDD | Not scheduled. Trigger in §11.4. |
 
 **`[HUMAN]` Parallel track: find a native-speaker reviewer.** Runs alongside the sequence, blocks nothing. Screening criteria and protocol in §12.
 
