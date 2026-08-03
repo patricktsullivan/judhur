@@ -264,6 +264,32 @@ async function azureAssess(env, expected, audioBytes, contentType) {
   return { status: res.status, text };
 }
 
+/* Azure Neural TTS (§7, amended [R-24]) — synthetic preview audio, clearly labeled
+   client-side. Returns MP3 bytes. ar-SA neural voice; region/key reuse the Speech
+   resource. Free F0 tier covers single-learner volume. */
+function xmlEscape(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+async function azureTTS(env, text) {
+  const region = env.AZURE_SPEECH_REGION;
+  const voice = env.AZURE_TTS_VOICE || 'ar-SA-HamedNeural';
+  const locale = (env.AZURE_SPEECH_LOCALE || 'ar-SA');
+  const ssml = "<speak version='1.0' xml:lang='" + locale + "'><voice name='" + voice + "'>" +
+    xmlEscape(text) + "</voice></speak>";
+  const res = await fetch('https://' + region + '.tts.speech.microsoft.com/cognitiveservices/v1', {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
+      'Content-Type': 'application/ssml+xml',
+      'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
+      'User-Agent': 'judhur-tts'
+    },
+    body: ssml
+  });
+  return res;
+}
+
 async function handleIngest(body) {
   if (body.text && body.text.trim()) {
     const text = body.text.trim().slice(0, MAX_INGEST_TEXT);
@@ -394,6 +420,27 @@ export default {
       }
       const verdict = tier1Verdict(body.expected, heard);
       return json({ tier: 1, understood: verdict.understood, heard: heard.trim(), reason: verdict.reason || null }, 200);
+    }
+
+    if (url.pathname === '/tts' && req.method === 'POST') {
+      if (!(env.AZURE_SPEECH_KEY && env.AZURE_SPEECH_REGION)) {
+        return json({ error: 'tts not configured — set AZURE_SPEECH_KEY/REGION (client falls back to the device voice)' }, 501);
+      }
+      let body;
+      try { body = await req.json(); } catch (e) { return json({ error: 'invalid json' }, 400); }
+      const text = (body.text || '').toString().slice(0, 400);   // one word/phrase, not an essay
+      if (!text.trim()) return json({ error: 'text is required' }, 400);
+      let res;
+      try { res = await azureTTS(env, text); }
+      catch (e) { return json({ error: 'tts call failed: ' + (e.message || 'unknown') }, 502); }
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        return json({ error: 'Azure TTS returned ' + res.status, detail: detail.slice(0, 300) }, 502);
+      }
+      return new Response(res.body, {
+        status: 200,
+        headers: { ...CORS, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=86400' }
+      });
     }
 
     if (url.pathname === '/ingest' && req.method === 'POST') {

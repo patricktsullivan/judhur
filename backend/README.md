@@ -17,6 +17,7 @@ no shared infrastructure, keys, or data.
 | `/assess` | POST | Pronunciation. `{expected, audio(base64), coach?}`. **Tier 2** when Azure is configured: per-phoneme scores via Azure Pronunciation Assessment (`ar-SA`), returning only clearly-low phonemes (precision-tuned [R-19]), plus optional LLM articulatory coaching from the flagged list only ([R-25]) — all marked provisional ([R-20][R-31]). **Tier 1** fallback (no Azure): Workers AI Whisper intelligibility, `{understood, heard}`, never a score ([R-23]). |
 | `/ingest` | POST | `{url}` or `{text}` → `{title, excerpt, source_ref}`. Extracts article text (paste + article URLs; YouTube not yet). Extraction failures return a specific `reason` ([R-13]). |
 | `/generate` | POST | `{excerpt, profile}` → graded fully-diacritized MSA `{arabic, transliteration, english_gloss, new_words[], grammar_notes}`. Tier-1 verification = single pass, no cross-vendor check yet (§6.3). |
+| `/tts` | POST | `{text}` → **MP3 audio** of the word/phrase in a neural Arabic voice (Azure, `ar-SA-HamedNeural` by default). Synthetic preview only, clearly labeled client-side; a human recording always supersedes it ([R-24] amended). `501` when Azure isn't configured — the client then uses the device's built-in voice (Web Speech API). |
 | `/verify` `/speak` | — | `501` stubs — later build steps (§4, §10) |
 
 Auth on every request: `Authorization: Bearer <SYNC_TOKEN>` (timing-safe compare). If
@@ -78,7 +79,11 @@ npx wrangler deploy                             # prints the https://...workers.
   enable Azure per-phoneme assessment, set Worker secrets `AZURE_SPEECH_KEY` and
   `AZURE_SPEECH_REGION` (e.g. `eastus`); optionally `AZURE_SPEECH_LOCALE` (`ar-SA` default,
   `ar-EG` also valid — §7.6.1). Azure's **F0 free tier** covers single-learner volume.
-  The Tier 3 coaching text reuses whichever generation model is configured above. The
+  The Tier 3 coaching text reuses whichever generation model is configured above.
+  The same Azure Speech key also powers **`/tts`** (synthetic preview audio); override the
+  voice with `AZURE_TTS_VOICE` (default `ar-SA-HamedNeural`; `ar-SA-ZariyahNeural` is a
+  female alternative). Without Azure, the client falls back to the browser's own Arabic
+  voice, so TTS needs no configuration to work — Azure just sounds better. The
   client captures **16 kHz mono PCM WAV** (Web Audio, not MediaRecorder) — Azure decoded
   the old WebM/Opus with broken duration metadata (SNR ~1, garbage scores), so WAV is
   required, not optional. The headline number is Azure's composite **PronScore** (accuracy

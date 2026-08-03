@@ -139,6 +139,49 @@
   .ans .tr-read{font-style:italic}
   .tr-peek{background:none;border:none;color:var(--muted);font-size:12px;margin-top:6px;padding:0;
            cursor:pointer;opacity:.7;text-decoration:underline dotted}
+  /* top-right card controls + context menu */
+  .ov-ctrls{margin-left:auto;display:flex;gap:6px}
+  .ovbtn{background:var(--surface);border:1px solid var(--surface-lt);color:var(--muted);
+         min-width:38px;height:32px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;
+         display:flex;align-items:center;justify-content:center;padding:0 8px}
+  .ovbtn svg{width:18px;height:18px}
+  .ovbtn.on{color:var(--gold);border-color:var(--gold)}
+  .cardmenu{position:absolute;right:12px;top:52px;z-index:5;background:var(--surface);
+            border:1px solid var(--surface-lt);border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  .cardmenu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink);
+                   font-size:13px;padding:9px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+  .cardmenu button:hover{background:var(--surface-lt)}
+  .playbtn.syn{border-color:var(--amber);color:var(--amber)}
+  /* settings toggles + sub-page links */
+  .set-row{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}
+  .toggle{flex:none;width:44px;height:26px;border-radius:13px;border:1px solid var(--surface-lt);
+          background:var(--bg-deep);position:relative;cursor:pointer;margin-top:2px;transition:background .15s}
+  .toggle span{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+               background:var(--muted);transition:transform .15s,background .15s}
+  .toggle.on{background:rgba(79,138,139,.4);border-color:var(--teal)}
+  .toggle.on span{transform:translateX(18px);background:var(--teal)}
+  .subback{background:none;border:none;color:var(--teal);font-size:13px;font-weight:600;cursor:pointer;
+           display:flex;align-items:center;gap:4px;padding:6px 0;margin-top:4px}
+  .subback svg{width:18px;height:18px}
+  .linkcard{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+            background:var(--surface);border:1px solid var(--surface-lt);border-radius:12px;
+            padding:15px 16px;margin-bottom:9px;cursor:pointer;text-align:left;color:var(--ink)}
+  .linkcard .lc-t{font-size:15px;font-weight:600}
+  .linkcard .lc-s{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .linkcard .lc-ch{color:var(--muted);display:flex}.linkcard .lc-ch svg{width:18px;height:18px}
+  /* library passage word-by-word */
+  .passage .pw{font-family:var(--arabic);font-size:26px;line-height:1.7;background:none;border:none;
+               color:var(--ink);cursor:pointer;padding:2px 3px;border-radius:6px;direction:rtl}
+  .passage .pw.known{color:var(--gold)}
+  .passage .pw.sel{background:var(--surface-lt)}
+  .wordgloss{margin-top:12px;background:var(--surface);border:1px solid var(--surface-lt);
+             border-radius:10px;padding:12px 14px;font-size:14px}
+  .nw-in{color:var(--teal);font-size:12px;font-weight:600;white-space:nowrap}
+  .nw-add{background:rgba(201,162,75,.16);color:var(--gold);border:none;border-radius:8px;
+          font-size:12.5px;font-weight:600;padding:7px 11px;cursor:pointer;display:flex;align-items:center;gap:3px;white-space:nowrap}
+  .nw-add svg{width:14px;height:14px}
+  .nw-lib{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .nw-lib .nw-txt{min-width:0}
   .ans .a3{font-family:var(--arabic);font-size:21px;direction:rtl;margin-top:18px}
   .ans .a4{color:var(--muted);font-size:12px;margin-top:4px}
   .reveal{width:100%;background:var(--surface);color:var(--ink);font-weight:600;
@@ -592,24 +635,61 @@ function schedule(prev,q){
 }
 
 /* ---------- audio ----------
-   Recorded human clips only — no TTS for core content [R-24].
-   Drop files next to this HTML: audio/letters/<key>.mp3, audio/words/<a>.mp3.
-   Missing files degrade to a muted button; the Progress tab has a coverage check. */
+   Human recordings are the gold standard (§7). When one is missing, fall back to a
+   synthetic voice — clearly labeled — so words are still audible before a human clip
+   exists ([R-24], amended v0.11): the device's own Arabic voice offline, or the
+   backend's Azure neural voice when configured. Files: audio/letters/<key>.mp3,
+   audio/words/<a>.mp3. The Settings tab has a coverage check. */
 var AUDIO_MISSING = {};
 var audioEl = null;
 function letterSrc(id){ return 'audio/letters/'+LETTER_META[id].key+'.mp3'; }
 function wordSrc(w){ return 'audio/words/'+w.a+'.mp3'; }
-function playAudio(src){
+function playAudio(src, text){
+  if(AUDIO_MISSING[src]){ if(text) speakText(text); return; }   /* known-missing → synthetic */
   if(!audioEl) audioEl = new Audio();
-  audioEl.onerror = function(){ if(!AUDIO_MISSING[src]){ AUDIO_MISSING[src]=true; render(); } };
+  var fail = function(){ if(!AUDIO_MISSING[src]) AUDIO_MISSING[src]=true; if(text){ speakText(text); } else render(); };
+  audioEl.onerror = fail;
   audioEl.src = src;
   var p = audioEl.play();
-  if(p && p.catch) p.catch(function(){ if(!AUDIO_MISSING[src]){ AUDIO_MISSING[src]=true; render(); } });
+  if(p && p.catch) p.catch(fail);
 }
-function playBtn(src){
-  var miss = AUDIO_MISSING[src];
-  return '<button class="playbtn'+(miss?' miss':'')+'" data-play="'+src+'" title="'
-       + (miss?'no recording yet — see Progress → Audio coverage':'play recording')+'">'+svg(IC.spk)+'</button>';
+function playBtn(src, text){
+  var miss = AUDIO_MISSING[src], canSay = !!text && !!S.settings.tts, muted = miss && !canSay;
+  var title = muted ? 'no recording yet — see Settings → Audio coverage'
+            : (miss ? 'synthetic voice — no human recording yet' : 'play recording');
+  return '<button class="playbtn'+(muted?' miss':'')+(miss&&canSay?' syn':'')+'" data-play="'+src+'"'
+       + (text?' data-say-fb="'+esc(text)+'"':'')+' title="'+title+'">'+svg(IC.spk)+'</button>';
+}
+/* Synthetic speech (§7, amended [R-24]) — always a fallback, never the gold standard.
+   Azure neural voice when the backend is configured (cached per text); otherwise the
+   device's built-in Arabic voice via the Web Speech API (free, offline). */
+var ttsAudio = null, ttsCache = {};
+function browserSpeak(text){
+  if(!('speechSynthesis' in window)) return false;
+  try{
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ar-SA'; u.rate = 0.9;
+    var vs = window.speechSynthesis.getVoices();
+    for(var i=0;i<vs.length;i++){ if(/^ar/i.test(vs[i].lang)){ u.voice = vs[i]; break; } }
+    window.speechSynthesis.speak(u);
+    return true;
+  }catch(e){ return false; }
+}
+function playTtsUrl(url){ if(!ttsAudio) ttsAudio=new Audio(); ttsAudio.src=url; var p=ttsAudio.play(); if(p&&p.catch) p.catch(function(){}); }
+function speakText(text){
+  if(!S.settings.tts || !text) return;
+  if(CFG.url && CFG.token){
+    if(ttsCache[text]){ playTtsUrl(ttsCache[text]); return; }
+    fetch(CFG.url.replace(/\/+$/,'')+'/tts', {method:'POST',
+      headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
+      body:JSON.stringify({text:text})})
+      .then(function(r){ if(!r.ok) throw new Error('tts '+r.status); return r.blob(); })
+      .then(function(b){ var url=URL.createObjectURL(b); ttsCache[text]=url; playTtsUrl(url); })
+      .catch(function(){ browserSpeak(text); });   /* fall back to the free device voice */
+    return;
+  }
+  browserSpeak(text);
 }
 function allAudio(){
   var list = [];
@@ -925,6 +1005,11 @@ if(!S.userCards) S.userCards = [];  /* words materialized from ingested content 
 if(!S.passages) S.passages = [];    /* generated reading passages, with provenance [R-14] */
 if(!S.settings) S.settings = {};    /* display prefs (e.g. diacritics stage) */
 if(!S.pinFull) S.pinFull = {};      /* per-card pin to full harakat [R-36] */
+/* Ingested words now live in the Library and only enter daily reviews on opt-in.
+   Cards materialized before this change were auto-added, so treat a missing flag
+   as already-in-review to avoid silently pulling them out. */
+S.userCards.forEach(function(w){ if(w.inReview===undefined) w.inReview = true; });
+if(S.settings.tts===undefined) S.settings.tts = true;   /* synthetic voice fills gaps until a human clip exists */
 
 /* Diacritic display (§11.2). Stored text is ALWAYS fully diacritized [R-35];
    these strip harakat at RENDER time only. */
@@ -933,6 +1018,8 @@ var RE_SHORTV  = /[ً-ِْٰ]/g; // all of the above EXCEPT shadda (ّ)
 function stripHarakat(s){ return String(s).replace(RE_HARAKAT, ''); }
 function partialHarakat(s){ return String(s).replace(RE_SHORTV, ''); }  // keep shadda (approximate partial)
 function diacriticMode(){ return S.settings.diacritics || 'full'; }
+/* Romanization visibility: per-card override wins, else the global default (#1/#2). */
+function trShown(){ return sess && sess.showTr!==undefined ? sess.showTr : !!S.settings.trDefault; }
 function wordStage(cardId){
   if(S.pinFull[cardId]) return 'full';                 /* per-card override [R-36] */
   var mode = diacriticMode();
@@ -949,6 +1036,7 @@ function arDisplay(text, stage){
 function mountUserCards(){
   DECK = DECK.filter(function(c){ return c.id.charAt(0) !== 'u'; });
   (S.userCards||[]).forEach(function(w){
+    if(!w.inReview) return;   /* library words join the deck only once opted in (§5, #3) */
     DECK.push({id:w.id, type:'vocab', d:{ar:w.ar, t:w.translit, en:w.en, a:'', reg:w.reg||'msa',
       root:w.root||'', rootMeaning:w.root_meaning||'', source:w.source_title, source_ref:w.source_ref}});
   });
@@ -962,6 +1050,9 @@ function learnerProfile(){
   return {known_words:words.slice(0,60), known_roots:Object.keys(roots), register:'MSA', target_new_words:5};
 }
 var tab = 'home';
+var progSub = '';       /* Progress sub-page: '' | 'letters' | 'roadmap' */
+var libView = null;     /* open Library passage id, or null for the list */
+var cardMenu = false;   /* in-review card ⋯ context menu open */
 var flipped = {};
 var openRoot = null;
 var sess = null;
@@ -1005,7 +1096,11 @@ var IC = {
   chevD:'<path d="M5 9l7 7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   spk:'<path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   mic:'<path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-  stop:'<rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/>'
+  stop:'<rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/>',
+  gear:'<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.2A1.6 1.6 0 0 0 7 19.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13H2.8a2 2 0 1 1 0-4H3a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V2.8a2 2 0 1 1 4 0V3a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.4 1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  dots:'<circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/>',
+  back:'<path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  plus:'<path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
 };
 function svg(p,cls){ return '<svg viewBox="0 0 24 24" class="'+(cls||'')+'">'+p+'</svg>'; }
 function starRow(){
@@ -1053,8 +1148,7 @@ function viewHome(){
   +   stat('Best streak', S.best+' days', null, 'var(--teal)')
   + '</div>'
   + '<div class="note">Progress saves '+(canLS?'to this browser':'in memory only for this session — storage is blocked here')+'. '
-  +   'Everything runs offline after the fonts load.</div>'
-  + '<button class="reset" data-act="reset">Reset all progress</button>';
+  +   'Everything runs offline after the fonts load.</div>';
 }
 function stat(lbl,val,sub,color){
   return '<div class="card stat"><div class="lbl">'+lbl+'</div>'
@@ -1062,9 +1156,12 @@ function stat(lbl,val,sub,color){
        + (sub?'<div class="sub2">'+sub+'</div>':'')+'</div>';
 }
 
+function subPage(title, body){
+  return '<button class="subback" data-act="prog-back">'+svg(IC.back)+' Progress</button>'
+       + '<h1 class="tt">'+esc(title)+'</h1>' + body;
+}
 function viewScript(){
-  var out = '<h1 class="tt">The alphabet</h1>'
-          + '<p class="sub">Tap a letter to flip it. Gold border means learned.</p>'
+  var out = '<p class="sub">Tap a letter to flip it. Gold border means learned.</p>'
           + '<div class="alpha">';
   ALPHABET.forEach(function(a){
     var id='a-'+a.id, known=reps(id)>=2, f=flipped[a.id];
@@ -1115,7 +1212,7 @@ function viewVocab(){
         out += '<div class="word"><div><div class="w-ar">'+w.ar+'</div>'
              + '<div class="w-en">'+esc(w.t)+' \u00b7 '+esc(w.en)+' '+regTag(w.reg)+'</div></div>'
              + '<div style="display:flex;align-items:center;gap:8px">'
-             +   playBtn(wordSrc(w))
+             +   playBtn(wordSrc(w), w.ar)
              +   '<span class="pill" style="color:'+PILL[0]+';background:'+PILL[1]+'">'+st+'</span>'
              + '</div></div>';
       });
@@ -1127,8 +1224,7 @@ function viewVocab(){
 }
 
 function viewRoadmap(){
-  var out = '<h1 class="tt">The roadmap</h1>'
-          + '<p class="sub">Arabic is an FSI Category IV language \u2014 roughly four times the hours of Spanish. Here is the shape of the climb.</p>'
+  var out = '<p class="sub">Arabic is an FSI Category IV language \u2014 roughly four times the hours of Spanish. Here is the shape of the climb.</p>'
           + '<div style="margin-top:14px">';
   ROADMAP.forEach(function(p){
     out += '<div class="card phase">'
@@ -1141,7 +1237,14 @@ function viewRoadmap(){
   return out+'</div>';
 }
 
+function linkCard(act, title, sub){
+  return '<button class="linkcard" data-act="'+act+'">'
+       + '<div><div class="lc-t">'+esc(title)+'</div><div class="lc-s">'+esc(sub)+'</div></div>'
+       + '<span class="lc-ch">'+svg(IC.chev)+'</span></button>';
+}
 function viewProgress(){
+  if(progSub==='letters') return subPage('The alphabet', viewScript());
+  if(progSub==='roadmap')  return subPage('The roadmap', viewRoadmap());
   var cells='';
   for(var i=29;i>=0;i--){
     var d = addDays(today(),-i);
@@ -1159,9 +1262,36 @@ function viewProgress(){
        +   '<div style="font-size:13px;font-weight:600;margin-bottom:11px">Last 30 days</div>'
        +   '<div class="heat">'+cells+'</div>'
        + '</div>'
+       + '<div style="margin-top:12px">'
+       +   linkCard('prog-letters','The alphabet', lettersKnown()+' / 28 letters learned')
+       +   linkCard('prog-roadmap','The roadmap', 'The shape of the climb ahead')
+       + '</div>';
+}
+function viewSettings(){
+  return '<h1 class="tt">Settings</h1>'
+       + '<p class="sub">Syncing, how words are shown, and voice. Nothing here leaves your device except sync, which talks only to your own backend.</p>'
+       + syncCard()
        + diacriticCard()
+       + readingCard()
+       + ttsCard()
        + covCard()
-       + syncCard();
+       + '<button class="reset" data-act="reset" style="margin-top:16px">Reset all progress</button>';
+}
+function readingCard(){
+  var on = !!S.settings.trDefault;
+  return '<div class="card" style="padding:16px;margin-top:12px">'
+    + '<div class="set-row"><div><div style="font-size:13px;font-weight:600">Show romanization by default</div>'
+    + '<p class="sub" style="margin:4px 0 0">Off keeps your eyes on the Arabic — on a revealed card, tap “Aa” to peek at the reading. On shows it every time.</p></div>'
+    + '<button class="toggle'+(on?' on':'')+'" data-set="trDefault" role="switch" aria-checked="'+on+'"><span></span></button></div>'
+    + '</div>';
+}
+function ttsCard(){
+  var on = !!S.settings.tts;
+  return '<div class="card" style="padding:16px;margin-top:12px">'
+    + '<div class="set-row"><div><div style="font-size:13px;font-weight:600">Synthetic voice</div>'
+    + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word. Your device’s built-in Arabic voice is used offline; if your backend has Azure set up, its higher-quality voice is used instead. Always marked <em>synthetic</em> — a human recording replaces it when available.</p></div>'
+    + '<button class="toggle'+(on?' on':'')+'" data-set="tts" role="switch" aria-checked="'+on+'"><span></span></button></div>'
+    + '</div>';
 }
 function diacriticCard(){
   var mode = diacriticMode();
@@ -1203,8 +1333,9 @@ function syncCard(){
 function covCard(){
   var out = '<div class="card" style="padding:16px;margin-top:12px">'
     + '<div style="font-size:13px;font-weight:600">Audio coverage</div>'
-    + '<p class="sub">Recorded human audio only — no TTS. Drop .mp3 files into '
-    + 'audio/letters/ and audio/words/ next to this HTML file; missing filenames are listed below.</p>';
+    + '<p class="sub">Human recordings are the gold standard. Drop .mp3 files into '
+    + 'audio/letters/ and audio/words/ next to this HTML file; anything missing falls back to the '
+    + 'synthetic voice (above) until a real clip is added. Missing filenames are listed below.</p>';
   if(!COV){
     out += '<button class="btn-teal" style="margin:12px 0 0" data-act="probe">Check '+allAudio().length+' recordings</button>';
   } else if(COV.running){
@@ -1223,10 +1354,88 @@ function covCard(){
   return out+'</div>';
 }
 
+/* ---------- content library (§5, #3) ---------- */
+var libSel = null;   /* selected passage word to gloss, or null */
+var libTr = false;   /* passage reading+meaning panel open */
+function wordsForPassage(pid){ return (S.userCards||[]).filter(function(w){ return w.passage===pid; }); }
+function addWordToReviews(uid){
+  var w = (S.userCards||[]).filter(function(x){return x.id===uid;})[0];
+  if(!w) return;
+  w.inReview = true; mountUserCards(); persist(); syncNow(); render();
+}
+function addPassageToReviews(pid){
+  wordsForPassage(pid).forEach(function(w){ w.inReview = true; });
+  mountUserCards(); persist(); syncNow(); render();
+}
+function normKey(s){ return String(s).replace(/[ً-ْٰـ]/g,'').replace(/[^ء-ي]/g,''); }
+function viewLibrary(){
+  if(libView) return libraryDetail(libView);
+  var out = '<h1 class="tt">Library</h1>';
+  if(!(S.passages||[]).length){
+    return out + '<p class="sub">Nothing here yet. Bring in an article or some text and it becomes a short Arabic passage you can study word by word — then add its new words to your reviews when you’re ready.</p>'
+      + '<button class="btn-gold" data-act="ing-open" style="margin-top:14px">＋ Bring in content</button>';
+  }
+  out += '<p class="sub">Passages you’ve brought in. Open one to read it word by word and add its new words to your daily reviews.</p>'
+       + '<button class="btn-gold" data-act="ing-open" style="margin-top:12px;margin-bottom:4px">＋ Bring in content</button>'
+       + '<div style="margin-top:8px">';
+  S.passages.slice().reverse().forEach(function(p){
+    var words = wordsForPassage(p.id), added = words.filter(function(w){return w.inReview;}).length;
+    out += '<button class="linkcard" data-act="lib-open" data-pid="'+esc(p.id)+'">'
+         + '<div><div class="lc-t" dir="rtl" style="font-family:var(--arabic)">'+esc((p.arabic||'').slice(0,40))+'…</div>'
+         + '<div class="lc-s">'+esc(p.title||p.source_ref||'your text')+' · '+words.length+' word'+(words.length===1?'':'s')
+         + (words.length?(' · '+added+' in reviews'):'')+'</div></div>'
+         + '<span class="lc-ch">'+svg(IC.chev)+'</span></button>';
+  });
+  return out + '</div>';
+}
+function libraryDetail(pid){
+  var p = (S.passages||[]).filter(function(x){return x.id===pid;})[0];
+  if(!p) { libView=null; return viewLibrary(); }
+  var words = wordsForPassage(pid);
+  var glossOf = {};
+  words.forEach(function(w){ glossOf[normKey(w.ar)] = w; });
+  var out = '<button class="subback" data-act="lib-back">'+svg(IC.back)+' Library</button>'
+    + '<div class="prov">from '+esc(p.title||p.source_ref||'your text')+'</div>'
+    + '<div class="ing-note" style="margin:10px 0">⚠ Auto-generated, not yet human-reviewed — diacritics may be imperfect (design doc §5, §11.3).</div>'
+    + '<div class="passage" dir="rtl">';
+  (p.arabic||'').split(/\s+/).forEach(function(tok){
+    if(!tok) return;
+    var key = normKey(tok), known = glossOf[key];
+    out += '<button class="pw'+(libSel===key?' sel':'')+(known?' known':'')+'" data-say="'+esc(tok)+'"'
+         + (known?' data-selword="'+esc(key)+'"':'')+'>'+esc(tok)+'</button> ';
+  });
+  out += '</div>';
+  if(libSel && glossOf[libSel]){
+    var g = glossOf[libSel];
+    out += '<div class="wordgloss"><b dir="rtl" style="font-family:var(--arabic)">'+esc(g.ar)+'</b> — '
+         + esc(g.en)+(g.root?' · root '+esc(g.root):'')+'</div>';
+  }
+  out += '<button class="tr-peek" data-tr-lib style="margin-top:12px">'+(libTr?'hide reading & meaning':'show reading & meaning')+'</button>';
+  if(libTr){
+    out += (p.translit?'<div class="p-tr">'+esc(p.translit)+'</div>':'')
+         + (p.gloss?'<div class="p-en">'+esc(p.gloss)+'</div>':'')
+         + (p.grammar?'<div class="p-gr">'+esc(p.grammar)+'</div>':'');
+  }
+  out += '<div class="nw-h">New words <span class="sub" style="font-weight:400">('+words.length+')</span></div>';
+  var pending = words.filter(function(w){return !w.inReview;}).length;
+  if(pending) out += '<button class="btn-gold" data-act="lib-add-all" data-pid="'+esc(pid)+'" style="margin:4px 0 10px">Add all '+pending+' to my reviews</button>';
+  words.forEach(function(w){
+    out += '<div class="nw nw-lib"><div class="nw-txt"><div><span class="nw-ar">'+esc(w.ar)+'</span> '
+         + (S.settings.trDefault?'<span class="nw-tr">'+esc(w.translit)+'</span>':'')+'</div>'
+         + '<div class="nw-en">'+esc(w.en)+(w.root?' · root '+esc(w.root):'')+'</div></div>'
+         + (w.inReview
+             ? '<div class="nw-in">✓ in reviews</div>'
+             : '<button class="nw-add" data-act="lib-add-word" data-uid="'+esc(w.id)+'">'+svg(IC.plus)+' add</button>')
+         + '</div>';
+  });
+  return out;
+}
+
 /* ---------- session ---------- */
 function startSession(filter){
   var q = dueList(filter||null).slice(0,MAX_SESSION);
   if(!q.length) return;
+  cardMenu = false;
   sess = {q:q,i:0,show:false,done:false,reviewed:0,xp:0};
   render();
 }
@@ -1286,7 +1495,8 @@ function grade(q){
   sess.i++;
   sess.show = false;
   sess.showVowels = false;   /* reset the tap-to-reveal for the next card */
-  sess.showTr = false;       /* reading stays hidden by default on every new card */
+  sess.showTr = undefined;   /* reading falls back to the global default on each new card */
+  cardMenu = false;
   if(sess.i >= sess.q.length) sess.done = true;
   persist(); render();
   if(sess.done) syncNow();   /* fire-and-forget; offline just reports unavailable */
@@ -1328,18 +1538,20 @@ function runIngest(){
     .catch(function(e){ ing.step='error'; ing.msg=e.message; render(); });
 }
 function materialize(){
-  var g=ing.result||{}, stamp=Date.now().toString(36), n=0;
-  S.passages.push({id:'p-'+stamp, title:ing.title, source_ref:ing.source_ref, arabic:g.arabic,
+  var g=ing.result||{}, stamp=Date.now().toString(36), pid='p-'+stamp, n=0;
+  S.passages.push({id:pid, title:ing.title, source_ref:ing.source_ref, arabic:g.arabic,
     translit:g.transliteration, gloss:g.english_gloss, grammar:g.grammar_notes, created:today()});
   (g.new_words||[]).forEach(function(w,i){
     if(!w || !w.ar) return;
-    S.userCards.push({id:'u-'+stamp+'-'+i, ar:w.ar, translit:w.translit||'', en:w.en||'',
+    /* saved to the Library, NOT the review deck — the learner opts them in later (#3) */
+    S.userCards.push({id:'u-'+stamp+'-'+i, passage:pid, inReview:false,
+      ar:w.ar, translit:w.translit||'', en:w.en||'',
       root:w.root||'', root_meaning:w.root_meaning||'', reg:'msa',
       source_title:ing.title, source_ref:ing.source_ref, added:today()});
     n++;
   });
-  mountUserCards(); persist(); syncNow();
-  ing.addedN=n; ing.step='added'; render();
+  persist(); syncNow();
+  ing.addedN=n; ing.savedPid=pid; ing.step='added'; render();
 }
 function ingestHTML(){
   var top='<div class="ov-top"><button data-act="ing-close">'+svg(IC.x)+'</button><div class="ov-ct">Bring in content</div></div>';
@@ -1367,12 +1579,13 @@ function ingestHTML(){
     });
     var addable=(g.new_words||[]).filter(function(w){return w&&w.ar;}).length;
     b+='<div class="ing-note">⚠ Auto-generated and not yet human-reviewed — diacritics may be imperfect.</div>'
-      +'<button class="btn-gold" data-act="ing-add" style="margin-top:12px">Add '+addable+' word'+(addable===1?'':'s')+' to my reviews</button>'
+      +'<button class="btn-gold" data-act="ing-add" style="margin-top:12px">Save to Library ('+addable+' word'+(addable===1?'':'s')+')</button>'
       +'<button class="reset" data-act="ing-close" style="color:var(--muted)">Discard</button>';
   } else if(ing.step==='added'){
-    return top+'<div class="ov-mid"><div class="done-wrap"><h2>Added</h2>'
-      +'<p>'+ing.addedN+' new word'+(ing.addedN===1?'':'s')+' joined your reviews, tagged with their source.</p>'
-      +'<div style="width:100%;max-width:320px"><button class="btn-gold" data-act="ing-close">Done</button></div></div></div>';
+    return top+'<div class="ov-mid"><div class="done-wrap"><h2>Saved to Library</h2>'
+      +'<p>The passage and its '+ing.addedN+' new word'+(ing.addedN===1?'':'s')+' are in your Library. Open it there to study word by word, and add words to your daily reviews when you’re ready.</p>'
+      +'<div style="width:100%;max-width:320px"><button class="btn-gold" data-act="lib-go">Open Library</button>'
+      +'<button class="reset" data-act="ing-close" style="color:var(--muted)">Done</button></div></div></div>';
   } else {
     b='<div class="ing-err">'+esc(ing.msg||'Something went wrong.')+'</div>'
       +'<button class="btn-teal" data-act="ing-open" style="margin-bottom:8px">Try again</button>'
@@ -1404,7 +1617,7 @@ function renderOverlay(){
       + '<div class="q-word">'+sd.ar+'</div>'
       + '<div class="ans"><div class="a1">'+esc(sd.t)+'</div><div class="a2">'+esc(sd.en)+'</div>'
       + speakPrompt()
-      + '<div class="ab-row">'+playBtn(wordSrc(sd))+micBtn(sc.id)+'</div>'
+      + '<div class="ab-row">'+playBtn(wordSrc(sd), sd.ar)+micBtn(sc.id)+'</div>'
       + t1Line(sc.id)
       + '</div>';
     var sfoot = '<div class="grades" style="grid-template-columns:repeat(2,1fr)">'
@@ -1439,13 +1652,9 @@ function renderOverlay(){
         + '<div class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+(showFull?d.ar:arDisplay(d.ar,vstage))+'</div>'
         + (showFull ? '' : '<div class="fade-hint" data-vowels="1">'+(vstage==='bare'?'no vowel marks':'vowels faded')+' — tap to reveal</div>')
         + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.en)+'</div>'
-            + (sess.showTr
-                ? '<div class="a2 tr-read">'+esc(d.t)+'</div>'
-                : '<button class="tr-peek" data-tr="1">Aa show reading</button>')
+            + (trShown() ? '<div class="a2 tr-read">'+esc(d.t)+'</div>' : '')
             + (d.source?'<div class="prov">from '+esc(d.source)+'</div>':'')
-            + '<div class="ab-row">'+playBtn(wordSrc(d))+'</div>'
-            + '<button class="pinbtn'+(S.pinFull[c.id]?' on':'')+'" data-pin="'+c.id+'">'
-            +   (S.pinFull[c.id]?'📌 vowels pinned on':'📌 always show vowels for this word')+'</button>'
+            + '<div class="ab-row">'+playBtn(wordSrc(d), d.ar)+'</div>'
             + '</div>' : '');
   }
   var foot = sess.show
@@ -1457,10 +1666,22 @@ function renderOverlay(){
       + '</div>'
     : '<button class="reveal" data-act="reveal">Show answer</button>';
 
+  var isVocab = c.type!=='alphabet';
+  var ctrls = isVocab
+    ? '<div class="ov-ctrls">'
+      + '<button class="ovbtn'+(trShown()?' on':'')+'" data-tr-toggle title="show romanization">aA</button>'
+      + '<button class="ovbtn'+(cardMenu?' on':'')+'" data-cardmenu title="options">'+svg(IC.dots)+'</button>'
+      + '</div>' : '';
+  var menu = (isVocab && cardMenu)
+    ? '<div class="cardmenu">'
+      + '<button data-pin="'+c.id+'">'+(S.pinFull[c.id]?'Unpin vowels (use the global setting)':'Pin vowels always on for this word')+'</button>'
+      + '</div>' : '';
   o.innerHTML = '<div class="ov-top">'
     +   '<button data-act="close">'+svg(IC.x)+'</button>'
     +   '<div class="ov-ct">'+(sess.i+1)+' / '+sess.q.length+'</div>'
+    +   ctrls
     + '</div>'
+    + menu
     + '<div class="bar"><i style="width:'+pct+'%"></i></div>'
     + '<div class="ov-mid">'+mid+'</div>'
     + '<div style="padding-bottom:6px">'+foot+'</div>';
@@ -1468,18 +1689,19 @@ function renderOverlay(){
 
 /* ---------- render ---------- */
 var TABS = [
-  ['home','Today',IC.home],['script','Script',IC.book],['vocab','Vocab',IC.layers],
-  ['roadmap','Roadmap',IC.map],['progress','Progress',IC.trend]
+  ['home','Today',IC.home],['vocab','Vocab',IC.layers],['library','Library',IC.book],
+  ['progress','Progress',IC.trend],['settings','Settings',IC.gear]
 ];
 function render(){
   document.getElementById('c-streak').textContent = S.streak;
   document.getElementById('c-xp').textContent = S.xp;
   var m = document.getElementById('main');
   m.innerHTML = tab==='home' ? viewHome()
-              : tab==='script' ? viewScript()
               : tab==='vocab' ? viewVocab()
-              : tab==='roadmap' ? viewRoadmap()
-              : viewProgress();
+              : tab==='library' ? viewLibrary()
+              : tab==='progress' ? viewProgress()
+              : tab==='settings' ? viewSettings()
+              : viewHome();
   document.getElementById('nav').innerHTML = TABS.map(function(t){
     return '<button data-tab="'+t[0]+'" class="'+(tab===t[0]?'on':'')+'">'+svg(t[2])+'<span>'+t[1]+'</span></button>';
   }).join('');
@@ -1490,14 +1712,18 @@ function render(){
 document.addEventListener('click', function(e){
   var el;
   if((el = e.target.closest('[data-vowels]'))){ if(sess){ sess.showVowels = true; render(); } return; }
-  if((el = e.target.closest('[data-tr]'))){ if(sess){ sess.showTr = true; render(); } return; }
+  if((el = e.target.closest('[data-tr-toggle]'))){ if(sess){ sess.showTr = !trShown(); render(); } return; }
+  if((el = e.target.closest('[data-cardmenu]'))){ cardMenu = !cardMenu; render(); return; }
   if((el = e.target.closest('[data-pin]'))){
     var pid = el.dataset.pin; S.pinFull[pid] = !S.pinFull[pid]; if(!S.pinFull[pid]) delete S.pinFull[pid];
-    persist(); render(); return;
+    cardMenu = false; persist(); render(); return;
   }
   if((el = e.target.closest('[data-diac]'))){ S.settings.diacritics = el.dataset.diac; persist(); render(); return; }
+  if((el = e.target.closest('[data-set]'))){ var k=el.dataset.set; S.settings[k]=!S.settings[k]; persist(); render(); return; }
+  if((el = e.target.closest('[data-say]'))){ speakText(el.dataset.say); if(el.dataset.selword!==undefined){ libSel = libSel===el.dataset.selword ? null : el.dataset.selword; render(); } return; }
+  if((el = e.target.closest('[data-tr-lib]'))){ libTr = !libTr; render(); return; }
   if((el = e.target.closest('[data-mic]'))){ toggleMic(el.dataset.mic); return; }
-  if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play); return; }
+  if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play, el.dataset.sayFb); return; }
   if((el = e.target.closest('[data-gs]'))){ gradeSpeak(parseInt(el.dataset.gs,10)); return; }
   if((el = e.target.closest('[data-g]'))){ grade(parseInt(el.dataset.g,10)); return; }
   if((el = e.target.closest('[data-grade]'))){
@@ -1511,15 +1737,25 @@ document.addEventListener('click', function(e){
     var ri = parseInt(el.dataset.root,10);
     openRoot = (openRoot===ri) ? null : ri; render(); return;
   }
-  if((el = e.target.closest('[data-tab]'))){ tab = el.dataset.tab; render(); return; }
+  if((el = e.target.closest('[data-tab]'))){
+    tab = el.dataset.tab; progSub=''; libView=null; libSel=null; libTr=false; cardMenu=false; render(); return;
+  }
   if((el = e.target.closest('[data-act]'))){
     var a = el.dataset.act;
     if(a==='start') startSession(null);
     else if(a==='start-vocab') startSession('vocab');
     else if(a==='speak') startSpeaking();
+    else if(a==='prog-letters'){ progSub='letters'; render(); }
+    else if(a==='prog-roadmap'){ progSub='roadmap'; render(); }
+    else if(a==='prog-back'){ progSub=''; render(); }
+    else if(a==='lib-open'){ libView=el.dataset.pid; libSel=null; libTr=false; render(); }
+    else if(a==='lib-back'){ libView=null; libSel=null; libTr=false; render(); }
+    else if(a==='lib-add-word'){ addWordToReviews(el.dataset.uid); }
+    else if(a==='lib-add-all'){ addPassageToReviews(el.dataset.pid); }
     else if(a==='ing-open') openIngest();
     else if(a==='ing-run') runIngest();
     else if(a==='ing-add') materialize();
+    else if(a==='lib-go'){ var pid=ing&&ing.savedPid; ing=null; tab='library'; libView=pid||null; libSel=null; libTr=false; render(); }
     else if(a==='ing-close'){ ing=null; render(); }
     else if(a==='probe') probeCoverage();
     else if(a==='save-sync'){

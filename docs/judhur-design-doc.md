@@ -2,7 +2,7 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.10 · July 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking)*
+Version 0.10 · July 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists)*
 
 ---
 
@@ -365,7 +365,7 @@ Arabic ASR is also weaker than English ASR. As of July 2026, Cohere's open-sourc
 | **ArTST** (open source) | SpeechT5-style unified text/speech transformer, MSA-focused |
 | **MMS-TTS-Ara** (Meta, open source) | VITS-based, weakly supervised. A baseline, not a best option. |
 
-**`[R-24]`** The 28 letters and core vocabulary MUST use recorded human audio, not TTS. Pharyngeal and uvular consonants are where synthesis is least trustworthy and what the learner most needs to imitate. Source from Common Voice Arabic or record with a native speaker. TTS covers generated content only, where recording is impossible.
+**`[R-24]`** *(amended v0.11)* Recorded human audio remains the **gold standard** for the 28 letters and core vocabulary — pharyngeal and uvular consonants are where synthesis is least trustworthy and what the learner most needs to imitate. Source from Common Voice Arabic or record with a native speaker. When a human recording does **not yet exist**, the app MAY fall back to synthetic speech so a word is still audible, provided it is **clearly labeled synthetic** and is always superseded by the human clip once recorded (§7.5). Rationale for the amendment: gating audio entirely on human recordings left most words silent for a solo learner and for classmates before recording sessions happen; a labeled synthetic fallback preserves the study loop (hearing the word) without letting synthesis masquerade as the reference. The fallback uses the device's own Arabic voice (Web Speech API — free, offline) by default, or the learner's configured Azure neural voice when available. Synthetic audio is never sent to the tutor calibration pool (§11.3) as a reference.
 
 ### 7.6 Tiered assessment
 
