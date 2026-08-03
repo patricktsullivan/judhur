@@ -136,6 +136,9 @@
   .ans{margin-top:26px}
   .ans .a1{color:var(--gold);font-size:17px;font-weight:600}
   .ans .a2{color:var(--muted);font-size:13.5px;margin-top:5px;line-height:1.5}
+  .ans .tr-read{font-style:italic}
+  .tr-peek{background:none;border:none;color:var(--muted);font-size:12px;margin-top:6px;padding:0;
+           cursor:pointer;opacity:.7;text-decoration:underline dotted}
   .ans .a3{font-family:var(--arabic);font-size:21px;direction:rtl;margin-top:18px}
   .ans .a4{color:var(--muted);font-size:12px;margin-top:4px}
   .reveal{width:100%;background:var(--surface);color:var(--ink);font-weight:600;
@@ -968,6 +971,11 @@ function reps(id){ var p=S.progress[id]; return p?p.reps:0; }
 function isDue(id){ var p=S.progress[id]; return p && p.due<=today(); }
 function lettersKnown(){ return ALPHABET.filter(function(a){return reps('a-'+a.id)>=2;}).length; }
 function wordsKnown(){ return DECK.filter(function(c){return c.type==='vocab'&&c.id.charAt(0)==='v'&&reps(c.id)>=2;}).length; }
+/* Fisher–Yates in place. */
+function shuffle(a){
+  for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
 function dueList(filter){
   var due=[],fresh=[];
   DECK.forEach(function(c){
@@ -975,7 +983,12 @@ function dueList(filter){
     if(!S.progress[c.id]) fresh.push(c);
     else if(S.progress[c.id].due<=today()) due.push(c);
   });
-  due.sort(function(x,y){return S.progress[x.id].due < S.progress[y.id].due ? -1 : 1;});
+  /* Keep spaced-repetition priority (more-overdue first) but shuffle before a STABLE
+     sort so cards sharing a due date — the big "due today" pool — come up in a
+     different order each session instead of always the same deck-order slice. */
+  shuffle(due);
+  due.sort(function(x,y){ var dx=S.progress[x.id].due, dy=S.progress[y.id].due; return dx<dy?-1:dx>dy?1:0; });
+  shuffle(fresh);
   return due.concat(fresh);
 }
 
@@ -1227,7 +1240,9 @@ function prodDue(){
     if(!p) fresh.push(c);
     else if(p.due<=today()) due.push(c);
   });
-  due.sort(function(x,y){return S.prod[x.id].due < S.prod[y.id].due ? -1 : 1;});
+  shuffle(due);
+  due.sort(function(x,y){ var dx=S.prod[x.id].due, dy=S.prod[y.id].due; return dx<dy?-1:dx>dy?1:0; });
+  shuffle(fresh);
   return due.concat(fresh);
 }
 function startSpeaking(){
@@ -1271,6 +1286,7 @@ function grade(q){
   sess.i++;
   sess.show = false;
   sess.showVowels = false;   /* reset the tap-to-reveal for the next card */
+  sess.showTr = false;       /* reading stays hidden by default on every new card */
   if(sess.i >= sess.q.length) sess.done = true;
   persist(); render();
   if(sess.done) syncNow();   /* fire-and-forget; offline just reports unavailable */
@@ -1422,7 +1438,10 @@ function renderOverlay(){
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
         + '<div class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+(showFull?d.ar:arDisplay(d.ar,vstage))+'</div>'
         + (showFull ? '' : '<div class="fade-hint" data-vowels="1">'+(vstage==='bare'?'no vowel marks':'vowels faded')+' — tap to reveal</div>')
-        + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.t)+'</div><div class="a2">'+esc(d.en)+'</div>'
+        + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.en)+'</div>'
+            + (sess.showTr
+                ? '<div class="a2 tr-read">'+esc(d.t)+'</div>'
+                : '<button class="tr-peek" data-tr="1">Aa show reading</button>')
             + (d.source?'<div class="prov">from '+esc(d.source)+'</div>':'')
             + '<div class="ab-row">'+playBtn(wordSrc(d))+'</div>'
             + '<button class="pinbtn'+(S.pinFull[c.id]?' on':'')+'" data-pin="'+c.id+'">'
@@ -1471,6 +1490,7 @@ function render(){
 document.addEventListener('click', function(e){
   var el;
   if((el = e.target.closest('[data-vowels]'))){ if(sess){ sess.showVowels = true; render(); } return; }
+  if((el = e.target.closest('[data-tr]'))){ if(sess){ sess.showTr = true; render(); } return; }
   if((el = e.target.closest('[data-pin]'))){
     var pid = el.dataset.pin; S.pinFull[pid] = !S.pinFull[pid]; if(!S.pinFull[pid]) delete S.pinFull[pid];
     persist(); render(); return;
