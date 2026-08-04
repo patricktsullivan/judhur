@@ -700,8 +700,46 @@ function browserSpeak(text){
   }catch(e){ return {ok:false, err:String(e.message||e)}; }
 }
 function playTtsUrl(url){ if(!ttsAudio) ttsAudio=new Audio(); ttsAudio.src=url; var p=ttsAudio.play(); if(p&&p.catch) p.catch(function(){}); }
-/* Play a sample word through the live path and report which voice handled it. */
-function ttsTest(){ ttsCache = {}; speakText('كِتَاب'); }
+/* Voice check: three guttural words in isolation (ح ع ق — sounds a non-Arabic voice
+   can't fake, so a wrong voice is obvious), then a sentence. The words are read pausally
+   (final short vowel dropped); the sentence is connected speech, where those vowels are
+   voiced — so كَـ endings differ between the two on purpose. Plays them in sequence and
+   reports which voice was used. */
+function ttsTest(){
+  if(!S.settings.tts) return;
+  ttsCache = {};
+  var items = ['حَلِيب','عَيْن','قَلَم','أَنَا أَتَعَلَّمُ العَرَبِيَّةَ'];
+  var azure = !!(CFG.url && CFG.token), base = azure ? CFG.url.replace(/\/+$/,'') : null;
+  var i = 0, via = 'test', voiceLabel = '';
+  function finish(){ ttsLast = {via: (via==='azure'||via==='device')?via:'warn',
+    detail: 'Played '+items.length+' clips ('+items.join(' · ')+'). Voice: '+(voiceLabel||'unknown')+'.'}; render(); }
+  function afterEach(){ i++; if(i>=items.length){ finish(); } else { setTimeout(step, 350); } }
+  function browserOne(text){
+    if(!('speechSynthesis' in window)){ via='none'; voiceLabel='no speech synthesis on this device'; afterEach(); return; }
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text); u.lang='ar-SA'; u.rate=0.85;
+    var v = arVoice();
+    if(v){ u.voice=v; u.lang=v.lang; via='device'; voiceLabel='device voice “'+v.name+'”'; }
+    else { via='device-default'; voiceLabel='a non-Arabic device voice (no Arabic voice installed)'; }
+    u.onend = afterEach; u.onerror = afterEach;
+    window.speechSynthesis.speak(u);
+  }
+  function step(){
+    var text = items[i];
+    ttsLast = {via:'test', detail:'Playing '+(i+1)+' / '+items.length+': '+esc(text)}; render();
+    if(azure){
+      fetch(base+'/tts',{method:'POST',headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
+        body:JSON.stringify({text:text})})
+        .then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+' '+t.slice(0,80)); }); return r.blob(); })
+        .then(function(b){ if(!b||b.size<200) throw new Error('empty audio');
+          via='azure'; voiceLabel='Azure neural voice';
+          var a = new Audio(URL.createObjectURL(b)); a.onended = afterEach; a.onerror = afterEach; a.play();
+        })
+        .catch(function(){ browserOne(text); });   /* this clip failed on Azure — fall back */
+    } else { browserOne(text); }
+  }
+  step();
+}
 function speakText(text){
   if(!S.settings.tts || !text) return;
   var done = function(via, detail){ ttsLast = {via:via, detail:detail||''}; if(tab==='settings') render(); };
@@ -1334,10 +1372,10 @@ function ttsCard(){
   else { statusTxt = 'No Arabic voice was found on this device, so words may sound wrong (a non-Arabic voice reading Arabic). Install an Arabic voice in your system settings, or set up Azure (Sync, above) for a proper neural voice.'; statusCls='warn'; }
   return '<div class="card" style="padding:16px;margin-top:12px">'
     + '<div class="set-row"><div><div style="font-size:13px;font-weight:600">Synthetic voice</div>'
-    + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word aloud, marked <em>synthetic</em>. A single word is read in isolation form, so a final short vowel is not sounded (كَتَبَ is read “katab”) — the same way the word is said on its own. A human recording replaces it when available.</p></div>'
+    + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word aloud, marked <em>synthetic</em>. A single word is read in isolation form, so a final short vowel is not sounded (كَتَبَ is read “katab”) — the same way the word is said on its own; inside a sentence that vowel returns. A human recording replaces it when available.</p></div>'
     + '<button class="toggle'+(on?' on':'')+'" data-set="tts" role="switch" aria-checked="'+on+'"><span></span></button></div>'
     + (on?'<div class="tts-status '+statusCls+'">'+statusTxt+'</div>'
-        + '<button class="btn-teal" style="margin:10px 0 0" data-act="tts-test">▶ Test the voice</button>'
+        + '<button class="btn-teal" style="margin:10px 0 0" data-act="tts-test">▶ Test the voice — 3 words + a sentence</button>'
         + (ttsLast?'<div class="tts-status '+(ttsLast.via==='azure'||ttsLast.via==='device'?'ok':'warn')+'">Last played via: '+esc(ttsLast.detail||ttsLast.via)+'</div>':'')
       :'')
     + '</div>';
