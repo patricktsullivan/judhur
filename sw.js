@@ -2,11 +2,15 @@
    Strategy:
    - navigations / index.html: network-first, cache fallback (updates apply on
      next online load; offline still works)
-   - everything else (audio, icons, manifest, Google Fonts): cache-first,
-     filled on first fetch — playing a clip or running the Progress tab's
-     coverage check pulls audio into the offline cache
+   - everything else (audio, icons, manifest): cache-first, filled on first
+     fetch — playing a clip or running the Progress tab's coverage check pulls
+     audio into the offline cache
+   Fonts are precached rather than filled on demand: [R-11] wants the study
+   loop working with no network, and Arabic in a fallback face is a broken
+   study loop, not a cosmetic downgrade. They are same-origin now, so the
+   cross-origin allowance for Google Fonts is gone.
    Bump VERSION on deploys that change precached files. */
-var VERSION = 'judhur-sw-v1';
+var VERSION = 'judhur-sw-v2';
 var CORE = [
   './',
   'index.html',
@@ -14,7 +18,11 @@ var CORE = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/maskable-512.png',
-  'icons/apple-touch-icon.png'
+  'icons/apple-touch-icon.png',
+  'fonts/inter-latin.woff2',
+  'fonts/fraunces-latin.woff2',
+  'fonts/noto-naskh-arabic.woff2',
+  'fonts/noto-naskh-latin.woff2'
 ];
 
 self.addEventListener('install', function (e) {
@@ -34,12 +42,8 @@ self.addEventListener('activate', function (e) {
   );
 });
 
-function cacheable(res) { return res && (res.ok || res.type === 'opaque'); }
-function wanted(url) {
-  return url.origin === self.location.origin ||
-         /(^|\.)fonts\.googleapis\.com$/.test(url.hostname) ||
-         /(^|\.)fonts\.gstatic\.com$/.test(url.hostname);
-}
+function cacheable(res) { return res && res.ok; }
+function wanted(url) { return url.origin === self.location.origin; }
 
 self.addEventListener('fetch', function (e) {
   var req = e.request;
