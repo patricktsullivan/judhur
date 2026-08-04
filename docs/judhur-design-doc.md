@@ -2,7 +2,9 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.12 · August 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists; 0.12 adds §7.5.1, measured Azure TTS limits + pausal decision, and refreshes §3 to the current build)*
+Version 0.13 · August 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists; 0.12 adds §7.5.1, measured Azure TTS limits + pausal decision, and refreshes §3 to the current build; 0.13 corrects claims this document made about its own implementation — see below)*
+
+**0.13 is a correction pass, not new design.** An outside review (`docs/review-2026-08.md`) found several places where this document described requirements as met that were not, and one place where it asserted something factually untrue about its own protocol. Those are corrected in place, and where a fix landed in code the section says so. The substantive changes: §3 and §10 no longer overstate what is built; §11.3 and §14 no longer claim that delaying the reviewer search costs no data (it currently costs data, because no audio is retained); §7.5 records the TTS engine actually in use; §2.4 gets the evidence caveat §2.3 already had; §8 and §11.1 are marked descriptive rather than built; the word count is corrected from 146 to 118. **No requirement was weakened to match the implementation.** Where the two disagreed, the requirement stands and the gap is named.
 
 ---
 
@@ -100,7 +102,11 @@ Findings:
 
 **`[R-9]`** The media pipeline serves as the novelty engine: repetition of known vocabulary stays fresh because surrounding content changes. Content variety is a functional requirement, not a nicety.
 
-*Sources:* abblino.com; en.wikipedia.org distributed practice; lifeskillsadvocate.com; tiimoapp.com; adhdcentre.co.uk.
+**Evidence quality** *(added v0.13)*. This section carries the heaviest requirements in the document — the hard session cap, the no-punishment rule, the always-visible counters — on the thinnest sources in it: ADHD-coaching vendors and one Wikipedia article. §2.3 gets an explicit warning about vendor blogs citing unnamed studies; the same warning belongs here and was missing. Treat the *directions* as reliable — distributed practice, immediate feedback, and ending before exhaustion are all defensible on broader grounds, and spacing in particular has real literature behind it (Cepeda et al., *Psychological Bulletin* 132(3), 2006) — and treat any specific number as unsupported.
+
+**The 12 in `[R-5]` is a guess.** Nothing in this section produces it. It became a MUST with an enforced ceiling because a ceiling had to be *some* number, and a number that is never revisited is worse than one that is arbitrary and known to be. **What would revise it:** the review log ([R-32]) now records every grade with its interval before and after, so completion rate and next-day retention can be compared across session lengths once there is enough history. Until that comparison is run, 12 stands — not because it is right, but because changing it on intuition would be no better.
+
+*Sources:* abblino.com; en.wikipedia.org distributed practice; lifeskillsadvocate.com; tiimoapp.com; adhdcentre.co.uk. **These are hostnames, not citations** — the opening claim that "sources are named so claims can be re-checked" does not hold for §2.2 through §2.4, where no titles, URLs, or dates were recorded. Anything load-bearing from these should be re-sourced before it is relied on again.
 
 ---
 
@@ -110,16 +116,24 @@ Two files: `index.html` (the self-contained study app) and `backend/worker.js` (
 
 **Built:**
 
-- **Content.** 28 letters with all four positional forms; ~146 words across ~30 root families, browsable by family. Recorded human audio is wired in but the clip files are not yet supplied (the HUMAN track, §12); missing clips fall back to synthetic audio.
-- **Study loop.** SM-2-style scheduler, 4-point grading, 12-card session cap, completion screen, streak/XP/level, 30-day heatmap. Session selection shuffles within a due date so the same cards don't dominate. Recognition and production are separate tracks ([R-29]).
-- **PWA.** Installable, offline study and audio, service worker (network-first for the page).
+- **Content.** 28 letters with all four positional forms; **118 words across 37 root families**, browsable by family. (Earlier drafts said "~146 words" — 146 is the *clip* count, 28 letters plus 118 words.) Cards are keyed on stable ids, so families and words can be reordered or corrected without disturbing saved progress. Recorded human audio is wired in but **no clip files exist yet** (the HUMAN track, §12); every word currently falls back to synthetic audio.
+- **Study loop.** SM-2-style scheduler, 4-point grading, 12-card session cap, completion screen, streak/XP/level, 30-day heatmap with the `[R-38]` active-day count computed and displayed. Session selection shuffles within a due date so the same cards don't dominate. Recognition and production are separate tracks ([R-29]). Grades append to a review log ([R-32]).
+- **PWA.** Installable, offline study, service worker (network-first for the page), self-hosted fonts.
 - **Backend.** `/state` sync across devices; `/assess` (Azure Tier 2 pronunciation, Whisper Tier 1 fallback); `/tts`; `/ingest` + `/generate`. Keys live only on the Worker.
-- **Pronunciation.** Azure per-phoneme scoring with positional sound-naming; LLM articulatory coaching from the flagged list; all provisional ([R-20][R-31]).
+- **Pronunciation.** Azure per-phoneme scoring with positional sound-naming, **marked as inferred** wherever the label came from the letter skeleton rather than from Azure; LLM articulatory coaching from the flagged list; all provisional ([R-20][R-31]).
 - **Content pipeline.** Article/text ingestion → graded diacritized MSA passage + new words, saved to a **Library**; new words enter reviews on opt-in.
 - **Display.** Three-stage diacritic fade (retention-linked), per-card vowel pinning, register tags, romanization hidden by default.
 - **Navigation.** Today · Vocab · Library · Progress (with Alphabet and Roadmap sub-pages) · Settings (sync, harakat, romanization default, synthetic voice, audio coverage).
 
-**Not yet built:** cross-vendor generation verification and dictionary-grounded roots (Step 10); the tutor calibration pool's audio retention and stratified sampling ([R-33], §11.3). The self-hosted MDD contingency (§11.4) remains `[PENDING]` and unlikely.
+**Not yet built — and each of these was previously described here or in §10 as done or nearly done:**
+
+- **Core audio ([R-12]).** No human recordings, and nothing is pre-generated. Synthetic speech is fetched live per word or spoken by the device. Offline, on a device with no Arabic system voice, there is **no audio at all**. `[R-12]` says hearing a word is part of the study loop, not an enhancement; it is unmet.
+- **Calibration pool ([R-33], §11.3).** Speech attempts are logged with their structured verdict, but **the audio is discarded**. Without audio there is nothing for a reviewer to label. See the corrected §11.3.
+- **Grapheme↔phoneme alignment ([R-21]).** Not computed, not stored, not requested by the generation prompt. This is §7.3's own named mitigation and its absence was not recorded anywhere.
+- **Phase state (§8).** No phase is tracked, so `[R-27]` and the level-appropriateness half of `[R-15]` have no state to work from, and the `/generate` profile omits `phase`, `grammar_cleared`, `grammar_pending`, and `recent_failures`. §8 is currently descriptive. §10 has no step for it — see the note there.
+- **Egyptian content (§11.1, [R-30]).** Every word is tagged `msa`; there is no dialect material at all. The register tag is real machinery with nothing to distinguish. See the corrected §11.1.
+- **Generation accuracy measurement.** Step 10 is gated on "measured error rates" and nothing measures them. See §6.6.
+- Cross-vendor generation verification and dictionary-grounded roots (Step 10). The self-hosted MDD contingency (§11.4) remains `[PENDING]` and unlikely.
 
 **Human track, not code:** native-speaker recordings for the letters and core words; native review of generated content and of pronunciation feedback (§12).
 
@@ -170,6 +184,10 @@ A progressive web app delivers a home-screen icon, full-screen chrome, and offli
 **`[R-11]`** The study loop MUST function with no network connection.
 
 **`[R-12]`** TTS audio for fixed core content (letters, known vocabulary) MUST be pre-generated and cached on device. Hearing a word is part of the study loop, not an enhancement.
+
+> **Unmet as of v0.13.** Nothing is pre-generated. There are no human recordings, and synthetic speech is either fetched live from the backend per word or spoken by the device's own voice — so offline, on a device with no Arabic system voice, there is no audio at all. The README's "check recordings once while online and the whole loop works in airplane mode" describes a mechanism that currently pulls 146 files that do not exist.
+>
+> **The cheap fix serves three requirements at once:** generate the 146 clips once against the maintainer's Azure account, commit them as ordinary files labeled synthetic, and let the existing human-recording override replace them one at a time as §12 delivers. That satisfies `[R-12]`, un-degrades the free path under `[R-45]` (§11.9), and makes the offline claim true — for a few MB and no new architecture. It is deliberately *not* a per-learner runtime cost: the clips are fixed content, which is what this requirement says.
 
 Network is required only for ingestion, generation, and assessment of the learner's own speech.
 
@@ -300,6 +318,20 @@ Where an authoritative source exists, check against it rather than asking anothe
 
 **`[R-18]`** Root correctness MUST be validated by dictionary lookup, not model consensus. Reserve model verification for judgments no lookup can make: naturalness, register, level-appropriateness.
 
+### 6.6 Measuring generation accuracy `[PENDING]` *(added v0.13)*
+
+§11.3 designs a careful blind, two-sided, duplicate-seeded protocol before a single pronunciation verdict is trusted. Generated content — which writes to permanent state — has no equivalent, and the asymmetry was not deliberate.
+
+Step 10 (§10) is gated on "do only if measured error rates warrant." **Nothing measures generation error rates.** There is no correction log, no flagged-word affordance, no `[HUMAN]` review job for generated content in §12, and §13 did not list it as an unknown. The trigger condition therefore cannot fire, which makes the gate a way of never doing the work rather than a way of deciding whether to.
+
+The stakes are higher here than for pronunciation, not lower. §11.3 warns that "a learner acting on unverified feedback can drill an error into permanence" — but pronunciation feedback is transient, and a wrong diacritic on a card entering spaced repetition is drilled by design. Generated words also arrive with a model-asserted root displayed next to hand-curated roots with nothing distinguishing them, which is precisely what `[R-18]` forbids.
+
+**`[R-47]`** Model-asserted roots on generated words MUST be visually distinguished from curated roots until validated by dictionary lookup ([R-18]).
+
+**`[R-48]`** The Library MUST offer a way to mark a generated item as wrong, and MUST record it. This is the measurement Step 10 is gated on; without it the gate cannot open.
+
+*Both are unimplemented as of v0.13 and are the smallest change that makes Step 10 decidable.*
+
 ---
 
 ## 7. Pronunciation
@@ -376,13 +408,15 @@ Arabic ASR is also weaker than English ASR. As of July 2026, Cohere's open-sourc
 | **ArTST** (open source) | SpeechT5-style unified text/speech transformer, MSA-focused |
 | **MMS-TTS-Ara** (Meta, open source) | VITS-based, weakly supervised. A baseline, not a best option. |
 
+**None of the four was adopted** *(recorded v0.13; the table above had been left standing as though the choice were open)*. The build uses **Azure Neural TTS (`ar-SA-HamedNeural`)**, on §11.9's reasoning rather than this table's: the synthetic voice is a stopgap until human recordings exist, and reusing the Speech resource the learner already needs for Tier 2 beats adding a vendor for a stopgap. The four options above remain the shortlist if synthetic audio ever becomes something other than a placeholder — Habibi in particular, if dialect coverage arrives with §11.1. Measured behavior of the voice actually in use is §7.5.1.
+
 **`[R-24]`** *(amended v0.11)* Recorded human audio remains the **gold standard** for the 28 letters and core vocabulary — pharyngeal and uvular consonants are where synthesis is least trustworthy and what the learner most needs to imitate. Source from Common Voice Arabic or record with a native speaker. When a human recording does **not yet exist**, the app MAY fall back to synthetic speech so a word is still audible, provided it is **clearly labeled synthetic** and is always superseded by the human clip once recorded. The fallback uses the learner's configured Azure neural voice when available, or the device's own Arabic voice (Web Speech API — free, offline) otherwise. Synthetic audio is never sent to the tutor calibration pool (§11.3) as a reference.
 
 #### 7.5.1 Implemented behavior and its limits (v0.12)
 
 The synthetic fallback uses Azure Neural TTS (`ar-SA-HamedNeural`) via the backend, reusing the Speech key. Measured facts about this voice, established by testing:
 
-- It **ignores harakat**: diacritized and undiacritized input produce byte-identical audio. The "diacritization is the gating factor" premise above holds for TTS engines generally but not for this voice.
+- It **ignores the harakat you supply**: diacritized and undiacritized input produce byte-identical audio. The "diacritization is the gating factor" premise above holds for TTS engines generally but not for this voice. *(v0.13 caveat: byte-identical output shows the supplied marks make no difference, not that the voice is vowel-blind. Azure almost certainly runs its own diacritizer upstream and reached the same reading for these test words. That distinction matters for a genuinely ambiguous form, where its guess and our stored diacritics could disagree with nothing to signal it — worth a spot check before synthetic audio is ever treated as more than a placeholder.)*
 - It **ignores `<phoneme>` (IPA and SAPI) and `<prosody volume>`**. This is consistent with §7.6.1's finding that Azure exposes no Arabic phone set.
 - It reads an isolated word in **pausal form**, dropping the final short vowel (كَتَبَ → "katab"). This is the natural way a word is pronounced on its own and is accepted as-is.
 
@@ -423,6 +457,10 @@ For **segmental accuracy** this is largely immaterial; a correct ع is a correct
 ---
 
 ## 8. Curriculum progression
+
+> **Status (v0.13): descriptive, not implemented.** No phase is tracked anywhere. The Roadmap tab renders this table as static text; nothing computes which phase the learner is in, nothing gates on the advancement criteria, and the `/generate` profile omits `phase`, `grammar_cleared`, `grammar_pending`, and `recent_failures` — so `[R-27]` and the level-appropriateness half of `[R-15]` have no state to work from. §10 has no step that would build it, which is a gap in the build sequence rather than an oversight in this section; see the note at the end of §10.
+>
+> `[R-28]` and `[R-29]` *are* implemented: retention (not exposure) is what the app counts as known, at the Phase 0 bar below — 3+ reps at an interval of a week or more — and recognition and production schedule independently.
 
 Advancement gates on evidence, not elapsed time.
 
@@ -489,7 +527,15 @@ ingested_content
 
 **`[R-32]`** `review_log` and `speech_attempt` MUST be append-only, never overwritten. This makes scheduler changes safe to experiment with — any new algorithm can be replayed against real history rather than tested blind.
 
+> *(v0.13)* `review_log` did not exist until now — grading overwrote the card's scheduler state in place, so no history was retained and the stated benefit was unavailable. It is implemented as of v0.13, with card id, local study day, track, grade, and interval before/after. **Nothing before v0.13 can be recovered**, which is the general shape of this requirement's cost: a log not written today is not a log that can be written later. `speech_attempt` is append-only and now carries the structured verdict, but see `[R-33]`.
+
 **`[R-33]`** Audio MUST be retained indefinitely where `in_calibration_pool` is true, and expired on the normal schedule otherwise. The pool is a stratified reservoir sample balanced across flagged/passed attempts and over-weighted toward the pharyngeals and ق. Target 200 items. See §11.3.
+
+> *(v0.13)* **Unmet.** No audio is retained at all. See the correction box in §11.3 for what this costs and what it would take.
+
+**`[R-50]`** *(added v0.13)* Card ids MUST be stable identifiers, not positions in a content array. Ids are permanent once issued: append, never renumber.
+
+> Card ids were `v-<rootIndex>-<wordIndex>`, which made saved progress depend on the content's array order — the source carried the comment "LOAD-BEARING… never reorder." That froze the content permanently: no regrouping a family, no fixing a misassigned root, ever. It also contradicted `[R-3]`, since a root identified only by its array index is not a first-class entity. Migrated in v0.13 to the stable ids the content export already carried, while the history was short enough for the remap to be derivable rather than guessed.
 
 ---
 
@@ -502,16 +548,25 @@ Each step must be independently usable. Nothing depends on a later step to deliv
 | Step | Deliverable | Status |
 |---|---|---|
 | **1** | v0 HTML in daily use | ✅ Built |
-| **2** | Content expansion: all letter forms, ~30 root families, recorded core audio | ✅ Built — 28 letters × 4 forms, ~146 words across ~30 roots. Human audio *files* pending (HUMAN track); missing clips fall back to synthetic. |
-| **3** | PWA | ✅ Built — installable, offline study + audio, service worker. iOS best-effort per §11.8. |
+| **2** | Content expansion: all letter forms, ~30 root families, recorded core audio | ◑ Partial — 28 letters × 4 forms, 118 words across 37 roots. **No audio files exist**, so `[R-12]` is unmet; every word falls back to synthetic. Previously marked ✅ with the audio treated as a HUMAN-track footnote, which understated it: recorded core audio is in the step's own title. |
+| **3** | PWA | ✅ Built — installable, offline study, service worker, self-hosted fonts. iOS best-effort per §11.8. *Offline **audio** depends on step 2's missing clips.* |
 | **4** | Backend skeleton + `/state` | ✅ Built — no key in client (grep-verifiable); cross-device sync; graceful offline degradation; deploys from the repo with keys as Secrets ([R-41]). |
 | **5** | Tier 1 intelligibility | ✅ Built — WAV mic capture on Chrome; Whisper round-trip; understood/not-understood, never a score. |
 | **6** | `/ingest` + `/generate`, verification Tier 1 | ✅ Built for article/paste; fully-diacritized output with provenance; specific extraction failures. **YouTube not supported** (returns a reason). |
-| **7** | Tier 2a Azure assessment + calibration pool | ◑ Partial — Azure per-phoneme assessment built (provisional, advancement-safe). **Calibration pool ([R-33]) not built.** |
-| **8** | Tier 3 LLM coaching | ✅ Built — structured flagged list in, articulatory text out, never raw audio; provisional. |
-| **9** | Diacritic fade + register tagging UI | ✅ Built — three stages, per-card pin, register on every card, stored data stays diacritized. |
-| **10** | Cross-vendor verification + dictionary grounding | ⬜ Not built — needs a second model vendor; do only if measured error rates warrant. |
-| **—** | *Contingency:* Tier 2b self-hosted MDD | Not scheduled. Trigger in §11.4. |
+| **7** | Tier 2a Azure assessment + calibration pool | ◑ Partial — Azure per-phoneme assessment built (provisional, advancement-safe; positional sound labels marked inferred). **Calibration pool ([R-33]) not built, and no audio is retained — §11.3.** |
+| **8** | Tier 3 LLM coaching | ✅ Built — structured flagged list in, articulatory text out, never raw audio; provisional, and hedged when the flagged sound was named positionally. |
+| **9** | Diacritic fade + register tagging UI | ✅ Built — three stages, per-card pin, register on every card, stored data stays diacritized. *Register tagging has no dialect content to distinguish — §11.1.* |
+| **10** | Cross-vendor verification + dictionary grounding | ⬜ Not built — needs a second model vendor; gated on "measured error rates," **which nothing measures** ([R-48], §6.6). |
+| **—** | *Contingency:* Tier 2b self-hosted MDD | Not scheduled. Trigger in §11.4 — currently unreachable, since the ~80-item threshold needs the pool. |
+
+**Two gaps in this sequence itself** *(added v0.13)*:
+
+1. **No step builds phase tracking**, so §8 will still be unimplemented when step 10 is done. Either add one or accept §8 as descriptive; the current state — a section written as binding curriculum with no step that delivers it — is the worst of the three.
+2. **No step is "use the app."** Ten steps sequence engineering; §11.6's three conditions are the only counterweight, and one of them was amended away (§11.6). A recurring row belongs in this table, because this table is what a reader treats as the work list:
+
+| Step | Deliverable | Status |
+|---|---|---|
+| **0** *(recurring)* | 15+ active days in the trailing 30, per `[R-38]` | Computed and shown in the app since v0.13 — check it before starting any step above |
 
 **`[HUMAN]` Parallel track: find a native-speaker reviewer.** Runs alongside the sequence, blocks nothing. Screening criteria and protocol in §12.
 
@@ -547,7 +602,16 @@ Integration appears close to free. Huntley's comparative study (MESA 2020) found
 
 **Implementation.** Automated assessment stays MSA-only; the MDD corpora and `ar-SA` are formal-register. Dialect enters as listening comprehension and conversational vocabulary, tagged per `[R-30]`. Neither needs a live speaker, so this proceeds unblocked. Dialect *speaking* has no automated path and waits for a reviewer (§12).
 
-**Evidence caveat.** Al-Batal's own volume notes little empirical research exists on integration effectiveness. This rests on expert consensus and one comparative study. **What would change it:** interference rather than reinforcement, detectable by comparing retention curves across the two register tags — which `[R-30]` makes measurable.
+> **Status (v0.13): decided, not implemented — there is no Egyptian content.** All 118 words are tagged `msa`; the string `egy` appears in the app exactly once, in the function that renders the tag. Consequences worth stating plainly, because §3 previously listed register tags under "Built":
+>
+> - The register tag renders "MSA" on every card. It is real machinery with nothing to distinguish.
+> - Phase 1's gate ("~40 dialect items recognized by ear") is unreachable.
+> - The evidence caveat below is unfalsifiable as built: retention curves across two register tags need two register tags with content behind them. §13's unknown #2 cannot be answered.
+> - Reason 3 for choosing Egyptian — that Azure will assess `ar-EG` — is load-bearing on nothing, since this section's own implementation note keeps assessment MSA-only. It should not count toward the decision.
+>
+> The decision itself still looks right; nothing here argues against it. But "integrate Egyptian from Phase 1" and "tag every card" are a content commitment (~40 listening items) that no build step owns, and until that content exists this section describes an intention.
+
+**Evidence caveat.** Al-Batal's own volume notes little empirical research exists on integration effectiveness. This rests on expert consensus and one comparative study. **What would change it:** interference rather than reinforcement, detectable by comparing retention curves across the two register tags — which `[R-30]` makes measurable *(once dialect content exists; see above)*.
 
 ### 11.2 Diacritics → Three-stage fade at the display layer
 
@@ -573,12 +637,20 @@ Verification against a live speaker is not optional; nothing else establishes wh
 
 **Calibration data does not have to be labeled when produced.** Every speech attempt is logged with its audio. If a representative sample is retained, a reviewer arriving in month six can label material from month one.
 
+> **Correction (v0.13): the interim protocol below is not running, and the delay is now costing data.**
+>
+> Tier 2 shipped, so the protocol's own trigger ("active from the day Tier 2 ships") fired some time ago. Steps 1 and 4 hold — attempts are logged, `human_verdict` stays null — and the log now keeps the structured verdict: what was heard, the composite score, and which sounds were flagged. **Steps 2 and 3 do not hold. The audio is discarded the moment `/assess` returns.**
+>
+> A reviewer cannot label a score they cannot listen to, so every Tier 2 attempt made so far is unlabelable and always will be. The §14 index row read "delay costs time-to-answer, not data" — that was true as designed and false as built, and it made the reviewer search look less urgent than it is.
+>
+> **What it takes to make it true:** audio retention on the learner's own backend — an R2 bucket on the same Cloudflare account, with the stratified reservoir sample of `[R-33]` maintained client-side and the sampled clips uploaded. That is a genuine build step, not a patch, and it is not in §10's sequence. Until it is done, `[R-33]` is unmet and §11.4's ~80-item threshold is unreachable, which means the Azure-vs-fine-tune decision stays pending indefinitely rather than pending on reviewer availability.
+
 **Interim protocol, active from the day Tier 2 ships:**
 
-1. Every attempt writes to `speech_attempt`.
-2. The calibration pool maintains a stratified reservoir sample per `[R-33]`.
-3. Pool audio persists indefinitely; everything else expires normally.
-4. `human_verdict` stays null.
+1. Every attempt writes to `speech_attempt`. *(done)*
+2. The calibration pool maintains a stratified reservoir sample per `[R-33]`. *(not built)*
+3. Pool audio persists indefinitely; everything else expires normally. *(not built — no audio is retained at all)*
+4. `human_verdict` stays null. *(done)*
 
 **On reviewer arrival:** export 20 items per session — blind, unlabeled, randomized, balanced between flagged and passed. Four sessions clears the backlog and yields per-phoneme precision and recall on this learner's actual voice, which beats any published benchmark for this purpose.
 
@@ -589,6 +661,8 @@ Sampling the *passed* items is the point. Reviewing only flagged items measures 
 - Tier 2 output is unvalidated. Per `[R-31]` it cannot gate advancement, and per `[R-20]` it is labeled provisional. A learner acting on unverified feedback can drill an error into permanence.
 - §11.4 stays `[PENDING]`. Neither branch triggers.
 - Prosody remains unaddressed (§11.5).
+- *(v0.13)* Every Tier 2 attempt made before audio retention exists is permanently unlabelable. This cost compounds daily and is the one item on this list that gets worse rather than merely staying constant.
+- *(v0.13)* Because `ar-SA` returns no phoneme labels, the sound named to the learner is matched positionally onto the word's letter skeleton — a guess that equal segment counts make plausible, not correct. It is now marked as a guess in the UI and hedged in the coaching prompt, but validating it is exactly what the pool would do, and cannot.
 
 **There is no adequate substitute.** Free exchange platforms (HelloTalk, Tandem, ConversationExchange) supply real ears and are worth using for practice, but will not produce structured blind labels. Self-assessment fails at exactly the phonemes that matter — a beginner cannot hear their own ع error. Cross-checking Azure against a second engine measures agreement, not correctness; §6.1's warning about confident convergence applies unchanged.
 
@@ -616,11 +690,17 @@ The risk is that building the system becomes the project and Arabic never gets l
 
 **Usage bounds building** — `[R-34]` as amended (v0.7): building may run ahead of usage while motivation is high, but `[R-38]`'s heatmap floor is a hard stop, not advice.
 
+> **On the v0.7 amendment** *(added v0.13, prompted by outside review)*. The safeguard aimed at this section's own stated failure mode was retired three days into the first usage window it applied to, by the person it constrains, using §2.4's research to justify removing a §2.4-motivated constraint. That may well have been the right call — but this section is titled "Three conditions, not intentions," and the v0.7 note's framing ("only the enforcement mechanism moved") understates what happened: for `[R-34]`, the enforcement mechanism *was* the requirement, and what remains is an intention. Recorded here so the amendment is legible as what it is rather than as a neutral clarification. `[R-38]` carries the whole load now, which is why its automation below is not optional.
+
 **`[R-38]`** If the 30-day activity heatmap drops below 15 active days, all building stops until it recovers. A system under active development and not in use has failed at its only purpose, and adding features is the most appealing way to avoid noticing.
+
+> **`[R-38]` is now computed, not eyeballed** *(v0.13)*. It was thirty dots to count by hand — which is exactly the check that stops happening at the moment it starts mattering. The Progress tab now states the active-day count outright and says plainly when the floor is breached. The wording addresses the build, not the learner: missed days carry no penalty or reproach, per `[R-8]`.
+>
+> **`[R-49]`** A requirement whose purpose is to fire when the owner is least inclined to check it MUST be computed and surfaced by the app, never left as a manual inspection. `[R-38]` satisfies this; `[R-39]`'s 200-item checkpoint does not yet.
 
 **`[R-39]` `[HUMAN]`** When the calibration pool reaches 200 items, the reviewer search stops being a background task. At that point the system generates unvalidated feedback at full rate with nothing checking it, the pool has stopped growing usefully, and no further engineering improves the situation. Building continues; the search moves to the top of the non-engineering list.
 
-All three are checkable from data the app already tracks.
+All three are checkable from data the app already tracks — *and "checkable" is not "checked," which is the point of `[R-49]`*. `[R-38]` is now surfaced by the app. `[R-39]`'s 200-item pool checkpoint cannot be, because the pool does not exist (§11.3); as things stand it will never trigger, which is the failure mode `[R-39]` was written to prevent.
 
 ### 11.7 Sharing model → Replicable single-user deployments
 
@@ -674,6 +754,8 @@ Free is weighted extremely high: anyone copying this project should be able to r
 | Tier 2a MDD (Step 7) | Azure Speech **F0** | 5 audio-hours/month — ample for single-word drills | Azure S0 pay-as-you-go |
 | Generation (Step 6) | Free-tier model APIs (choose at build time; verify then) | — | Paid model APIs |
 
+> **`[R-45]` is currently violated on audio** *(added v0.13)*. The requirement says the free path must stay "functional, not a degraded stub." With no human recordings, what a learner actually hears is: on the paid path, an Azure neural voice; on the free path, whatever Arabic voice their OS happens to have — and the app's own Settings copy warns that when there is none, "words may sound wrong (a non-Arabic voice reading Arabic)." For a system whose §2.2 names guttural consonants as the central difficulty, a non-Arabic voice reading Arabic is not a degraded stub, it is anti-teaching. Committing pre-generated clips ([R-12], §4.2) closes this: both paths then get the same audio, and Azure's remaining advantage is Tier 2 assessment, which is a genuine upgrade rather than a paywall on the basics.
+
 **Tier 1 ASR decision (supersedes an implicit Azure-first assumption):** Workers AI Whisper wins on the two criteria that now dominate — $0 and zero additional signup (the learner's Cloudflare account already exists from Step 4). Whisper's documented Arabic weaknesses (§7.4) are acceptable at Tier 1 *because* Tier 1 is a yes/no intelligibility probe whose failure mode is explicitly "may be the model's fault" (`[R-23]`), and `task:"transcribe"` pins it against the translate-to-English failure. If it proves too weak even for the probe, Azure STT is the documented escalation — and arrives at Step 7 regardless.
 
 ### 11.10 Speaking is a standalone words-only activity; letters are recognition-only
@@ -704,6 +786,9 @@ Not an engineering task. Included because the role is unusual enough that screen
 |---|---|---|
 | **Labeler** | Blind judgment on recorded clips: was this phoneme correct? No teaching, no encouragement. | Monthly, ~30 min |
 | **Teacher** | Conventional tutoring: Egyptian conversation, prosody, correcting things the system cannot see | Whatever cadence suits |
+| **Content checker** *(added v0.13)* | Spot-check 20 generated Arabic words a month: spelling, diacritics, and whether the stated root is the real root | Monthly, ~20 min |
+
+The content checker is the missing counterpart to the labeler. §11.3 is meticulous about not trusting pronunciation feedback before a human has verified it, while generated vocabulary — which enters spaced repetition and gets drilled — has never been checked by anyone (§6.6, and the README's content accuracy note). It needs no blinding and no protocol: it is proofreading, it suits the same person as either other job, and 20 items a month is enough to tell whether Step 10's cross-vendor verification is worth building. `[R-48]` gives it somewhere to record the answer.
 
 These need different aptitudes and **do not have to be the same person.** Splitting them is often easier: labeling is mechanical annotation work that suits a marketplace like Upwork as readily as italki, and it can be asynchronous — send audio files and a form, no scheduling required. Teaching is conventional and easy to source.
 
@@ -769,7 +854,9 @@ Not pending decisions — questions only answerable by running the system.
 1. **Does the learner speak aloud into a phone mid-session?** Build step 5 exists to find out. If no, the entire pronunciation branch needs a different interaction model.
 2. **Does MSA/Egyptian integration reinforce or interfere?** §11.1 bets on reinforce. Retention curves across register tags will show it within months.
 3. **Does pipeline-generated content get studied,** or is ingestion more appealing than the resulting cards? Measurable: compare review completion rates for generated versus core-deck cards.
-4. **What is Azure's real per-phoneme accuracy on this voice?** Unknowable from published benchmarks. §11.3 is designed to produce it.
+4. **What is Azure's real per-phoneme accuracy on this voice?** Unknowable from published benchmarks. §11.3 is designed to produce it — *and currently does not, because no audio is retained. As built this is not an open question but an unanswerable one.*
+5. **Is the generated Arabic correct?** *(added v0.13)* Nobody knows, and nothing is set up to find out (§6.6). Generated words enter spaced repetition, where being wrong is drilled rather than forgotten. `[R-48]` is the smallest thing that would start answering it.
+6. **Is 12 the right session cap?** *(added v0.13)* `[R-5]`'s number is a guess (§2.4). The review log now records what would settle it.
 
 ---
 
@@ -803,7 +890,7 @@ Not pending decisions — questions only answerable by running the system.
 | Fade triggered by retention, not calendar | Tracks mastery rather than elapsed time |
 | Commercial API before any fine-tuning | Azure covers `ar-SA`/`ar-EG`; removes ML from the critical path |
 | Calibration sample blind and two-sided | One-sided sampling misses the dominant failure mode |
-| Calibration pool accumulates before a reviewer exists | Labels apply retroactively; delay costs time-to-answer, not data |
+| Calibration pool accumulates before a reviewer exists | Labels apply retroactively — **but only if audio is kept, and it isn't; as built, delay costs data too (§11.3)** |
 | Duplicate clips seeded into every batch | Measures the measurement instrument; noisy labels are worse than none |
 | Labeler and teacher may be different people | Different aptitudes; labeling is async annotation work |
 | Reviewer search parallel, with a 200-item checkpoint | Unblocks the build without letting "not blocking" become "not happening" |
@@ -813,3 +900,10 @@ Not pending decisions — questions only answerable by running the system.
 | Chromium-first; iOS/WebKit best-effort | All testing and acceptance runs on Chromium (Android + desktop). iOS cannot join that tier — every iOS browser is WebKit underneath (§11.8) |
 | Free-first: core account-less, cloud features $0 at one-learner volume | Accessibility for co-learners; paid options only as documented optional upgrades (§11.9) |
 | Tier 1 ASR on Workers AI Whisper, not Azure | $0 and zero new vendor beats accuracy for a yes/no intelligibility probe; Azure is the escalation and arrives at Step 7 anyway (§11.9) |
+| Synthetic voice on Azure, not the §7.5 shortlist | A stopgap should reuse an account already required, not add a vendor (§7.5, §11.9) |
+| Card ids are stable identifiers, never array positions | Positional ids froze the content order permanently and made a root an index, not an entity (`[R-50]`) |
+| A study day is the learner's local day | UTC dates shortened every interval east of UTC and mis-credited evening study in the Americas (§9, v0.13) |
+| Retention, not exposure, is what "known" means | Two reps is two days; `[R-28]` asks for survival across a long interval, and an inflated "known" list also mis-levels generated content |
+| Requirements that fire when the owner isn't looking must be computed by the app | "Checkable from data the app tracks" is not the same as checked (`[R-49]`, §11.6) |
+| Fonts ship with the repo | A CDN font link left Arabic in a fallback face on a cold offline start, against `[R-11]` |
+| Content lives in the app; content/ is a generated export | The single-file design has no build step, so a hand-maintained "authoring source" silently drifted from what shipped |

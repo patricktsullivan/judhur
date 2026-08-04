@@ -13,17 +13,25 @@ failure mode (§11.6).
 | Step | Deliverable | Status |
 |---|---|---|
 | 1 | v0 single-file HTML in daily use | ✅ |
-| 2 | Content expansion: positional letter forms, ~30 root families, recorded core audio | ✅ code · 🎙 recordings in progress |
-| 3 | PWA: installable, offline study loop, offline audio | ✅ code · needs hosting enabled (below) |
+| 2 | Content expansion: positional letter forms, ~30 root families, recorded core audio | ◑ 28 letters × 4 forms, 118 words / 37 roots · **🎙 no recordings yet** |
+| 3 | PWA: installable, offline study loop | ✅ code · needs hosting enabled (below) |
 | 4 | Backend skeleton + `/state` cross-device sync | ✅ code · needs your own deploy ([SETUP.md](backend/SETUP.md)) |
 | 5 | Tier 1 speech: say it, hear back understood / not understood | ✅ code · live ASR needs your deploy (free, §11.9) |
 | 6 | Content pipeline: URL/text → graded Arabic passage, new words into reviews | ✅ code · article + pasted text (YouTube deferred); needs your deploy |
+| 7 | Azure per-phoneme pronunciation diagnosis | ◑ built and provisional · **calibration pool not built** (no audio is kept) |
+| 8 | LLM articulatory coaching | ✅ code · needs an Azure key |
 | 9 | Diacritic fade (full / fade-with-mastery / bare) + register display | ✅ built ahead of 7–8 (client-only, no accounts) |
-| 7, 8 | Azure pronunciation diagnosis + LLM coaching | not started (needs Azure + audio storage) |
-| 10 | Cross-vendor generation verification + dictionary-grounded roots | not started (needs a 2nd model vendor) |
+| 10 | Cross-vendor generation verification + dictionary-grounded roots | not started (needs a 2nd model vendor, and something measuring error rates) |
+
+Not built, and named here because the design doc used to imply otherwise: core audio
+(`[R-12]`), the §11.3 calibration pool (`[R-33]`), grapheme↔phoneme alignment
+(`[R-21]`), phase tracking (§8), and Egyptian content (§11.1). Design doc v0.13 marks
+each in place; `docs/review-2026-08.md` is the review that prompted it.
 
 Building may run ahead of usage per `[R-34]` as amended (design doc v0.7); the hard
 stop is `[R-38]` — if the 30-day heatmap drops below 15 active days, building halts.
+**Progress → Last 30 days** states that count and says when the floor is breached, so
+it is a number to read rather than dots to count.
 
 ## Using the app
 
@@ -60,9 +68,16 @@ sticks to web standards, so it will most likely work fine — it just isn't part
 tested platforms, and quirks get fixed as they're reported rather than hunted in
 advance.
 
-**After installing (any platform):** open **Progress → Audio coverage → Check
-recordings** once while online — that pulls every available audio clip onto your
-device. From then on the whole study loop, audio included, works in airplane mode.
+**Offline:** everything except syncing and bringing in content works with no network
+— cards, grading, streaks, and the whole session loop, from the first install.
+
+**Audio is the exception, today.** There are no recordings yet, so words are read by
+a synthetic voice: your backend's Azure voice if you set one up, otherwise your
+device's own Arabic voice, which needs no network but does need your device to have
+one installed. Once recordings land in `audio/`, open **Settings → Audio coverage →
+Check recordings** once while online to pull them onto your device, and audio works
+in airplane mode too. (Design doc `[R-12]` wants those clips shipped rather than
+fetched — see its §4.2.)
 
 ### Storage & sync
 
@@ -72,7 +87,7 @@ device. From then on the whole study loop, audio included, works in airplane mod
 - **Cross-device sync is opt-in.** Deploy your own free backend once — simple,
   no-terminal, step-by-step setup is in **[backend/SETUP.md](backend/SETUP.md)**
   (~10 minutes); maintainers, see [backend/README.md](backend/README.md). Then on each
-  device open **Progress → Sync across devices** and paste your backend's web address +
+  device open **Settings → Sync across devices** and paste your backend's web address +
   password. Devices merge review histories per card — the higher rep count wins, streaks
   recompute from the union of study days. Unconfigured or offline, nothing changes:
   progress stays local and the app never blocks on the network.
@@ -89,18 +104,23 @@ To add recordings, drop files here (next to the HTML file):
 ```
 audio/
   letters/<letter-key>.mp3     e.g. audio/letters/alif.mp3, audio/letters/ba.mp3
-  words/<card-id>.mp3          e.g. audio/words/w-ktb-1.mp3
+  words/<audio-stem>.mp3       e.g. audio/words/kataba.mp3, audio/words/madrasa.mp3
 ```
+
+The stem is the word's transliteration, not its card id — the exact filename for every
+clip is in the recording list below.
 
 **What to record: 146 clips — one per letter (28) and one per word (118).** Roots
 themselves are not recorded; each *word* in a family gets its own clip. The full list
 with exact filenames is [`content/recording-list.md`](content/recording-list.md) —
-hand it to the speaker as-is.
+hand it to the speaker as-is. It is generated from the app by
+`node tools/sync-content.mjs`, so it stays right as content grows.
 
 - **Letters**: the letter's name, then its bare sound — "بَاء … بْ". Phase 0 gates on
-  *producing* sounds, so the isolated sound matters as much as the name.
+  *recognising* letters and their sounds, not on producing them (design doc §11.10) —
+  but the isolated sound is what a learner imitates, so it matters as much as the name.
 - **Words**: the word once, clearly, in careful MSA, exactly as diacritized.
-- The app's **Progress → Audio coverage** view probes which files are present and
+- The app's **Settings → Audio coverage** view probes which files are present and
   lists what's missing — use it to track the recording effort.
 - A card with no audio file shows a muted icon and works normally otherwise.
 - Format: mp3 (Safari + Chrome, plays from `file://`). Mono, any reasonable bitrate.
@@ -138,7 +158,7 @@ or **not understood**, with what the listener heard. Notes:
 
 ## Content accuracy note `[HUMAN]`
 
-The Step 2 vocabulary (≥30 root families, ≥90 fully diacritized MSA words) was
+The Step 2 vocabulary (37 root families, 118 fully diacritized MSA words) was
 hand-curated from standard high-frequency vocabulary **without** the design doc's §6
 verification pipeline, which doesn't exist yet (build step 10). A native-speaker review
 pass over `content/` belongs on the `[HUMAN]` track alongside the reviewer search (§12).
@@ -146,17 +166,40 @@ pass over `content/` belongs on the `[HUMAN]` track alongside the reviewer searc
 ## Repository layout
 
 ```
-index.html                  the app — single self-contained page, embedded data
+index.html                  the app — single self-contained page, source of record for content
 sw.js                       service worker: offline app shell + audio cache
 manifest.webmanifest        PWA manifest
 icons/                      app icons
+fonts/                      self-hosted webfonts (OFL) — no CDN, so offline is really offline
 backend/                    optional self-hosted helper (sync + speech); setup guide inside
 wrangler.jsonc              Cloudflare Worker config for the backend
 docs/judhur-design-doc.md   the spec of record
-content/                    content authoring source (JSON), embedded into the HTML
+docs/review-2026-08.md      outside review that prompted design doc v0.13
+content/                    GENERATED export of the app's content — do not hand-edit
 audio/                      recorded human audio (drop-in; commit recordings so they follow the repo)
+tools/                      test suite and generators (see below)
+LICENSE                     MIT; bundled fonts are OFL 1.1 (fonts/OFL.txt)
 ```
+
+## Working on it
+
+```sh
+node tools/test.mjs             # 120 checks; re-runs across five timezones
+node tools/sync-content.mjs     # regenerate content/ + the recording list from index.html
+node tools/sync-content.mjs --check   # CI: fail if content/ is stale
+node tools/sync-fonts.mjs       # refetch the webfonts (the only tool needing network)
+```
+
+No build step and no dependencies — the app is one file you can open from disk. The
+content lives in `index.html`; `content/*.json` is generated from it, which is why
+editing those files does nothing. CI runs the tests and the content check on push.
 
 Deploy note: when a change lands that should update installed clients' cached shell,
 bump `VERSION` in `sw.js` (navigations are network-first anyway, so the app page
 itself refreshes on the next online visit regardless).
+
+## License
+
+MIT — see [LICENSE](LICENSE). The bundled fonts are SIL OFL 1.1 and keep their own
+terms ([fonts/OFL.txt](fonts/OFL.txt)). The design doc's §11.7 sharing model assumes
+you can fork this and run your own copy; the license is what makes that true.

@@ -15,7 +15,7 @@ merging is done in the client; the Worker is deliberately dumb storage ([R-42]).
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `/state` | GET / PUT | Read or store the learner profile (JSON, ≤512 KB). Single key, single learner by design. |
+| `/state` | GET / PUT | Read or store the learner profile (JSON, ≤4 MB measured in bytes). Single key, single learner by design. The cap allows for the append-only review log ([R-32]), which grows for the life of the project at roughly 260 KB/year. |
 | `/assess` | POST | Pronunciation. `{expected, audio(base64), coach?}`. With Azure configured: per-phoneme scoring via Azure Pronunciation Assessment (`ar-SA`), returning `PronScore` plus phonemes scored below threshold, and optional LLM articulatory coaching from the flagged list only. Without Azure: Workers AI Whisper intelligibility, `{understood, heard}`, never a score ([R-23]). Output is provisional ([R-20][R-31]). |
 | `/tts` | POST | `{text}` → MP3 of the word in a neural Arabic voice (Azure). `501` when Azure isn't configured; the client then uses the device's own voice. |
 | `/ingest` | POST | `{url}` or `{text}` → `{title, excerpt, source_ref}`. Extracts article text. Extraction failures return a specific `reason` ([R-13]). |
@@ -71,6 +71,15 @@ npx wrangler deploy                            # prints the https://…workers.d
   the reference word's consonant/long-vowel skeleton; when Azure's segment count doesn't
   match the skeleton, the sound is left unnamed rather than guessed. Azure's F0 free tier
   covers single-learner volume.
+
+  Those positional names carry `inferred: true` through the response, the coaching prompt
+  (which is told to phrase tips as something to check rather than a definite error), and
+  the UI. Equal segment counts make the mapping plausible, not correct — shadda, hamza
+  carriers and long vowels can align by count while the mapping is shifted, and sending a
+  learner to drill a sound they said correctly is the false-reject failure `[R-19]` treats
+  as unrecoverable. Validating it is what §11.3's calibration pool would do, and that pool
+  does not exist: **no attempt audio is retained anywhere**, so nothing here has been
+  checked against a human ear.
 
 - **Speech (`/tts`).** Uses the same Azure key. Voice: `AZURE_TTS_VOICE` (default
   `ar-SA-HamedNeural`). The response is `Cache-Control: no-store` because it varies by POST

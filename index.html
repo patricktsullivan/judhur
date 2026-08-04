@@ -1111,7 +1111,7 @@ function micBtn(cardId){
 function speakPrompt(){
   return speechReady()
     ? '<div class="cue"><span class="cue-h">🎙️ Say it aloud</span>Read the word, tap the mic to check whether you’re understood, then grade yourself.</div>'
-    : '<div class="cue"><span class="cue-h">🗣️ Say it aloud</span>Read the word out loud, then grade yourself. Set up your backend in <b>Progress → Sync</b> for an automatic check.</div>';
+    : '<div class="cue"><span class="cue-h">🗣️ Say it aloud</span>Read the word out loud, then grade yourself. Set up your backend in <b>Settings → Sync</b> for an automatic check.</div>';
 }
 function t1Line(cardId){
   var t = T1[cardId]; if(!t) return '';
@@ -1844,7 +1844,7 @@ function grade(q){
 var ing = null;
 function openIngest(){
   if(!CFG.url || !CFG.token){
-    ing = {step:'error', msg:'Bringing in content needs your backend. Set it up in Progress → Sync first.'};
+    ing = {step:'error', msg:'Bringing in content needs your backend. Set it up in Settings → Sync first.'};
   } else { ing = {step:'input'}; }
   render();
 }
