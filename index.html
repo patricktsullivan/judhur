@@ -1724,13 +1724,13 @@ function renderOverlay(){
   var mid;
   if(c.type==='alphabet'){
     mid = '<div class="q-letter">'+d.letter+'</div>'
+        + '<div class="ab-row">'+playBtn(letterSrc(d.id))+'</div>'   /* audio on both sides */
         + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.name)+' \u2014 '+esc(d.translit)+' '+regTag('msa')+'</div>'
             + '<div class="a2">'+esc(d.sound)+'</div>'
             + '<div class="formrow">'+formCells(d.id,26)+'</div>'
             + (LETTER_META[d.id].guttural?'<span class="gutt">throat sound</span>':'')
             + '<div class="a3">'+d.ex+'</div>'
             + '<div class="a4">'+esc(d.exT)+' \u00b7 '+esc(d.exE)+'</div>'
-            + '<div class="ab-row">'+playBtn(letterSrc(d.id))+'</div>'
             + '</div>' : '');
   } else {
     var vstage = wordStage(c.id);
@@ -1738,10 +1738,10 @@ function renderOverlay(){
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
         + '<div class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+(showFull?d.ar:arDisplay(d.ar,vstage))+'</div>'
         + (showFull ? '' : '<div class="fade-hint" data-vowels="1">'+(vstage==='bare'?'no vowel marks':'vowels faded')+' — tap to reveal</div>')
+        + '<div class="ab-row">'+playBtn(wordSrc(d), d.ar)+'</div>'   /* audio on both sides */
         + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.en)+'</div>'
             + (trShown() ? '<div class="a2 tr-read">'+esc(d.t)+'</div>' : '')
             + (d.source?'<div class="prov">from '+esc(d.source)+'</div>':'')
-            + '<div class="ab-row">'+playBtn(wordSrc(d), d.ar)+'</div>'
             + '</div>' : '');
   }
   var foot = sess.show
