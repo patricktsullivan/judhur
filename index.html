@@ -80,6 +80,7 @@
         display:flex;flex-direction:column;align-items:center;justify-content:center;
         text-align:center;border:1.5px solid transparent;cursor:pointer}
   .tile.known{border-color:var(--gold)}
+  .tile.learning{border-color:rgba(79,138,139,.45)}
   .tile .big{font-family:var(--arabic);font-size:40px}
   .tile .nm{font-size:12px;color:var(--muted);margin-top:5px}
   .tile .ex{font-family:var(--arabic);font-size:15px;color:var(--gold);direction:rtl}
@@ -117,6 +118,9 @@
   .heat{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
   .heat div{aspect-ratio:1/1;border-radius:3px;background:var(--bg-deep)}
   .heat div.on{background:var(--gold)}
+  .gate{margin-top:12px;font-size:11.5px;line-height:1.55;color:var(--muted)}
+  .gate.under{color:var(--amber);background:rgba(184,147,90,.12);
+              border:1px solid rgba(184,147,90,.3);border-radius:8px;padding:9px 11px}
 
   /* session overlay */
   #ovl{position:fixed;inset:0;background:var(--bg-deep);z-index:20;
@@ -393,202 +397,206 @@ var LETTER_META = {
 };
 
 /* ---------- content: root families & words ----------
-   Card IDs are index-based (v-<rootIdx>-<wordIdx>): the first 10 families and
-   their original word order are LOAD-BEARING for saved progress. Append only;
-   never reorder. `a` is the audio filename stem (audio/words/<a>.mp3).
-   Authoring source: content/roots-words.json. */
+   Every root and word carries a STABLE `id` (r-ktb, w-ktb-1). Card ids come
+   from those ids, so families and words can be reordered, regrouped, or
+   corrected without touching saved progress. Ids are permanent once issued:
+   append new ones, never renumber. (Card ids used to be array positions,
+   v-<rootIdx>-<wordIdx>, which froze the content order forever; migrateIds()
+   below remaps that old state and can be dropped once no old state remains.)
+   `a` is the audio filename stem (audio/words/<a>.mp3).
+   content/roots-words.json is generated from this block — see tools/sync-content.mjs. */
 var ROOTS = [
-  {root:'ك ت ب',meaning:'writing',words:[
-    {ar:'كَتَبَ',t:'kataba',en:'he wrote',a:'kataba',reg:'msa'},
-    {ar:'كِتَاب',t:'kitāb',en:'book',a:'kitaab',reg:'msa'},
-    {ar:'كَاتِب',t:'kātib',en:'writer',a:'kaatib',reg:'msa'},
-    {ar:'مَكْتَب',t:'maktab',en:'office; desk',a:'maktab',reg:'msa'},
-    {ar:'مَكْتَبَة',t:'maktaba',en:'library; bookstore',a:'maktaba',reg:'msa'}
+  {id:'r-ktb',root:'ك ت ب',meaning:'writing',words:[
+    {id:'w-ktb-1',ar:'كَتَبَ',t:'kataba',en:'he wrote',a:'kataba',reg:'msa'},
+    {id:'w-ktb-2',ar:'كِتَاب',t:'kitāb',en:'book',a:'kitaab',reg:'msa'},
+    {id:'w-ktb-5',ar:'كَاتِب',t:'kātib',en:'writer',a:'kaatib',reg:'msa'},
+    {id:'w-ktb-3',ar:'مَكْتَب',t:'maktab',en:'office; desk',a:'maktab',reg:'msa'},
+    {id:'w-ktb-4',ar:'مَكْتَبَة',t:'maktaba',en:'library; bookstore',a:'maktaba',reg:'msa'}
   ]},
-  {root:'د ر س',meaning:'studying',words:[
-    {ar:'دَرَسَ',t:'darasa',en:'he studied',a:'darasa',reg:'msa'},
-    {ar:'دَرْس',t:'dars',en:'lesson',a:'dars',reg:'msa'},
-    {ar:'مَدْرَسَة',t:'madrasa',en:'school',a:'madrasa',reg:'msa'},
-    {ar:'مُدَرِّس',t:'mudarris',en:'teacher, instructor',a:'mudarris',reg:'msa'}
+  {id:'r-drs',root:'د ر س',meaning:'studying',words:[
+    {id:'w-drs-1',ar:'دَرَسَ',t:'darasa',en:'he studied',a:'darasa',reg:'msa'},
+    {id:'w-drs-2',ar:'دَرْس',t:'dars',en:'lesson',a:'dars',reg:'msa'},
+    {id:'w-drs-3',ar:'مَدْرَسَة',t:'madrasa',en:'school',a:'madrasa',reg:'msa'},
+    {id:'w-drs-4',ar:'مُدَرِّس',t:'mudarris',en:'teacher, instructor',a:'mudarris',reg:'msa'}
   ]},
-  {root:'ع ل م',meaning:'knowledge',words:[
-    {ar:'عَلِمَ',t:'ʿalima',en:'he knew',a:'3alima',reg:'msa'},
-    {ar:'عِلْم',t:'ʿilm',en:'knowledge',a:'3ilm',reg:'msa'},
-    {ar:'مُعَلِّم',t:'muʿallim',en:'teacher',a:'mu3allim',reg:'msa'},
-    {ar:'عَالَم',t:'ʿālam',en:'world',a:'3aalam',reg:'msa'}
+  {id:'r-3lm',root:'ع ل م',meaning:'knowledge',words:[
+    {id:'w-3lm-1',ar:'عَلِمَ',t:'ʿalima',en:'he knew',a:'3alima',reg:'msa'},
+    {id:'w-3lm-2',ar:'عِلْم',t:'ʿilm',en:'knowledge',a:'3ilm',reg:'msa'},
+    {id:'w-3lm-3',ar:'مُعَلِّم',t:'muʿallim',en:'teacher',a:'mu3allim',reg:'msa'},
+    {id:'w-3lm-4',ar:'عَالَم',t:'ʿālam',en:'world',a:'3aalam',reg:'msa'}
   ]},
-  {root:'ق ر أ',meaning:'reading',words:[
-    {ar:'قَرَأَ',t:'qaraʾa',en:'he read',a:'qara2a',reg:'msa'},
-    {ar:'قِرَاءَة',t:'qirāʾa',en:'reading',a:'qiraa2a',reg:'msa'},
-    {ar:'قَارِئ',t:'qāriʾ',en:'reader',a:'qaari2',reg:'msa'}
+  {id:'r-qr2',root:'ق ر أ',meaning:'reading',words:[
+    {id:'w-qr2-1',ar:'قَرَأَ',t:'qaraʾa',en:'he read',a:'qara2a',reg:'msa'},
+    {id:'w-qr2-2',ar:'قِرَاءَة',t:'qirāʾa',en:'reading',a:'qiraa2a',reg:'msa'},
+    {id:'w-qr2-3',ar:'قَارِئ',t:'qāriʾ',en:'reader',a:'qaari2',reg:'msa'}
   ]},
-  {root:'ع م ل',meaning:'work',words:[
-    {ar:'عَمِلَ',t:'ʿamila',en:'he worked',a:'3amila',reg:'msa'},
-    {ar:'عَمَل',t:'ʿamal',en:'work',a:'3amal',reg:'msa'},
-    {ar:'عَامِل',t:'ʿāmil',en:'worker',a:'3aamil',reg:'msa'}
+  {id:'r-3ml',root:'ع م ل',meaning:'work',words:[
+    {id:'w-3ml-1',ar:'عَمِلَ',t:'ʿamila',en:'he worked',a:'3amila',reg:'msa'},
+    {id:'w-3ml-2',ar:'عَمَل',t:'ʿamal',en:'work',a:'3amal',reg:'msa'},
+    {id:'w-3ml-3',ar:'عَامِل',t:'ʿāmil',en:'worker',a:'3aamil',reg:'msa'}
   ]},
-  {root:'س ل م',meaning:'peace / safety',words:[
-    {ar:'سَلَام',t:'salām',en:'peace',a:'salaam',reg:'msa'},
-    {ar:'سَلَامَة',t:'salāma',en:'safety',a:'salaama',reg:'msa'},
-    {ar:'مُسْلِم',t:'muslim',en:'one who submits',a:'muslim',reg:'msa'}
+  {id:'r-slm',root:'س ل م',meaning:'peace / safety',words:[
+    {id:'w-slm-1',ar:'سَلَام',t:'salām',en:'peace',a:'salaam',reg:'msa'},
+    {id:'w-slm-2',ar:'سَلَامَة',t:'salāma',en:'safety',a:'salaama',reg:'msa'},
+    {id:'w-slm-3',ar:'مُسْلِم',t:'muslim',en:'one who submits',a:'muslim',reg:'msa'}
   ]},
-  {root:'ح ب ب',meaning:'love',words:[
-    {ar:'أَحَبَّ',t:'aḥabba',en:'he loved',a:'ahabba',reg:'msa'},
-    {ar:'حُبّ',t:'ḥubb',en:'love',a:'hubb',reg:'msa'},
-    {ar:'حَبِيب',t:'ḥabīb',en:'beloved',a:'habiib',reg:'msa'}
+  {id:'r-hbb',root:'ح ب ب',meaning:'love',words:[
+    {id:'w-hbb-1',ar:'أَحَبَّ',t:'aḥabba',en:'he loved',a:'ahabba',reg:'msa'},
+    {id:'w-hbb-2',ar:'حُبّ',t:'ḥubb',en:'love',a:'hubb',reg:'msa'},
+    {id:'w-hbb-3',ar:'حَبِيب',t:'ḥabīb',en:'beloved',a:'habiib',reg:'msa'}
   ]},
-  {root:'ك ب ر',meaning:'bigness',words:[
-    {ar:'كَبِير',t:'kabīr',en:'big',a:'kabiir',reg:'msa'},
-    {ar:'أَكْبَر',t:'akbar',en:'bigger / biggest',a:'akbar',reg:'msa'},
-    {ar:'كِبَر',t:'kibar',en:'greatness',a:'kibar',reg:'msa'},
-    {ar:'كَبُرَ',t:'kabura',en:'he/it grew big',a:'kabura',reg:'msa'}
+  {id:'r-kbr',root:'ك ب ر',meaning:'bigness',words:[
+    {id:'w-kbr-1',ar:'كَبِير',t:'kabīr',en:'big',a:'kabiir',reg:'msa'},
+    {id:'w-kbr-2',ar:'أَكْبَر',t:'akbar',en:'bigger / biggest',a:'akbar',reg:'msa'},
+    {id:'w-kbr-4',ar:'كِبَر',t:'kibar',en:'greatness',a:'kibar',reg:'msa'},
+    {id:'w-kbr-3',ar:'كَبُرَ',t:'kabura',en:'he/it grew big',a:'kabura',reg:'msa'}
   ]},
-  {root:'ذ ه ب',meaning:'going',words:[
-    {ar:'ذَهَبَ',t:'dhahaba',en:'he went',a:'dhahaba',reg:'msa'},
-    {ar:'يَذْهَب',t:'yadhhab',en:'he goes',a:'yadhhab',reg:'msa'},
-    {ar:'ذَهَاب',t:'dhahāb',en:'departure',a:'dhahaab',reg:'msa'},
-    {ar:'ذَهَب',t:'dhahab',en:'gold',a:'dhahab',reg:'msa'}
+  {id:'r-dhhb',root:'ذ ه ب',meaning:'going',words:[
+    {id:'w-dhhb-1',ar:'ذَهَبَ',t:'dhahaba',en:'he went',a:'dhahaba',reg:'msa'},
+    {id:'w-dhhb-4',ar:'يَذْهَب',t:'yadhhab',en:'he goes',a:'yadhhab',reg:'msa'},
+    {id:'w-dhhb-2',ar:'ذَهَاب',t:'dhahāb',en:'departure',a:'dhahaab',reg:'msa'},
+    {id:'w-dhhb-3',ar:'ذَهَب',t:'dhahab',en:'gold',a:'dhahab',reg:'msa'}
   ]},
-  {root:'س ف ر',meaning:'travel',words:[
-    {ar:'سَافَرَ',t:'sāfara',en:'he traveled',a:'saafara',reg:'msa'},
-    {ar:'سَفَر',t:'safar',en:'a trip',a:'safar',reg:'msa'},
-    {ar:'مُسَافِر',t:'musāfir',en:'traveler',a:'musaafir',reg:'msa'}
+  {id:'r-sfr',root:'س ف ر',meaning:'travel',words:[
+    {id:'w-sfr-1',ar:'سَافَرَ',t:'sāfara',en:'he traveled',a:'saafara',reg:'msa'},
+    {id:'w-sfr-2',ar:'سَفَر',t:'safar',en:'a trip',a:'safar',reg:'msa'},
+    {id:'w-sfr-3',ar:'مُسَافِر',t:'musāfir',en:'traveler',a:'musaafir',reg:'msa'}
   ]},
-  {root:'س ك ن',meaning:'dwelling, stillness',words:[
-    {ar:'سَكَنَ',t:'sakana',en:'he lived, resided',a:'sakana',reg:'msa'},
-    {ar:'مَسْكَن',t:'maskan',en:'residence, dwelling',a:'maskan',reg:'msa'},
-    {ar:'سُكَّان',t:'sukkān',en:'inhabitants',a:'sukkaan',reg:'msa'}
+  {id:'r-skn',root:'س ك ن',meaning:'dwelling, stillness',words:[
+    {id:'w-skn-1',ar:'سَكَنَ',t:'sakana',en:'he lived, resided',a:'sakana',reg:'msa'},
+    {id:'w-skn-2',ar:'مَسْكَن',t:'maskan',en:'residence, dwelling',a:'maskan',reg:'msa'},
+    {id:'w-skn-3',ar:'سُكَّان',t:'sukkān',en:'inhabitants',a:'sukkaan',reg:'msa'}
   ]},
-  {root:'ط ع م',meaning:'food, taste',words:[
-    {ar:'طَعَام',t:'ṭaʿām',en:'food',a:'ta3aam',reg:'msa'},
-    {ar:'مَطْعَم',t:'maṭʿam',en:'restaurant',a:'mat3am',reg:'msa'},
-    {ar:'طَعْم',t:'ṭaʿm',en:'taste, flavor',a:'ta3m',reg:'msa'}
+  {id:'r-t3m',root:'ط ع م',meaning:'food, taste',words:[
+    {id:'w-t3m-1',ar:'طَعَام',t:'ṭaʿām',en:'food',a:'ta3aam',reg:'msa'},
+    {id:'w-t3m-2',ar:'مَطْعَم',t:'maṭʿam',en:'restaurant',a:'mat3am',reg:'msa'},
+    {id:'w-t3m-3',ar:'طَعْم',t:'ṭaʿm',en:'taste, flavor',a:'ta3m',reg:'msa'}
   ]},
-  {root:'أ ك ل',meaning:'eating',words:[
-    {ar:'أَكَلَ',t:'ʾakala',en:'he ate',a:'2akala',reg:'msa'},
-    {ar:'أَكْل',t:'ʾakl',en:'eating; food',a:'2akl',reg:'msa'},
-    {ar:'مَأْكُولَات',t:'maʾkūlāt',en:'foods, dishes',a:'ma2kuulaat',reg:'msa'}
+  {id:'r-2kl',root:'أ ك ل',meaning:'eating',words:[
+    {id:'w-2kl-1',ar:'أَكَلَ',t:'ʾakala',en:'he ate',a:'2akala',reg:'msa'},
+    {id:'w-2kl-2',ar:'أَكْل',t:'ʾakl',en:'eating; food',a:'2akl',reg:'msa'},
+    {id:'w-2kl-3',ar:'مَأْكُولَات',t:'maʾkūlāt',en:'foods, dishes',a:'ma2kuulaat',reg:'msa'}
   ]},
-  {root:'ش ر ب',meaning:'drinking',words:[
-    {ar:'شَرِبَ',t:'shariba',en:'he drank',a:'shariba',reg:'msa'},
-    {ar:'مَشْرُوب',t:'mashrūb',en:'drink, beverage',a:'mashruub',reg:'msa'},
-    {ar:'شَرَاب',t:'sharāb',en:'drink; syrup',a:'sharaab',reg:'msa'}
+  {id:'r-shrb',root:'ش ر ب',meaning:'drinking',words:[
+    {id:'w-shrb-1',ar:'شَرِبَ',t:'shariba',en:'he drank',a:'shariba',reg:'msa'},
+    {id:'w-shrb-2',ar:'مَشْرُوب',t:'mashrūb',en:'drink, beverage',a:'mashruub',reg:'msa'},
+    {id:'w-shrb-3',ar:'شَرَاب',t:'sharāb',en:'drink; syrup',a:'sharaab',reg:'msa'}
   ]},
-  {root:'ج ل س',meaning:'sitting',words:[
-    {ar:'جَلَسَ',t:'jalasa',en:'he sat',a:'jalasa',reg:'msa'},
-    {ar:'جُلُوس',t:'julūs',en:'sitting',a:'juluus',reg:'msa'},
-    {ar:'مَجْلِس',t:'majlis',en:'council; sitting room',a:'majlis',reg:'msa'}
+  {id:'r-jls',root:'ج ل س',meaning:'sitting',words:[
+    {id:'w-jls-1',ar:'جَلَسَ',t:'jalasa',en:'he sat',a:'jalasa',reg:'msa'},
+    {id:'w-jls-2',ar:'جُلُوس',t:'julūs',en:'sitting',a:'juluus',reg:'msa'},
+    {id:'w-jls-3',ar:'مَجْلِس',t:'majlis',en:'council; sitting room',a:'majlis',reg:'msa'}
   ]},
-  {root:'ف ه م',meaning:'understanding',words:[
-    {ar:'فَهِمَ',t:'fahima',en:'he understood',a:'fahima',reg:'msa'},
-    {ar:'فَهْم',t:'fahm',en:'understanding',a:'fahm',reg:'msa'},
-    {ar:'مَفْهُوم',t:'mafhūm',en:'concept; understood',a:'mafhuum',reg:'msa'}
+  {id:'r-fhm',root:'ف ه م',meaning:'understanding',words:[
+    {id:'w-fhm-1',ar:'فَهِمَ',t:'fahima',en:'he understood',a:'fahima',reg:'msa'},
+    {id:'w-fhm-2',ar:'فَهْم',t:'fahm',en:'understanding',a:'fahm',reg:'msa'},
+    {id:'w-fhm-3',ar:'مَفْهُوم',t:'mafhūm',en:'concept; understood',a:'mafhuum',reg:'msa'}
   ]},
-  {root:'ق و ل',meaning:'saying',words:[
-    {ar:'قَالَ',t:'qāla',en:'he said',a:'qaala',reg:'msa'},
-    {ar:'قَوْل',t:'qawl',en:'saying, statement',a:'qawl',reg:'msa'},
-    {ar:'مَقَال',t:'maqāl',en:'article, essay',a:'maqaal',reg:'msa'}
+  {id:'r-qwl',root:'ق و ل',meaning:'saying',words:[
+    {id:'w-qwl-1',ar:'قَالَ',t:'qāla',en:'he said',a:'qaala',reg:'msa'},
+    {id:'w-qwl-2',ar:'قَوْل',t:'qawl',en:'saying, statement',a:'qawl',reg:'msa'},
+    {id:'w-qwl-3',ar:'مَقَال',t:'maqāl',en:'article, essay',a:'maqaal',reg:'msa'}
   ]},
-  {root:'ف ع ل',meaning:'doing, acting',words:[
-    {ar:'فَعَلَ',t:'faʿala',en:'he did',a:'fa3ala',reg:'msa'},
-    {ar:'فِعْل',t:'fiʿl',en:'action; verb',a:'fi3l',reg:'msa'},
-    {ar:'فَاعِل',t:'fāʿil',en:'doer; agent',a:'faa3il',reg:'msa'}
+  {id:'r-f3l',root:'ف ع ل',meaning:'doing, acting',words:[
+    {id:'w-f3l-1',ar:'فَعَلَ',t:'faʿala',en:'he did',a:'fa3ala',reg:'msa'},
+    {id:'w-f3l-2',ar:'فِعْل',t:'fiʿl',en:'action; verb',a:'fi3l',reg:'msa'},
+    {id:'w-f3l-3',ar:'فَاعِل',t:'fāʿil',en:'doer; agent',a:'faa3il',reg:'msa'}
   ]},
-  {root:'ن ظ ر',meaning:'looking, seeing',words:[
-    {ar:'نَظَرَ',t:'naẓara',en:'he looked',a:'nazara',reg:'msa'},
-    {ar:'نَظَر',t:'naẓar',en:'sight, view',a:'nazar',reg:'msa'},
-    {ar:'مَنْظَر',t:'manẓar',en:'view, scene',a:'manzar',reg:'msa'},
-    {ar:'نَظَّارَة',t:'naẓẓāra',en:'eyeglasses',a:'nazzaara',reg:'msa'}
+  {id:'r-nzr',root:'ن ظ ر',meaning:'looking, seeing',words:[
+    {id:'w-nzr-1',ar:'نَظَرَ',t:'naẓara',en:'he looked',a:'nazara',reg:'msa'},
+    {id:'w-nzr-2',ar:'نَظَر',t:'naẓar',en:'sight, view',a:'nazar',reg:'msa'},
+    {id:'w-nzr-3',ar:'مَنْظَر',t:'manẓar',en:'view, scene',a:'manzar',reg:'msa'},
+    {id:'w-nzr-4',ar:'نَظَّارَة',t:'naẓẓāra',en:'eyeglasses',a:'nazzaara',reg:'msa'}
   ]},
-  {root:'س م ع',meaning:'hearing',words:[
-    {ar:'سَمِعَ',t:'samiʿa',en:'he heard',a:'sami3a',reg:'msa'},
-    {ar:'سَمْع',t:'samʿ',en:'hearing',a:'sam3',reg:'msa'},
-    {ar:'مُسْتَمِع',t:'mustamiʿ',en:'listener',a:'mustami3',reg:'msa'}
+  {id:'r-sm3',root:'س م ع',meaning:'hearing',words:[
+    {id:'w-sm3-1',ar:'سَمِعَ',t:'samiʿa',en:'he heard',a:'sami3a',reg:'msa'},
+    {id:'w-sm3-2',ar:'سَمْع',t:'samʿ',en:'hearing',a:'sam3',reg:'msa'},
+    {id:'w-sm3-3',ar:'مُسْتَمِع',t:'mustamiʿ',en:'listener',a:'mustami3',reg:'msa'}
   ]},
-  {root:'ك ل م',meaning:'speaking, words',words:[
-    {ar:'كَلِمَة',t:'kalima',en:'word',a:'kalima',reg:'msa'},
-    {ar:'كَلَام',t:'kalām',en:'speech, talk',a:'kalaam',reg:'msa'},
-    {ar:'تَكَلَّمَ',t:'takallama',en:'he spoke',a:'takallama',reg:'msa'}
+  {id:'r-klm',root:'ك ل م',meaning:'speaking, words',words:[
+    {id:'w-klm-1',ar:'كَلِمَة',t:'kalima',en:'word',a:'kalima',reg:'msa'},
+    {id:'w-klm-2',ar:'كَلَام',t:'kalām',en:'speech, talk',a:'kalaam',reg:'msa'},
+    {id:'w-klm-3',ar:'تَكَلَّمَ',t:'takallama',en:'he spoke',a:'takallama',reg:'msa'}
   ]},
-  {root:'ع ر ف',meaning:'knowing, recognizing',words:[
-    {ar:'عَرَفَ',t:'ʿarafa',en:'he knew, recognized',a:'3arafa',reg:'msa'},
-    {ar:'مَعْرِفَة',t:'maʿrifa',en:'knowledge',a:'ma3rifa',reg:'msa'},
-    {ar:'مَعْرُوف',t:'maʿrūf',en:'well-known; favor',a:'ma3ruuf',reg:'msa'}
+  {id:'r-3rf',root:'ع ر ف',meaning:'knowing, recognizing',words:[
+    {id:'w-3rf-1',ar:'عَرَفَ',t:'ʿarafa',en:'he knew, recognized',a:'3arafa',reg:'msa'},
+    {id:'w-3rf-2',ar:'مَعْرِفَة',t:'maʿrifa',en:'knowledge',a:'ma3rifa',reg:'msa'},
+    {id:'w-3rf-3',ar:'مَعْرُوف',t:'maʿrūf',en:'well-known; favor',a:'ma3ruuf',reg:'msa'}
   ]},
-  {root:'خ ر ج',meaning:'exiting, going out',words:[
-    {ar:'خَرَجَ',t:'kharaja',en:'he went out',a:'kharaja',reg:'msa'},
-    {ar:'خَارِج',t:'khārij',en:'outside',a:'khaarij',reg:'msa'},
-    {ar:'مَخْرَج',t:'makhraj',en:'exit',a:'makhraj',reg:'msa'}
+  {id:'r-khrj',root:'خ ر ج',meaning:'exiting, going out',words:[
+    {id:'w-khrj-1',ar:'خَرَجَ',t:'kharaja',en:'he went out',a:'kharaja',reg:'msa'},
+    {id:'w-khrj-2',ar:'خَارِج',t:'khārij',en:'outside',a:'khaarij',reg:'msa'},
+    {id:'w-khrj-3',ar:'مَخْرَج',t:'makhraj',en:'exit',a:'makhraj',reg:'msa'}
   ]},
-  {root:'د خ ل',meaning:'entering',words:[
-    {ar:'دَخَلَ',t:'dakhala',en:'he entered',a:'dakhala',reg:'msa'},
-    {ar:'دَاخِل',t:'dākhil',en:'inside',a:'daakhil',reg:'msa'},
-    {ar:'مَدْخَل',t:'madkhal',en:'entrance',a:'madkhal',reg:'msa'}
+  {id:'r-dkhl',root:'د خ ل',meaning:'entering',words:[
+    {id:'w-dkhl-1',ar:'دَخَلَ',t:'dakhala',en:'he entered',a:'dakhala',reg:'msa'},
+    {id:'w-dkhl-2',ar:'دَاخِل',t:'dākhil',en:'inside',a:'daakhil',reg:'msa'},
+    {id:'w-dkhl-3',ar:'مَدْخَل',t:'madkhal',en:'entrance',a:'madkhal',reg:'msa'}
   ]},
-  {root:'ص غ ر',meaning:'smallness',words:[
-    {ar:'صَغِير',t:'ṣaghīr',en:'small; young',a:'saghiir',reg:'msa'},
-    {ar:'أَصْغَر',t:'ʾaṣghar',en:'smaller, smallest',a:'2asghar',reg:'msa'}
+  {id:'r-sghr',root:'ص غ ر',meaning:'smallness',words:[
+    {id:'w-sghr-1',ar:'صَغِير',t:'ṣaghīr',en:'small; young',a:'saghiir',reg:'msa'},
+    {id:'w-sghr-2',ar:'أَصْغَر',t:'ʾaṣghar',en:'smaller, smallest',a:'2asghar',reg:'msa'}
   ]},
-  {root:'ج م ل',meaning:'beauty',words:[
-    {ar:'جَمِيل',t:'jamīl',en:'beautiful',a:'jamiil',reg:'msa'},
-    {ar:'جَمَال',t:'jamāl',en:'beauty',a:'jamaal',reg:'msa'},
-    {ar:'أَجْمَل',t:'ʾajmal',en:'more beautiful',a:'2ajmal',reg:'msa'}
+  {id:'r-jml',root:'ج م ل',meaning:'beauty',words:[
+    {id:'w-jml-1',ar:'جَمِيل',t:'jamīl',en:'beautiful',a:'jamiil',reg:'msa'},
+    {id:'w-jml-2',ar:'جَمَال',t:'jamāl',en:'beauty',a:'jamaal',reg:'msa'},
+    {id:'w-jml-3',ar:'أَجْمَل',t:'ʾajmal',en:'more beautiful',a:'2ajmal',reg:'msa'}
   ]},
-  {root:'ف ت ح',meaning:'opening',words:[
-    {ar:'فَتَحَ',t:'fataḥa',en:'he opened',a:'fataha',reg:'msa'},
-    {ar:'مِفْتَاح',t:'miftāḥ',en:'key',a:'miftaah',reg:'msa'},
-    {ar:'مَفْتُوح',t:'maftūḥ',en:'open',a:'maftuuh',reg:'msa'}
+  {id:'r-fth',root:'ف ت ح',meaning:'opening',words:[
+    {id:'w-fth-1',ar:'فَتَحَ',t:'fataḥa',en:'he opened',a:'fataha',reg:'msa'},
+    {id:'w-fth-2',ar:'مِفْتَاح',t:'miftāḥ',en:'key',a:'miftaah',reg:'msa'},
+    {id:'w-fth-3',ar:'مَفْتُوح',t:'maftūḥ',en:'open',a:'maftuuh',reg:'msa'}
   ]},
-  {root:'س أ ل',meaning:'asking',words:[
-    {ar:'سَأَلَ',t:'saʾala',en:'he asked',a:'sa2ala',reg:'msa'},
-    {ar:'سُؤَال',t:'suʾāl',en:'question',a:'su2aal',reg:'msa'},
-    {ar:'مَسْأَلَة',t:'masʾala',en:'issue, problem',a:'mas2ala',reg:'msa'}
+  {id:'r-s2l',root:'س أ ل',meaning:'asking',words:[
+    {id:'w-s2l-1',ar:'سَأَلَ',t:'saʾala',en:'he asked',a:'sa2ala',reg:'msa'},
+    {id:'w-s2l-2',ar:'سُؤَال',t:'suʾāl',en:'question',a:'su2aal',reg:'msa'},
+    {id:'w-s2l-3',ar:'مَسْأَلَة',t:'masʾala',en:'issue, problem',a:'mas2ala',reg:'msa'}
   ]},
-  {root:'ج و ب',meaning:'answering',words:[
-    {ar:'أَجَابَ',t:'ʾajāba',en:'he answered',a:'2ajaaba',reg:'msa'},
-    {ar:'جَوَاب',t:'jawāb',en:'answer',a:'jawaab',reg:'msa'},
-    {ar:'إِجَابَة',t:'ʾijāba',en:'answer, response',a:'2ijaaba',reg:'msa'}
+  {id:'r-jwb',root:'ج و ب',meaning:'answering',words:[
+    {id:'w-jwb-1',ar:'أَجَابَ',t:'ʾajāba',en:'he answered',a:'2ajaaba',reg:'msa'},
+    {id:'w-jwb-2',ar:'جَوَاب',t:'jawāb',en:'answer',a:'jawaab',reg:'msa'},
+    {id:'w-jwb-3',ar:'إِجَابَة',t:'ʾijāba',en:'answer, response',a:'2ijaaba',reg:'msa'}
   ]},
-  {root:'ل ع ب',meaning:'playing',words:[
-    {ar:'لَعِبَ',t:'laʿiba',en:'he played',a:'la3iba',reg:'msa'},
-    {ar:'لُعْبَة',t:'luʿba',en:'game, toy',a:'lu3ba',reg:'msa'},
-    {ar:'لَاعِب',t:'lāʿib',en:'player',a:'laa3ib',reg:'msa'},
-    {ar:'مَلْعَب',t:'malʿab',en:'playground, stadium',a:'mal3ab',reg:'msa'}
+  {id:'r-l3b',root:'ل ع ب',meaning:'playing',words:[
+    {id:'w-l3b-1',ar:'لَعِبَ',t:'laʿiba',en:'he played',a:'la3iba',reg:'msa'},
+    {id:'w-l3b-2',ar:'لُعْبَة',t:'luʿba',en:'game, toy',a:'lu3ba',reg:'msa'},
+    {id:'w-l3b-3',ar:'لَاعِب',t:'lāʿib',en:'player',a:'laa3ib',reg:'msa'},
+    {id:'w-l3b-4',ar:'مَلْعَب',t:'malʿab',en:'playground, stadium',a:'mal3ab',reg:'msa'}
   ]},
-  {root:'ن و م',meaning:'sleeping',words:[
-    {ar:'نَامَ',t:'nāma',en:'he slept',a:'naama',reg:'msa'},
-    {ar:'نَوْم',t:'nawm',en:'sleep',a:'nawm',reg:'msa'},
-    {ar:'نَائِم',t:'nāʾim',en:'asleep, sleeping',a:'naa2im',reg:'msa'}
+  {id:'r-nwm',root:'ن و م',meaning:'sleeping',words:[
+    {id:'w-nwm-1',ar:'نَامَ',t:'nāma',en:'he slept',a:'naama',reg:'msa'},
+    {id:'w-nwm-2',ar:'نَوْم',t:'nawm',en:'sleep',a:'nawm',reg:'msa'},
+    {id:'w-nwm-3',ar:'نَائِم',t:'nāʾim',en:'asleep, sleeping',a:'naa2im',reg:'msa'}
   ]},
-  {root:'ش غ ل',meaning:'occupation, busyness',words:[
-    {ar:'شُغْل',t:'shughl',en:'work, business',a:'shughl',reg:'msa'},
-    {ar:'مَشْغُول',t:'mashghūl',en:'busy',a:'mashghuul',reg:'msa'},
-    {ar:'اِشْتَغَلَ',t:'ishtaghala',en:'he worked',a:'ishtaghala',reg:'msa'}
+  {id:'r-shghl',root:'ش غ ل',meaning:'occupation, busyness',words:[
+    {id:'w-shghl-1',ar:'شُغْل',t:'shughl',en:'work, business',a:'shughl',reg:'msa'},
+    {id:'w-shghl-2',ar:'مَشْغُول',t:'mashghūl',en:'busy',a:'mashghuul',reg:'msa'},
+    {id:'w-shghl-3',ar:'اِشْتَغَلَ',t:'ishtaghala',en:'he worked',a:'ishtaghala',reg:'msa'}
   ]},
-  {root:'ز و ر',meaning:'visiting',words:[
-    {ar:'زَارَ',t:'zāra',en:'he visited',a:'zaara',reg:'msa'},
-    {ar:'زِيَارَة',t:'ziyāra',en:'visit',a:'ziyaara',reg:'msa'},
-    {ar:'زَائِر',t:'zāʾir',en:'visitor',a:'zaa2ir',reg:'msa'}
+  {id:'r-zwr',root:'ز و ر',meaning:'visiting',words:[
+    {id:'w-zwr-1',ar:'زَارَ',t:'zāra',en:'he visited',a:'zaara',reg:'msa'},
+    {id:'w-zwr-2',ar:'زِيَارَة',t:'ziyāra',en:'visit',a:'ziyaara',reg:'msa'},
+    {id:'w-zwr-3',ar:'زَائِر',t:'zāʾir',en:'visitor',a:'zaa2ir',reg:'msa'}
   ]},
-  {root:'و ص ل',meaning:'arriving, connecting',words:[
-    {ar:'وَصَلَ',t:'waṣala',en:'he arrived',a:'wasala',reg:'msa'},
-    {ar:'وُصُول',t:'wuṣūl',en:'arrival',a:'wusuul',reg:'msa'},
-    {ar:'مُوَاصَلَات',t:'muwāṣalāt',en:'transportation',a:'muwaasalaat',reg:'msa'}
+  {id:'r-wsl',root:'و ص ل',meaning:'arriving, connecting',words:[
+    {id:'w-wsl-1',ar:'وَصَلَ',t:'waṣala',en:'he arrived',a:'wasala',reg:'msa'},
+    {id:'w-wsl-2',ar:'وُصُول',t:'wuṣūl',en:'arrival',a:'wusuul',reg:'msa'},
+    {id:'w-wsl-3',ar:'مُوَاصَلَات',t:'muwāṣalāt',en:'transportation',a:'muwaasalaat',reg:'msa'}
   ]},
-  {root:'غ س ل',meaning:'washing',words:[
-    {ar:'غَسَلَ',t:'ghasala',en:'he washed',a:'ghasala',reg:'msa'},
-    {ar:'غَسِيل',t:'ghasīl',en:'laundry',a:'ghasiil',reg:'msa'},
-    {ar:'غَسَّالَة',t:'ghassāla',en:'washing machine',a:'ghassaala',reg:'msa'}
+  {id:'r-ghsl',root:'غ س ل',meaning:'washing',words:[
+    {id:'w-ghsl-1',ar:'غَسَلَ',t:'ghasala',en:'he washed',a:'ghasala',reg:'msa'},
+    {id:'w-ghsl-2',ar:'غَسِيل',t:'ghasīl',en:'laundry',a:'ghasiil',reg:'msa'},
+    {id:'w-ghsl-3',ar:'غَسَّالَة',t:'ghassāla',en:'washing machine',a:'ghassaala',reg:'msa'}
   ]},
-  {root:'ط ب خ',meaning:'cooking',words:[
-    {ar:'طَبَخَ',t:'ṭabakha',en:'he cooked',a:'tabakha',reg:'msa'},
-    {ar:'مَطْبَخ',t:'maṭbakh',en:'kitchen',a:'matbakh',reg:'msa'},
-    {ar:'طَبَّاخ',t:'ṭabbākh',en:'cook, chef',a:'tabbaakh',reg:'msa'}
+  {id:'r-tbkh',root:'ط ب خ',meaning:'cooking',words:[
+    {id:'w-tbkh-1',ar:'طَبَخَ',t:'ṭabakha',en:'he cooked',a:'tabakha',reg:'msa'},
+    {id:'w-tbkh-2',ar:'مَطْبَخ',t:'maṭbakh',en:'kitchen',a:'matbakh',reg:'msa'},
+    {id:'w-tbkh-3',ar:'طَبَّاخ',t:'ṭabbākh',en:'cook, chef',a:'tabbaakh',reg:'msa'}
   ]},
-  {root:'ص ب ح',meaning:'morning, becoming',words:[
-    {ar:'صَبَاح',t:'ṣabāḥ',en:'morning',a:'sabaah',reg:'msa'},
-    {ar:'مِصْبَاح',t:'miṣbāḥ',en:'lamp',a:'misbaah',reg:'msa'},
-    {ar:'أَصْبَحَ',t:'ʾaṣbaḥa',en:'he became',a:'2asbaha',reg:'msa'}
+  {id:'r-sbh',root:'ص ب ح',meaning:'morning, becoming',words:[
+    {id:'w-sbh-1',ar:'صَبَاح',t:'ṣabāḥ',en:'morning',a:'sabaah',reg:'msa'},
+    {id:'w-sbh-2',ar:'مِصْبَاح',t:'miṣbāḥ',en:'lamp',a:'misbaah',reg:'msa'},
+    {id:'w-sbh-3',ar:'أَصْبَحَ',t:'ʾaṣbaḥa',en:'he became',a:'2asbaha',reg:'msa'}
   ]}
 ];
 
@@ -613,17 +621,54 @@ var ROADMAP = [
 /* ---------- build the deck ---------- */
 var DECK = [];
 ALPHABET.forEach(function(a){ DECK.push({id:'a-'+a.id,type:'alphabet',d:a}); });
-ROOTS.forEach(function(r,ri){
-  r.words.forEach(function(w,wi){
-    DECK.push({id:'v-'+ri+'-'+wi,type:'vocab',d:{ar:w.ar,t:w.t,en:w.en,a:w.a,reg:w.reg,root:r.root,rootMeaning:r.meaning}});
+ROOTS.forEach(function(r){
+  r.words.forEach(function(w){
+    DECK.push({id:w.id,type:'vocab',d:{ar:w.ar,t:w.t,en:w.en,a:w.a,reg:w.reg,
+      root:r.root,rootId:r.id,rootMeaning:r.meaning}});
   });
 });
+/* One-time remap of index-based card ids onto the stable ones. Derivable
+   without a lookup table because the array order still matches the order the
+   old ids encoded. Idempotent, and safe to run again after a sync pulls
+   un-migrated state from another device. Collisions keep the stronger record,
+   matching the merge rule (more reps wins, then the later due date). */
+function migrateIds(st){
+  if(!st) return st;
+  var map = {};
+  ROOTS.forEach(function(r,ri){ r.words.forEach(function(w,wi){ map['v-'+ri+'-'+wi] = w.id; }); });
+  function better(x,y){ return !y ? x : !x ? y : x.reps>y.reps ? x : y.reps>x.reps ? y : (x.due>y.due?x:y); }
+  ['progress','prod'].forEach(function(k){
+    var src = st[k]; if(!src) return;
+    Object.keys(src).forEach(function(old){
+      var nu = map[old]; if(!nu) return;
+      src[nu] = better(src[old], src[nu]); delete src[old];
+    });
+  });
+  if(st.pins) Object.keys(st.pins).forEach(function(old){
+    var nu = map[old]; if(!nu) return;
+    var a = st.pins[old], b = st.pins[nu];
+    st.pins[nu] = (b && b.t > a.t) ? b : a; delete st.pins[old];
+  });
+  (st.log||[]).forEach(function(e){ if(map[e.id]) e.id = map[e.id]; });
+  (st.speech||[]).forEach(function(e){ if(map[e.id]) e.id = map[e.id]; });
+  return st;
+}
 var TOTAL_WORDS = ROOTS.reduce(function(n,r){return n+r.words.length;},0);
 var MAX_SESSION = 12;
 
-/* ---------- date helpers ---------- */
-function today(){ var d=new Date(); return d.toISOString().slice(0,10); }
-function addDays(s,n){ var d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+/* ---------- date helpers ----------
+   A study "day" is the learner's LOCAL day. Every date in state is a local
+   YYYY-MM-DD string, formatted by ymd() and parsed back as local midnight.
+   (Previously today() formatted in UTC while addDays() parsed as local: east
+   of UTC that made addDays(d,n) return d+n-1, so every interval was a day
+   short and the heatmap never lit today; west of UTC the day rolled over in
+   the late afternoon, so evening study was credited to tomorrow.) */
+function ymd(d){
+  var m=d.getMonth()+1, x=d.getDate();
+  return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(x<10?'0':'')+x;
+}
+function today(){ return ymd(new Date()); }
+function addDays(s,n){ var d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d); }
 function dayDiff(a,b){ return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000); }
 
 /* ---------- SM-2-ish scheduler ---------- */
@@ -650,7 +695,10 @@ function wordSrc(w){ return 'audio/words/'+w.a+'.mp3'; }
 function playAudio(src, text){
   if(AUDIO_MISSING[src]){ if(text) speakText(text); return; }   /* known-missing → synthetic */
   if(!audioEl) audioEl = new Audio();
-  var fail = function(){ if(!AUDIO_MISSING[src]) AUDIO_MISSING[src]=true; if(text){ speakText(text); } else render(); };
+  var fail = function(){
+    if(!AUDIO_MISSING[src]){ AUDIO_MISSING[src]=true; saveMissing(); }
+    if(text){ speakText(text); } else render();
+  };
   audioEl.onerror = fail;
   audioEl.src = src;
   var p = audioEl.play();
@@ -774,22 +822,51 @@ function allAudio(){
   ROOTS.forEach(function(r){ r.words.forEach(function(w){ list.push(wordSrc(w)); }); });
   return list;
 }
+/* Remember which clips are absent, so the first tap on each word doesn't pay a
+   failed round trip before falling back to the synthetic voice. Short-lived on
+   purpose: a recording dropped into audio/ must start playing without anyone
+   clearing a cache. */
+var MISS_KEY = 'judhur-audio-miss-v1', MISS_TTL = 24*60*60*1000;
+(function(){
+  try{
+    var raw = canLS ? localStorage.getItem(MISS_KEY) : memStore[MISS_KEY];
+    var o = raw ? JSON.parse(raw) : null;
+    if(o && o.at && (Date.now()-o.at) < MISS_TTL)
+      (o.list||[]).forEach(function(s){ AUDIO_MISSING[s]=true; });
+  }catch(e){}
+})();
+function saveMissing(){
+  var s = JSON.stringify({at:Date.now(), list:Object.keys(AUDIO_MISSING)});
+  if(canLS){ try{ localStorage.setItem(MISS_KEY, s); return; }catch(e){} }
+  memStore[MISS_KEY] = s;
+}
 var COV = null;
+/* Probes run a few at a time. Sequentially, with every clip absent and each
+   probe waiting out its own timeout, a full check took minutes. */
+var COV_PARALLEL = 6;
 function probeCoverage(){
   var list = allAudio();
+  AUDIO_MISSING = {};                 /* a re-check must be able to clear a stale miss */
   COV = {done:0,total:list.length,missing:[],running:true};
   render();
-  var i = 0;
-  function next(){
-    if(i >= list.length){ COV.running=false; render(); return; }
-    var src = list[i++], a = new Audio(), settled = false, tm;
+  var i = 0, active = 0;
+  function pump(){
+    while(active < COV_PARALLEL && i < list.length){ probe(list[i++]); }
+    if(!active && i >= list.length){
+      COV.missing.sort();
+      COV.running = false; saveMissing(); render();
+    }
+  }
+  function probe(src){
+    active++;
+    var a = new Audio(), settled = false, tm;
     function fin(ok){
       if(settled) return;
-      settled = true; clearTimeout(tm);
+      settled = true; clearTimeout(tm); active--;
       COV.done++;
       if(!ok){ COV.missing.push(src); AUDIO_MISSING[src]=true; }
       if(COV.done % 10 === 0) render();
-      next();
+      pump();
     }
     a.onerror = function(){ fin(false); };
     a.onloadeddata = function(){ fin(true); };
@@ -797,7 +874,7 @@ function probeCoverage(){
     tm = setTimeout(function(){ fin(false); }, 4000);
     a.preload = 'auto'; a.src = src; a.load();
   }
-  next();
+  pump();
 }
 
 /* ---------- cross-device sync (step 4) ----------
@@ -853,26 +930,65 @@ function mergeStates(a,b){
   m.last = runs.last;
   m.streak = runs.current;
   m.best = Math.max(a.best||0, b.best||0, runs.best);
-  /* speech attempts: append-only union by key [R-32] */
-  var sk = {};
-  m.speech = [];
-  (a.speech||[]).concat(b.speech||[]).forEach(function(at){
-    var key = at.k || JSON.stringify(at);
-    if(!sk[key]){ sk[key]=1; m.speech.push(at); }
-  });
-  /* ingested content: union by id (definitions travel between devices) */
-  function unionById(la, lb){
+  /* append-only logs: union by key [R-32] */
+  function unionByKey(la, lb, keyOf){
     var out=[], seen={};
-    (la||[]).concat(lb||[]).forEach(function(x){ if(x && !seen[x.id]){ seen[x.id]=1; out.push(x); } });
+    (la||[]).concat(lb||[]).forEach(function(x){
+      if(!x) return;
+      var k = keyOf(x);
+      if(!seen[k]){ seen[k]=1; out.push(x); }
+    });
     return out;
   }
-  m.userCards = unionById(a.userCards, b.userCards);
+  m.speech = unionByKey(a.speech, b.speech, function(at){ return at.k || JSON.stringify(at); });
+  /* (t, id) is unique: one card can't be graded twice in the same millisecond */
+  m.log = unionByKey(a.log, b.log, function(e){ return e.t+'|'+e.id; })
+            .sort(function(x,y){ return x.t-y.t; });
+  /* Ingested content: union by id, but MERGE the entry when both sides have it
+     — keeping only the first copy meant an opt-in performed on the other
+     device could never arrive (its inReview:true lost to the local false). */
+  function unionById(la, lb, mergeOne){
+    var out=[], at={};
+    (la||[]).concat(lb||[]).forEach(function(x){
+      if(!x) return;
+      if(at[x.id] === undefined){ at[x.id] = out.length; out.push(x); }
+      else if(mergeOne) out[at[x.id]] = mergeOne(out[at[x.id]], x);
+    });
+    return out;
+  }
+  m.userCards = unionById(a.userCards, b.userCards, function(x,y){
+    /* opting a word into reviews is one-way in the UI, so OR is the whole rule */
+    return Object.assign({}, x, y, {inReview: !!(x.inReview || y.inReview)});
+  });
   m.passages  = unionById(a.passages,  b.passages);
-  /* display prefs: settings shallow-merged; pinned-full union */
-  m.settings = Object.assign({}, a.settings || {}, b.settings || {});
-  m.pinFull = {};
-  [a.pinFull, b.pinFull].forEach(function(o){ Object.keys(o || {}).forEach(function(k){ if(o[k]) m.pinFull[k] = true; }); });
-  return m;
+  /* Preferences and pins are the state a learner can CHANGE BACK, so a union
+     or a blind shallow-merge is wrong for them: union makes an unpin
+     impossible, and Object.assign made whichever device synced last win, so a
+     local toggle silently reverted. Both carry a change time and the newer
+     value wins per key. */
+  function mergeLWW(av, at, bv, bt){
+    var v={}, t={}, keys={};
+    Object.keys(av||{}).forEach(function(k){keys[k]=1;});
+    Object.keys(bv||{}).forEach(function(k){keys[k]=1;});
+    Object.keys(keys).forEach(function(k){
+      var ta=(at||{})[k]||0, tb=(bt||{})[k]||0;
+      var useB = (bv||{})[k]!==undefined && (tb>ta || (av||{})[k]===undefined);
+      v[k] = useB ? bv[k] : av[k];
+      t[k] = Math.max(ta, tb);
+    });
+    return {v:v, t:t};
+  }
+  var prefs = mergeLWW(a.settings, a.setT, b.settings, b.setT);
+  m.settings = prefs.v; m.setT = prefs.t;
+  m.pins = {};
+  var pk = {};
+  Object.keys(a.pins||{}).forEach(function(k){pk[k]=1;});
+  Object.keys(b.pins||{}).forEach(function(k){pk[k]=1;});
+  Object.keys(pk).forEach(function(k){
+    var pa=(a.pins||{})[k], pb=(b.pins||{})[k];
+    m.pins[k] = !pa ? pb : !pb ? pa : (pb.t>pa.t ? pb : pa);
+  });
+  return migrateIds(m);
 }
 function syncStatus(msg, cls){ SY.status=msg; SY.cls=cls||''; if(tab==='progress') render(); }
 function syncNow(){
@@ -887,8 +1003,7 @@ function syncNow(){
       return r.json();
     })
     .then(function(remote){
-      S = mergeStates(S, remote);
-      if(!S.userCards) S.userCards=[]; if(!S.passages) S.passages=[]; if(!S.prod) S.prod={};
+      S = ensureShape(mergeStates(S, remote));
       mountUserCards();   /* surface any words that arrived from another device */
       persist();
       var body = JSON.stringify(S);
@@ -979,9 +1094,18 @@ function t1Line(cardId){
         head = '<div class="t1 no">Needs work'+sc+'</div>';
         note = 'Hard to make out — say it once more, clearly and a touch slower.';
       } else if(named.length){             /* specific sounds we can name (Azure IPA or our letter map) */
-        head = '<div class="t1 no">Sounds to work on: '+named.map(function(d){return '<b class="heard">'+esc(d.phoneme)+'</b>';}).join(', ')+'</div>';
+        /* ar-SA returns per-phoneme scores with no labels, so most of these
+           names come from matching Azure's segments onto the word's letters by
+           position. That is a guess, and the learner is told it is a guess —
+           being sent to drill a sound they said correctly is the one failure
+           mode [R-19] treats as unrecoverable. */
+        var guessed = named.some(function(d){ return d.inferred; });
+        head = '<div class="t1 no">Sounds to '+(guessed?'check':'work on')+': '
+             + named.map(function(d){return '<b class="heard">'+esc(d.phoneme)+'</b>';}).join(', ')+'</div>';
         coach = o.coaching ? '<div class="coach">'+esc(o.coaching).replace(/\n/g,'<br>')+'</div>' : '';
-        note = esc(o.note || 'This is what was detected — it doesn’t catch everything.');
+        note = guessed
+          ? 'The checker scored these positions low but didn’t name the sounds itself — the letters above are matched by position, so one of them may be the wrong sound to blame. Worth a listen, not a verdict.'
+          : esc(o.note || 'This is what was detected — it doesn’t catch everything.');
       } else if(!good){                    /* low/mediocre but no single sound pinned down */
         head = '<div class="t1 no">Needs work'+sc+'</div>';
         note = det.length
@@ -1060,9 +1184,19 @@ function finishMic(){
   }).then(function(out){
     T1[r.cardId] = {st:'done', r: out};
     var ok = out.tier===2 ? (out.notRecognized ? false : (out.detected ? out.detected.length===0 : null)) : !!out.understood;
-    if(!S.speech) S.speech = [];
+    /* Append-only [R-32]. Keeps the structured verdict — what was heard, the
+       composite score, and which sounds were flagged — so §11.3's question
+       ("what is Azure's real per-phoneme accuracy on THIS voice?") has a
+       record to work from later.
+       NOT the §11.3 calibration pool: [R-33] requires the AUDIO to be retained,
+       and it isn't — the recording is discarded the moment this returns. A
+       reviewer cannot label a score they can't listen to. Retaining audio needs
+       storage on the learner's own backend (an R2 bucket), which is unbuilt. */
     S.speech.push({k:Date.now().toString(36)+Math.random().toString(36).slice(2,7),
-                   d:today(), id:r.cardId, tier:out.tier||1, ok:ok});   // append-only [R-32]
+                   d:today(), id:r.cardId, tier:out.tier||1, ok:ok, audio:false,
+                   heard:out.heard||null,
+                   pron:(out.pron!=null?out.pron:(out.overall!=null?out.overall:null)),
+                   det:(out.detected||[]).map(function(x){ return {p:x.phoneme, s:x.score, i:!!x.inferred}; })});
     persist(); render();
   }).catch(function(e){
     T1[r.cardId] = {st:'err', msg:'speech check unavailable — '+e.message+'. Studying continues.'};
@@ -1075,18 +1209,38 @@ function teardownMicFor(r){
   r.stream.getTracks().forEach(function(t){ t.stop(); });
 }
 
-/* ---------- state ---------- */
-var S = load() || {xp:0,streak:0,best:0,last:null,history:[],progress:{}};
-if(!S.prod) S.prod = {};        /* production (speaking) track — separate from recognition [R-29] */
-if(!S.userCards) S.userCards = [];  /* words materialized from ingested content (§5) */
-if(!S.passages) S.passages = [];    /* generated reading passages, with provenance [R-14] */
-if(!S.settings) S.settings = {};    /* display prefs (e.g. diacritics stage) */
-if(!S.pinFull) S.pinFull = {};      /* per-card pin to full harakat [R-36] */
-/* Ingested words now live in the Library and only enter daily reviews on opt-in.
-   Cards materialized before this change were auto-added, so treat a missing flag
-   as already-in-review to avoid silently pulling them out. */
-S.userCards.forEach(function(w){ if(w.inReview===undefined) w.inReview = true; });
-if(S.settings.tts===undefined) S.settings.tts = true;   /* synthetic voice fills gaps until a human clip exists */
+/* ---------- state ----------
+   One place that fills in every field and runs every migration, so a state
+   loaded from disk, merged from another device, or freshly reset all end up
+   in the same shape. */
+function blankState(){ return {xp:0,streak:0,best:0,last:null,history:[],progress:{}}; }
+function ensureShape(st){
+  st = migrateIds(st) || blankState();
+  if(!st.progress) st.progress = {};
+  if(!st.history) st.history = [];
+  if(!st.prod) st.prod = {};          /* production (speaking) track — separate from recognition [R-29] */
+  if(!st.userCards) st.userCards = [];/* words materialized from ingested content (§5) */
+  if(!st.passages) st.passages = [];  /* generated reading passages, with provenance [R-14] */
+  if(!st.settings) st.settings = {};  /* display prefs (e.g. diacritics stage) */
+  if(!st.setT) st.setT = {};          /* per-setting last-change ms, for the sync merge */
+  if(!st.log) st.log = [];            /* append-only review log [R-32] */
+  if(!st.speech) st.speech = [];      /* append-only speech attempts [R-32] */
+  /* Per-card harakat pin [R-36]. Stored as {id:{v:0|1,t:ms}} so an UNpin is a
+     real event that survives a sync — the old {id:true} shape had no way to
+     express "no longer pinned", so a union merge re-pinned it forever. */
+  if(!st.pins) st.pins = {};
+  if(st.pinFull){                     /* migrate the old shape once */
+    Object.keys(st.pinFull).forEach(function(k){ if(st.pinFull[k] && !st.pins[k]) st.pins[k] = {v:1,t:0}; });
+    delete st.pinFull;
+  }
+  /* Ingested words now live in the Library and only enter daily reviews on opt-in.
+     Cards materialized before this change were auto-added, so treat a missing flag
+     as already-in-review to avoid silently pulling them out. */
+  st.userCards.forEach(function(w){ if(w.inReview===undefined) w.inReview = true; });
+  if(st.settings.tts===undefined) st.settings.tts = true;   /* synthetic voice fills gaps until a human clip exists */
+  return st;
+}
+var S = ensureShape(load());
 
 /* Diacritic display (§11.2). Stored text is ALWAYS fully diacritized [R-35];
    these strip harakat at RENDER time only. */
@@ -1097,8 +1251,10 @@ function partialHarakat(s){ return String(s).replace(RE_SHORTV, ''); }  // keep 
 function diacriticMode(){ return S.settings.diacritics || 'full'; }
 /* Romanization visibility: per-card override wins, else the global default (#1/#2). */
 function trShown(){ return sess && sess.showTr!==undefined ? sess.showTr : !!S.settings.trDefault; }
+function pinned(id){ var p=S.pins[id]; return !!(p && p.v); }
+function setPin(id,v){ S.pins[id] = {v: v?1:0, t: Date.now()}; }
 function wordStage(cardId){
-  if(S.pinFull[cardId]) return 'full';                 /* per-card override [R-36] */
+  if(pinned(cardId)) return 'full';                    /* per-card override [R-36] */
   var mode = diacriticMode();
   if(mode !== 'auto') return mode;                     /* 'full' or 'bare' chosen explicitly */
   var p = S.progress[cardId], iv = p ? p.interval : 0; /* fade on retention, not calendar [R-37] */
@@ -1122,7 +1278,10 @@ function mountUserCards(){
 function learnerProfile(){
   var words=[], roots={};
   DECK.forEach(function(c){
-    if(c.type==='vocab' && reps(c.id)>=2){ words.push(c.d.ar); if(c.d.root) roots[c.d.root]=1; }
+    /* "Known" here means retained [R-28] — the generator is told what has
+       actually stuck, not what has merely been seen twice. An inflated list
+       is how graded output drifts above the learner's real level. */
+    if(c.type==='vocab' && retained(c.id)){ words.push(c.d.ar); if(c.d.root) roots[c.d.root]=1; }
   });
   return {known_words:words.slice(0,60), known_roots:Object.keys(roots), register:'MSA', target_new_words:5};
 }
@@ -1135,10 +1294,40 @@ var openRoot = null;
 var sess = null;
 
 function persist(){ save(S); }
+/* Settings carry a per-key change time so a sync merge can pick the newer
+   value instead of letting whichever device answered last win. */
+function setPref(k,v){ S.settings[k]=v; S.setT[k]=Date.now(); persist(); }
 function reps(id){ var p=S.progress[id]; return p?p.reps:0; }
 function isDue(id){ var p=S.progress[id]; return p && p.due<=today(); }
-function lettersKnown(){ return ALPHABET.filter(function(a){return reps('a-'+a.id)>=2;}).length; }
-function wordsKnown(){ return DECK.filter(function(c){return c.type==='vocab'&&c.id.charAt(0)==='v'&&reps(c.id)>=2;}).length; }
+/* [R-28]: retention gates, exposure doesn't. A card counts as retained only
+   once it has survived a long interval — the same bar §8 sets for Phase 0
+   (≥3 successful reps at an interval of ≥7 days). "Learning" is everything
+   that has been graded at least once but hasn't cleared that bar yet. */
+function retained(id,map){ var p=(map||S.progress)[id]; return !!p && p.reps>=3 && p.interval>=7; }
+function learning(id,map){ var p=(map||S.progress)[id]; return !!p && p.reps>0 && !retained(id,map); }
+function lettersRetained(){ return ALPHABET.filter(function(a){return retained('a-'+a.id);}).length; }
+function wordsRetained(){ return DECK.filter(function(c){return c.type==='vocab'&&c.id.charAt(0)==='w'&&retained(c.id);}).length; }
+/* Active study days inside the trailing 30-day window — the quantity [R-38]
+   is defined over. Computed, not eyeballed off the heatmap. */
+function activeDays(){
+  var n=0; for(var i=0;i<30;i++){ if(S.history.indexOf(addDays(today(),-i))>-1) n++; }
+  return n;
+}
+/* [R-32] append-only. Never rewritten, so a future scheduler can be replayed
+   against real history instead of being tested blind. */
+function logReview(id, track, q, before, after){
+  S.log.push({t:Date.now(), d:today(), id:id, k:track, q:q,
+              b:before?before.interval:0, a:after.interval});
+}
+/* One place where a study day is recorded, so the three grading paths can't
+   drift apart. Missed days are never penalised here [R-8]. */
+function markStudied(){
+  var td = today();
+  if(S.last === td) return;
+  if(S.last && dayDiff(S.last,td)===1) S.streak++; else S.streak=1;
+  if(S.streak>S.best) S.best=S.streak;
+  S.history.push(td); S.last=td;
+}
 /* Fisher–Yates in place. */
 function shuffle(a){
   for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; }
@@ -1187,7 +1376,13 @@ function starRow(){
   }
   return out+'</div>';
 }
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* Escapes quotes too: esc() output lands inside HTML *attribute* values in
+   ~15 places, some of them carrying model-generated text (ingested passage
+   tokens, generated word forms) or user typing (the backend URL). */
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 function formCells(id,size){
   var M = LETTER_META[id], labels = ['isolated','initial','medial','final'], out = '';
   for(var i=0;i<4;i++){
@@ -1219,8 +1414,8 @@ function viewHome(){
   + '<button class="btn-teal" data-act="ing-open" style="margin-top:12px;margin-bottom:0">＋ Bring in content</button>'
   + starRow()
   + '<div class="grid2">'
-  +   stat('Letters known', lettersKnown()+' / 28', null, 'var(--teal)')
-  +   stat('Words learned', wordsKnown()+' / '+TOTAL_WORDS, null, 'var(--gold)')
+  +   stat('Letters retained', lettersRetained()+' / 28', null, 'var(--teal)')
+  +   stat('Words retained', wordsRetained()+' / '+TOTAL_WORDS, null, 'var(--gold)')
   +   stat('Level', String(lvl), into+'/100 xp', 'var(--coral)')
   +   stat('Best streak', S.best+' days', null, 'var(--teal)')
   + '</div>'
@@ -1237,12 +1432,22 @@ function subPage(title, body){
   return '<button class="subback" data-act="prog-back">'+svg(IC.back)+' Progress</button>'
        + '<h1 class="tt">'+esc(title)+'</h1>' + body;
 }
+/* Reference surface, not a grading surface. Grading used to live on these
+   tiles, outside any session: no 12-card ceiling [R-5] and no completion
+   screen [R-6], which also made "28 / 28" reachable in one sitting. Letters
+   are now reviewed through the ordinary capped session like everything else,
+   and this page is what \u00a711.10 says the alphabet is \u2014 something to look at
+   and listen to. */
 function viewScript(){
-  var out = '<p class="sub">Tap a letter to flip it. Gold border means learned.</p>'
-          + '<div class="alpha">';
+  var dueN = DECK.filter(function(c){return c.type==='alphabet'&&isDue(c.id);}).length;
+  var out = '<p class="sub">Tap a letter to flip it \u2014 forms, an example word, and audio. '
+          + 'Gold means retained (\u00a78 Phase 0: 3+ reps held a week or longer); a faint border means still learning.</p>';
+  if(dueN) out += '<div style="margin-top:14px"><button class="btn-teal" data-act="start-letters">Review '+dueN+' due letter'+(dueN>1?'s':'')+'</button></div>';
+  out += '<div class="alpha">';
   ALPHABET.forEach(function(a){
-    var id='a-'+a.id, known=reps(id)>=2, f=flipped[a.id];
-    out += '<div class="tile'+(known?' known':'')+'" data-flip="'+a.id+'">';
+    var id='a-'+a.id, f=flipped[a.id];
+    var cls = retained(id) ? ' known' : learning(id) ? ' learning' : '';
+    out += '<div class="tile'+cls+'" data-flip="'+esc(a.id)+'">';
     if(!f){
       out += '<div class="big">'+a.letter+'</div><div class="nm">'+esc(a.name)+'</div>';
     } else {
@@ -1251,9 +1456,7 @@ function viewScript(){
            + '<div class="formrow">'+formCells(a.id,15)+'</div>'
            + (LETTER_META[a.id].guttural?'<span class="gutt">throat sound</span>':'')
            + '<div class="row">'
-           +   '<button data-grade="'+id+'|0" style="color:var(--coral)">'+svg(IC.x)+'</button>'
-           +   '<button data-grade="'+id+'|2" style="color:var(--teal)">'+svg(IC.check)+'</button>'
-           +   '<button class="playbtn'+(AUDIO_MISSING[letterSrc(a.id)]?' miss':'')+'" data-play="'+letterSrc(a.id)+'">'+svg(IC.spk)+'</button>'
+           +   '<button class="playbtn'+(AUDIO_MISSING[letterSrc(a.id)]?' miss':'')+'" data-play="'+esc(letterSrc(a.id))+'">'+svg(IC.spk)+'</button>'
            + '</div>';
     }
     out += '</div>';
@@ -1269,22 +1472,23 @@ function viewVocab(){
   out += '<div class="rootlist">';
   ROOTS.forEach(function(r,ri){
     var open = openRoot===ri;
-    var learned = r.words.filter(function(w,wi){return reps('v-'+ri+'-'+wi)>=2;}).length;
+    var learned = r.words.filter(function(w){return retained(w.id);}).length;
     out += '<div class="root"><div class="root-hd" data-root="'+ri+'">'
          +   '<div class="lt"><div class="root-ar">'+r.root+'</div>'
          +     '<div><div class="root-mn">'+esc(r.meaning)+'</div>'
-         +       '<div class="root-ct">'+learned+'/'+r.words.length+' learned</div></div></div>'
+         +       '<div class="root-ct">'+learned+'/'+r.words.length+' retained</div></div></div>'
          +   '<span style="color:var(--muted);display:flex">'+svg(open?IC.chevD:IC.chev)+'</span>'
          + '</div>';
     if(open){
       out += '<div class="root-bd">';
-      r.words.forEach(function(w,wi){
-        var id='v-'+ri+'-'+wi, p=S.progress[id];
-        var st = !p ? 'new' : (p.due<=today() ? 'due' : 'learned');
+      r.words.forEach(function(w){
+        var id=w.id, p=S.progress[id];
+        var st = !p ? 'new' : p.due<=today() ? 'due' : retained(id) ? 'retained' : 'learning';
         var PILL = {
-          'new':    ['#9FB2C9','rgba(159,178,201,.15)'],
-          'due':    ['#C1592E','rgba(193,89,46,.16)'],
-          'learned':['#4F8A8B','rgba(79,138,139,.16)']
+          'new':     ['#9FB2C9','rgba(159,178,201,.15)'],
+          'due':     ['#C1592E','rgba(193,89,46,.16)'],
+          'learning':['#B8935A','rgba(184,147,90,.16)'],
+          'retained':['#4F8A8B','rgba(79,138,139,.16)']
         }[st];
         out += '<div class="word"><div><div class="w-ar">'+w.ar+'</div>'
              + '<div class="w-en">'+esc(w.t)+' \u00b7 '+esc(w.en)+' '+regTag(w.reg)+'</div></div>'
@@ -1327,20 +1531,32 @@ function viewProgress(){
     var d = addDays(today(),-i);
     cells += '<div class="'+(S.history.indexOf(d)>-1?'on':'')+'" title="'+d+'"></div>';
   }
+  var act = activeDays();
+  /* [R-38] is the project's one remaining usage safeguard, and it was left as
+     thirty dots to count by eye — which is exactly the check that stops
+     happening when it matters. State it as a number, and say plainly when the
+     floor is breached. Addressed to the build, not to the learner: missed days
+     carry no penalty or reproach [R-8]. */
+  var gate = act < 15
+    ? '<div class="gate under"><b>Build gate [R-38]: '+act+' / 30 active days.</b> '
+      + 'Below the floor of 15, so building stops until this recovers. Nothing about studying changes — '
+      + 'the app works exactly as before.</div>'
+    : '<div class="gate">Build gate [R-38]: '+act+' / 30 active days — above the floor of 15.</div>';
   return '<h1 class="tt">Progress</h1>'
        + '<p class="sub">Consistency, not intensity, is what moves this forward.</p>'
        + '<div class="grid2">'
        +   stat('Current streak', S.streak+' days', null, 'var(--coral)')
        +   stat('Longest streak', S.best+' days', null, 'var(--coral)')
-       +   stat('Letters known', lettersKnown()+' / 28', null, 'var(--teal)')
-       +   stat('Words learned', wordsKnown()+' / '+TOTAL_WORDS, null, 'var(--gold)')
+       +   stat('Letters retained', lettersRetained()+' / 28', null, 'var(--teal)')
+       +   stat('Words retained', wordsRetained()+' / '+TOTAL_WORDS, null, 'var(--gold)')
        + '</div>'
        + '<div class="card" style="padding:16px;margin-top:12px">'
        +   '<div style="font-size:13px;font-weight:600;margin-bottom:11px">Last 30 days</div>'
        +   '<div class="heat">'+cells+'</div>'
+       +   gate
        + '</div>'
        + '<div style="margin-top:12px">'
-       +   linkCard('prog-letters','The alphabet', lettersKnown()+' / 28 letters learned')
+       +   linkCard('prog-letters','The alphabet', lettersRetained()+' / 28 letters retained')
        +   linkCard('prog-roadmap','The roadmap', 'The shape of the climb ahead')
        + '</div>';
 }
@@ -1550,13 +1766,10 @@ function startSpeaking(){
 function gradeSpeak(q){
   cancelMic();
   var card = sess.q[sess.i];
-  S.prod[card.id] = schedule(S.prod[card.id], q);   /* independent of recognition */
-  var td = today();
-  if(S.last !== td){
-    if(S.last && dayDiff(S.last,td)===1) S.streak++; else S.streak=1;
-    if(S.streak>S.best) S.best=S.streak;
-    S.history.push(td); S.last = td;
-  }
+  var before = S.prod[card.id];
+  S.prod[card.id] = schedule(before, q);            /* independent of recognition */
+  logReview(card.id, 'prod', q, before, S.prod[card.id]);
+  markStudied();
   var gain = q===0 ? 1 : 5;
   S.xp += gain; sess.reviewed++; sess.xp += gain;
   delete T1[card.id];
@@ -1568,15 +1781,11 @@ function gradeSpeak(q){
 function grade(q){
   cancelMic();   /* grading moves on; discard any in-flight recording */
   var card = sess.q[sess.i];
-  S.progress[card.id] = schedule(S.progress[card.id], q);
+  var before = S.progress[card.id];
+  S.progress[card.id] = schedule(before, q);
+  logReview(card.id, 'rec', q, before, S.progress[card.id]);
   var gain = [1,4,6,8][q];
-  var td = today();
-  if(S.last !== td){
-    if(S.last && dayDiff(S.last,td)===1) S.streak++; else S.streak=1;
-    if(S.streak>S.best) S.best=S.streak;
-    S.history.push(td);
-    S.last = td;
-  }
+  markStudied();
   S.xp += gain;
   sess.reviewed++; sess.xp += gain;
   sess.i++;
@@ -1587,17 +1796,6 @@ function grade(q){
   if(sess.i >= sess.q.length) sess.done = true;
   persist(); render();
   if(sess.done) syncNow();   /* fire-and-forget; offline just reports unavailable */
-}
-function gradeOne(id,q){
-  S.progress[id] = schedule(S.progress[id], q);
-  var td=today();
-  if(S.last!==td){
-    if(S.last && dayDiff(S.last,td)===1) S.streak++; else S.streak=1;
-    if(S.streak>S.best) S.best=S.streak;
-    S.history.push(td); S.last=td;
-  }
-  S.xp += (q===0?1:6);
-  persist(); render();
 }
 
 /* ---------- content ingestion (§5) ---------- */
@@ -1761,7 +1959,7 @@ function renderOverlay(){
       + '</div>' : '';
   var menu = (isVocab && cardMenu)
     ? '<div class="cardmenu">'
-      + '<button data-pin="'+c.id+'">'+(S.pinFull[c.id]?'Unpin vowels (use the global setting)':'Pin vowels always on for this word')+'</button>'
+      + '<button data-pin="'+esc(c.id)+'">'+(pinned(c.id)?'Unpin vowels (use the global setting)':'Pin vowels always on for this word')+'</button>'
       + '</div>' : '';
   o.innerHTML = '<div class="ov-top">'
     +   '<button data-act="close">'+svg(IC.x)+'</button>'
@@ -1802,21 +2000,17 @@ document.addEventListener('click', function(e){
   if((el = e.target.closest('[data-tr-toggle]'))){ if(sess){ sess.showTr = !trShown(); render(); } return; }
   if((el = e.target.closest('[data-cardmenu]'))){ cardMenu = !cardMenu; render(); return; }
   if((el = e.target.closest('[data-pin]'))){
-    var pid = el.dataset.pin; S.pinFull[pid] = !S.pinFull[pid]; if(!S.pinFull[pid]) delete S.pinFull[pid];
+    var pid = el.dataset.pin; setPin(pid, !pinned(pid));
     cardMenu = false; persist(); render(); return;
   }
-  if((el = e.target.closest('[data-diac]'))){ S.settings.diacritics = el.dataset.diac; persist(); render(); return; }
-  if((el = e.target.closest('[data-set]'))){ var k=el.dataset.set; S.settings[k]=!S.settings[k]; persist(); render(); return; }
+  if((el = e.target.closest('[data-diac]'))){ setPref('diacritics', el.dataset.diac); render(); return; }
+  if((el = e.target.closest('[data-set]'))){ var k=el.dataset.set; setPref(k, !S.settings[k]); render(); return; }
   if((el = e.target.closest('[data-say]'))){ speakText(el.dataset.say); if(el.dataset.selword!==undefined){ libSel = libSel===el.dataset.selword ? null : el.dataset.selword; render(); } return; }
   if((el = e.target.closest('[data-tr-lib]'))){ libTr = !libTr; render(); return; }
   if((el = e.target.closest('[data-mic]'))){ toggleMic(el.dataset.mic); return; }
   if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play, el.dataset.sayFb); return; }
   if((el = e.target.closest('[data-gs]'))){ gradeSpeak(parseInt(el.dataset.gs,10)); return; }
   if((el = e.target.closest('[data-g]'))){ grade(parseInt(el.dataset.g,10)); return; }
-  if((el = e.target.closest('[data-grade]'))){
-    var parts = el.dataset.grade.split('|');
-    gradeOne(parts[0], parseInt(parts[1],10)); return;
-  }
   if((el = e.target.closest('[data-flip]'))){
     flipped[el.dataset.flip] = !flipped[el.dataset.flip]; render(); return;
   }
@@ -1831,6 +2025,7 @@ document.addEventListener('click', function(e){
     var a = el.dataset.act;
     if(a==='start') startSession(null);
     else if(a==='start-vocab') startSession('vocab');
+    else if(a==='start-letters') startSession('alphabet');
     else if(a==='speak') startSpeaking();
     else if(a==='prog-letters'){ progSub='letters'; render(); }
     else if(a==='prog-roadmap'){ progSub='roadmap'; render(); }
@@ -1856,8 +2051,8 @@ document.addEventListener('click', function(e){
     else if(a==='close'){ cancelMic(); sess=null; render(); }
     else if(a==='reset'){
       if(confirm('Erase all progress? This cannot be undone.')){
-        S = {xp:0,streak:0,best:0,last:null,history:[],progress:{}};
-        flipped={}; openRoot=null; persist(); render();
+        S = ensureShape(blankState());
+        flipped={}; openRoot=null; mountUserCards(); persist(); render();
       }
     }
     return;

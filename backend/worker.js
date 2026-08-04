@@ -19,7 +19,13 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Authorization,Content-Type',
   'Access-Control-Max-Age': '86400'
 };
-const MAX_STATE_BYTES = 512 * 1024;
+/* Headroom for the append-only review log [R-32], which grows for the life of
+   the project: ~60 bytes per graded card, so a 12-card day costs ~260 KB/year.
+   4 MB is roughly fifteen years and still far under KV's 25 MB value limit.
+   Measured in BYTES — a JS string's .length undercounts Arabic by about half,
+   so the old check let through roughly double what it advertised. */
+const MAX_STATE_BYTES = 4 * 1024 * 1024;
+const byteLen = s => new TextEncoder().encode(s).length;
 const MAX_AUDIO_B64 = 2 * 1024 * 1024;   // ~1.5 MB of audio — plenty for one word
 
 /* Arabic comparison for the Tier 1 verdict. Strips what ASR won't reliably
@@ -211,13 +217,20 @@ export function parseAzureAssessment(j, threshold) {
        are kept as-is (more precise than our letter map). */
     const letters = arLetters(w.Word);
     if (letters.length === phonemes.length && phonemes.some(p => !p.phoneme)) {
-      phonemes.forEach((p, i) => { if (!p.phoneme) p.phoneme = letters[i]; });
+      /* `inferred` travels with the label all the way to the UI. Equal counts
+         make the positional mapping plausible, NOT correct — shadda, hamza
+         carriers and long vowels can line up by count while the alignment is
+         shifted, and naming the wrong sound is the false-reject class of error
+         [R-19]/[R-20] are built to avoid. §7.3 says this mapping is unsolved;
+         this solves it by assumption, so the assumption stays visible. */
+      phonemes.forEach((p, i) => { if (!p.phoneme) { p.phoneme = letters[i]; p.inferred = true; } });
     }
     return { word: w.Word, accuracy: pickScore(w), errorType: w.ErrorType || null, phonemes };
   });
   const detected = [];
   words.forEach(w => w.phonemes.forEach(p => {
-    if (p.score != null && p.score < t) detected.push({ phoneme: p.phoneme, score: p.score, word: w.word });
+    if (p.score != null && p.score < t)
+      detected.push({ phoneme: p.phoneme, score: p.score, word: w.word, inferred: !!p.inferred });
   }));
   /* named = flagged sounds Azure actually labelled (ar-SA often returns empty labels) */
   const named = detected.filter(d => d.phoneme);
@@ -232,7 +245,15 @@ export function parseAzureAssessment(j, threshold) {
    it never receives audio, only this structured list [R-22][R-25]. */
 export function coachPrompt(word, detected) {
   const list = detected.map(d => d.phoneme).join(', ');
+  /* When the sound was named by position rather than by the checker itself,
+     say so in the prompt. Otherwise the coach turns a guessed label into
+     confident articulatory instruction for a sound the learner may not have
+     got wrong — the model amplifies the uncertainty instead of carrying it. */
+  const inferred = detected.some(d => d.inferred);
   return 'An Arabic learner said the word "' + word + '". A pronunciation checker flagged these sounds as possibly off: ' + list + '. ' +
+    (inferred
+      ? 'These sound labels were matched by position and are not certain, so phrase each tip as something to check rather than a definite error. '
+      : '') +
     'For each flagged sound, give ONE short, physical tip on how to produce it (tongue/throat/lip position). ' +
     'Be brief and encouraging. Do NOT invent other errors — address only the listed sounds. Plain text, one line per sound.';
 }
@@ -352,7 +373,7 @@ export default {
       }
       if (req.method === 'PUT') {
         const body = await req.text();
-        if (body.length > MAX_STATE_BYTES) return json({ error: 'state too large' }, 413);
+        if (byteLen(body) > MAX_STATE_BYTES) return json({ error: 'state too large' }, 413);
         try { JSON.parse(body); } catch (e) { return json({ error: 'invalid json' }, 400); }
         await env.JUDHUR_KV.put('state', body);
         return json({ ok: true, bytes: body.length }, 200);
