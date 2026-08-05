@@ -176,7 +176,15 @@
   .bar i{display:block;height:4px;background:var(--gold);border-radius:99px;transition:width .25s}
   .ov-mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
   .q-letter{font-family:var(--arabic);font-size:74px;line-height:1}
-  .q-word{font-family:var(--arabic);font-size:46px;direction:rtl;line-height:1.3}
+  .q-word{font-family:var(--arabic);font-size:46px;direction:rtl;line-height:1.3;display:inline-block}
+  /* gendered pair: both forms, each labelled ([R-51]) */
+  .genpair{display:flex;flex-direction:column;gap:2px;align-items:center}
+  .genform{display:flex;align-items:baseline;gap:10px}
+  .genform .q-word{font-size:38px}
+  .genlbl{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.5px;
+          min-width:16px;text-align:right;flex:none}
+  .w-gen{display:flex;flex-direction:column;gap:1px}
+  .w-gen .gl{font-size:9.5px;font-weight:700;color:var(--teal);margin-inline-end:5px}
   .q-root{color:var(--teal);font-size:12px;margin-bottom:10px}
   .q-root span{font-family:var(--arabic);direction:rtl}
   .ans{margin-top:26px}
@@ -475,63 +483,83 @@ var LETTER_META = {
    content/roots-words.json is generated from this block — see tools/sync-content.mjs. */
 var ROOTS = [
   {id:'r-ktb',root:'ك ت ب',meaning:'writing',words:[
-    {id:'w-ktb-1',ar:'كَتَبَ',t:'kataba',en:'he wrote',a:'kataba',reg:'msa'},
+    {id:'w-ktb-1',ar:'كَتَبَ',t:'kataba',en:'he wrote',a:'kataba',reg:'msa',
+     f:{ar:'كَتَبَتْ',t:'katabat',en:'she wrote',a:'katabat'}},
     {id:'w-ktb-2',ar:'كِتَاب',t:'kitāb',en:'book',a:'kitaab',reg:'msa'},
-    {id:'w-ktb-5',ar:'كَاتِب',t:'kātib',en:'writer',a:'kaatib',reg:'msa'},
+    {id:'w-ktb-5',ar:'كَاتِب',t:'kātib',en:'writer',a:'kaatib',reg:'msa',
+     f:{ar:'كَاتِبَة',t:'kātiba',en:'writer',a:'kaatiba'}},
     {id:'w-ktb-3',ar:'مَكْتَب',t:'maktab',en:'office; desk',a:'maktab',reg:'msa'},
     {id:'w-ktb-4',ar:'مَكْتَبَة',t:'maktaba',en:'library; bookstore',a:'maktaba',reg:'msa'}
   ]},
   {id:'r-drs',root:'د ر س',meaning:'studying',words:[
-    {id:'w-drs-1',ar:'دَرَسَ',t:'darasa',en:'he studied',a:'darasa',reg:'msa'},
+    {id:'w-drs-1',ar:'دَرَسَ',t:'darasa',en:'he studied',a:'darasa',reg:'msa',
+     f:{ar:'دَرَسَتْ',t:'darasat',en:'she studied',a:'darasat'}},
     {id:'w-drs-2',ar:'دَرْس',t:'dars',en:'lesson',a:'dars',reg:'msa'},
     {id:'w-drs-3',ar:'مَدْرَسَة',t:'madrasa',en:'school',a:'madrasa',reg:'msa'},
-    {id:'w-drs-4',ar:'مُدَرِّس',t:'mudarris',en:'teacher, instructor',a:'mudarris',reg:'msa'}
+    {id:'w-drs-4',ar:'مُدَرِّس',t:'mudarris',en:'teacher, instructor',a:'mudarris',reg:'msa',
+     f:{ar:'مُدَرِّسَة',t:'mudarrisa',en:'teacher, instructor',a:'mudarrisa'}}
   ]},
   {id:'r-3lm',root:'ع ل م',meaning:'knowledge',words:[
-    {id:'w-3lm-1',ar:'عَلِمَ',t:'ʿalima',en:'he knew',a:'3alima',reg:'msa'},
+    {id:'w-3lm-1',ar:'عَلِمَ',t:'ʿalima',en:'he knew',a:'3alima',reg:'msa',
+     f:{ar:'عَلِمَتْ',t:'ʿalimat',en:'she knew',a:'3alimat'}},
     {id:'w-3lm-2',ar:'عِلْم',t:'ʿilm',en:'knowledge',a:'3ilm',reg:'msa'},
-    {id:'w-3lm-3',ar:'مُعَلِّم',t:'muʿallim',en:'teacher',a:'mu3allim',reg:'msa'},
+    {id:'w-3lm-3',ar:'مُعَلِّم',t:'muʿallim',en:'teacher',a:'mu3allim',reg:'msa',
+     f:{ar:'مُعَلِّمَة',t:'muʿallima',en:'teacher',a:'mu3allima'}},
     {id:'w-3lm-4',ar:'عَالَم',t:'ʿālam',en:'world',a:'3aalam',reg:'msa'}
   ]},
   {id:'r-qr2',root:'ق ر أ',meaning:'reading',words:[
-    {id:'w-qr2-1',ar:'قَرَأَ',t:'qaraʾa',en:'he read',a:'qara2a',reg:'msa'},
+    {id:'w-qr2-1',ar:'قَرَأَ',t:'qaraʾa',en:'he read',a:'qara2a',reg:'msa',
+     f:{ar:'قَرَأَتْ',t:'qaraʾat',en:'she read',a:'qara2at'}},
     {id:'w-qr2-2',ar:'قِرَاءَة',t:'qirāʾa',en:'reading',a:'qiraa2a',reg:'msa'},
-    {id:'w-qr2-3',ar:'قَارِئ',t:'qāriʾ',en:'reader',a:'qaari2',reg:'msa'}
+    {id:'w-qr2-3',ar:'قَارِئ',t:'qāriʾ',en:'reader',a:'qaari2',reg:'msa',
+     f:{ar:'قَارِئَة',t:'qāriʾa',en:'reader',a:'qaari2a'}}
   ]},
   {id:'r-3ml',root:'ع م ل',meaning:'work',words:[
-    {id:'w-3ml-1',ar:'عَمِلَ',t:'ʿamila',en:'he worked',a:'3amila',reg:'msa'},
+    {id:'w-3ml-1',ar:'عَمِلَ',t:'ʿamila',en:'he worked',a:'3amila',reg:'msa',
+     f:{ar:'عَمِلَتْ',t:'ʿamilat',en:'she worked',a:'3amilat'}},
     {id:'w-3ml-2',ar:'عَمَل',t:'ʿamal',en:'work',a:'3amal',reg:'msa'},
-    {id:'w-3ml-3',ar:'عَامِل',t:'ʿāmil',en:'worker',a:'3aamil',reg:'msa'}
+    {id:'w-3ml-3',ar:'عَامِل',t:'ʿāmil',en:'worker',a:'3aamil',reg:'msa',
+     f:{ar:'عَامِلَة',t:'ʿāmila',en:'worker',a:'3aamila'}}
   ]},
   {id:'r-slm',root:'س ل م',meaning:'peace / safety',words:[
     {id:'w-slm-1',ar:'سَلَام',t:'salām',en:'peace',a:'salaam',reg:'msa'},
     {id:'w-slm-2',ar:'سَلَامَة',t:'salāma',en:'safety',a:'salaama',reg:'msa'},
-    {id:'w-slm-3',ar:'مُسْلِم',t:'muslim',en:'one who submits',a:'muslim',reg:'msa'}
+    {id:'w-slm-3',ar:'مُسْلِم',t:'muslim',en:'one who submits',a:'muslim',reg:'msa',
+     f:{ar:'مُسْلِمَة',t:'muslima',en:'one who submits',a:'muslima'}}
   ]},
   {id:'r-hbb',root:'ح ب ب',meaning:'love',words:[
-    {id:'w-hbb-1',ar:'أَحَبَّ',t:'aḥabba',en:'he loved',a:'ahabba',reg:'msa'},
+    {id:'w-hbb-1',ar:'أَحَبَّ',t:'aḥabba',en:'he loved',a:'ahabba',reg:'msa',
+     f:{ar:'أَحَبَّتْ',t:'aḥabbat',en:'she loved',a:'ahabbat'}},
     {id:'w-hbb-2',ar:'حُبّ',t:'ḥubb',en:'love',a:'hubb',reg:'msa'},
-    {id:'w-hbb-3',ar:'حَبِيب',t:'ḥabīb',en:'beloved',a:'habiib',reg:'msa'}
+    {id:'w-hbb-3',ar:'حَبِيب',t:'ḥabīb',en:'beloved',a:'habiib',reg:'msa',
+     f:{ar:'حَبِيبَة',t:'ḥabība',en:'beloved',a:'habiiba'}}
   ]},
   {id:'r-kbr',root:'ك ب ر',meaning:'bigness',words:[
-    {id:'w-kbr-1',ar:'كَبِير',t:'kabīr',en:'big',a:'kabiir',reg:'msa'},
+    {id:'w-kbr-1',ar:'كَبِير',t:'kabīr',en:'big',a:'kabiir',reg:'msa',
+     f:{ar:'كَبِيرَة',t:'kabīra',en:'big',a:'kabiira'}},
     {id:'w-kbr-2',ar:'أَكْبَر',t:'akbar',en:'bigger / biggest',a:'akbar',reg:'msa'},
     {id:'w-kbr-4',ar:'كِبَر',t:'kibar',en:'greatness',a:'kibar',reg:'msa'},
-    {id:'w-kbr-3',ar:'كَبُرَ',t:'kabura',en:'he/it grew big',a:'kabura',reg:'msa'}
+    {id:'w-kbr-3',ar:'كَبُرَ',t:'kabura',en:'he/it grew big',a:'kabura',reg:'msa',
+     f:{ar:'كَبُرَتْ',t:'kaburat',en:'she/it grew big',a:'kaburat'}}
   ]},
   {id:'r-dhhb',root:'ذ ه ب',meaning:'going',words:[
-    {id:'w-dhhb-1',ar:'ذَهَبَ',t:'dhahaba',en:'he went',a:'dhahaba',reg:'msa'},
-    {id:'w-dhhb-4',ar:'يَذْهَب',t:'yadhhab',en:'he goes',a:'yadhhab',reg:'msa'},
+    {id:'w-dhhb-1',ar:'ذَهَبَ',t:'dhahaba',en:'he went',a:'dhahaba',reg:'msa',
+     f:{ar:'ذَهَبَتْ',t:'dhahabat',en:'she went',a:'dhahabat'}},
+    {id:'w-dhhb-4',ar:'يَذْهَب',t:'yadhhab',en:'he goes',a:'yadhhab',reg:'msa',
+     f:{ar:'تَذْهَب',t:'tadhhab',en:'she goes',a:'tadhhab'}},
     {id:'w-dhhb-2',ar:'ذَهَاب',t:'dhahāb',en:'departure',a:'dhahaab',reg:'msa'},
     {id:'w-dhhb-3',ar:'ذَهَب',t:'dhahab',en:'gold',a:'dhahab',reg:'msa'}
   ]},
   {id:'r-sfr',root:'س ف ر',meaning:'travel',words:[
-    {id:'w-sfr-1',ar:'سَافَرَ',t:'sāfara',en:'he traveled',a:'saafara',reg:'msa'},
+    {id:'w-sfr-1',ar:'سَافَرَ',t:'sāfara',en:'he traveled',a:'saafara',reg:'msa',
+     f:{ar:'سَافَرَتْ',t:'sāfarat',en:'she traveled',a:'saafarat'}},
     {id:'w-sfr-2',ar:'سَفَر',t:'safar',en:'a trip',a:'safar',reg:'msa'},
-    {id:'w-sfr-3',ar:'مُسَافِر',t:'musāfir',en:'traveler',a:'musaafir',reg:'msa'}
+    {id:'w-sfr-3',ar:'مُسَافِر',t:'musāfir',en:'traveler',a:'musaafir',reg:'msa',
+     f:{ar:'مُسَافِرَة',t:'musāfira',en:'traveler',a:'musaafira'}}
   ]},
   {id:'r-skn',root:'س ك ن',meaning:'dwelling, stillness',words:[
-    {id:'w-skn-1',ar:'سَكَنَ',t:'sakana',en:'he lived, resided',a:'sakana',reg:'msa'},
+    {id:'w-skn-1',ar:'سَكَنَ',t:'sakana',en:'he lived, resided',a:'sakana',reg:'msa',
+     f:{ar:'سَكَنَتْ',t:'sakanat',en:'she lived, resided',a:'sakanat'}},
     {id:'w-skn-2',ar:'مَسْكَن',t:'maskan',en:'residence, dwelling',a:'maskan',reg:'msa'},
     {id:'w-skn-3',ar:'سُكَّان',t:'sukkān',en:'inhabitants',a:'sukkaan',reg:'msa'}
   ]},
@@ -541,130 +569,163 @@ var ROOTS = [
     {id:'w-t3m-3',ar:'طَعْم',t:'ṭaʿm',en:'taste, flavor',a:'ta3m',reg:'msa'}
   ]},
   {id:'r-2kl',root:'أ ك ل',meaning:'eating',words:[
-    {id:'w-2kl-1',ar:'أَكَلَ',t:'ʾakala',en:'he ate',a:'2akala',reg:'msa'},
+    {id:'w-2kl-1',ar:'أَكَلَ',t:'ʾakala',en:'he ate',a:'2akala',reg:'msa',
+     f:{ar:'أَكَلَتْ',t:'ʾakalat',en:'she ate',a:'2akalat'}},
     {id:'w-2kl-2',ar:'أَكْل',t:'ʾakl',en:'eating; food',a:'2akl',reg:'msa'},
     {id:'w-2kl-3',ar:'مَأْكُولَات',t:'maʾkūlāt',en:'foods, dishes',a:'ma2kuulaat',reg:'msa'}
   ]},
   {id:'r-shrb',root:'ش ر ب',meaning:'drinking',words:[
-    {id:'w-shrb-1',ar:'شَرِبَ',t:'shariba',en:'he drank',a:'shariba',reg:'msa'},
+    {id:'w-shrb-1',ar:'شَرِبَ',t:'shariba',en:'he drank',a:'shariba',reg:'msa',
+     f:{ar:'شَرِبَتْ',t:'sharibat',en:'she drank',a:'sharibat'}},
     {id:'w-shrb-2',ar:'مَشْرُوب',t:'mashrūb',en:'drink, beverage',a:'mashruub',reg:'msa'},
     {id:'w-shrb-3',ar:'شَرَاب',t:'sharāb',en:'drink; syrup',a:'sharaab',reg:'msa'}
   ]},
   {id:'r-jls',root:'ج ل س',meaning:'sitting',words:[
-    {id:'w-jls-1',ar:'جَلَسَ',t:'jalasa',en:'he sat',a:'jalasa',reg:'msa'},
+    {id:'w-jls-1',ar:'جَلَسَ',t:'jalasa',en:'he sat',a:'jalasa',reg:'msa',
+     f:{ar:'جَلَسَتْ',t:'jalasat',en:'she sat',a:'jalasat'}},
     {id:'w-jls-2',ar:'جُلُوس',t:'julūs',en:'sitting',a:'juluus',reg:'msa'},
     {id:'w-jls-3',ar:'مَجْلِس',t:'majlis',en:'council; sitting room',a:'majlis',reg:'msa'}
   ]},
   {id:'r-fhm',root:'ف ه م',meaning:'understanding',words:[
-    {id:'w-fhm-1',ar:'فَهِمَ',t:'fahima',en:'he understood',a:'fahima',reg:'msa'},
+    {id:'w-fhm-1',ar:'فَهِمَ',t:'fahima',en:'he understood',a:'fahima',reg:'msa',
+     f:{ar:'فَهِمَتْ',t:'fahimat',en:'she understood',a:'fahimat'}},
     {id:'w-fhm-2',ar:'فَهْم',t:'fahm',en:'understanding',a:'fahm',reg:'msa'},
     {id:'w-fhm-3',ar:'مَفْهُوم',t:'mafhūm',en:'concept; understood',a:'mafhuum',reg:'msa'}
   ]},
   {id:'r-qwl',root:'ق و ل',meaning:'saying',words:[
-    {id:'w-qwl-1',ar:'قَالَ',t:'qāla',en:'he said',a:'qaala',reg:'msa'},
+    {id:'w-qwl-1',ar:'قَالَ',t:'qāla',en:'he said',a:'qaala',reg:'msa',
+     f:{ar:'قَالَتْ',t:'qālat',en:'she said',a:'qaalat'}},
     {id:'w-qwl-2',ar:'قَوْل',t:'qawl',en:'saying, statement',a:'qawl',reg:'msa'},
     {id:'w-qwl-3',ar:'مَقَال',t:'maqāl',en:'article, essay',a:'maqaal',reg:'msa'}
   ]},
   {id:'r-f3l',root:'ف ع ل',meaning:'doing, acting',words:[
-    {id:'w-f3l-1',ar:'فَعَلَ',t:'faʿala',en:'he did',a:'fa3ala',reg:'msa'},
+    {id:'w-f3l-1',ar:'فَعَلَ',t:'faʿala',en:'he did',a:'fa3ala',reg:'msa',
+     f:{ar:'فَعَلَتْ',t:'faʿalat',en:'she did',a:'fa3alat'}},
     {id:'w-f3l-2',ar:'فِعْل',t:'fiʿl',en:'action; verb',a:'fi3l',reg:'msa'},
-    {id:'w-f3l-3',ar:'فَاعِل',t:'fāʿil',en:'doer; agent',a:'faa3il',reg:'msa'}
+    {id:'w-f3l-3',ar:'فَاعِل',t:'fāʿil',en:'doer; agent',a:'faa3il',reg:'msa',
+     f:{ar:'فَاعِلَة',t:'fāʿila',en:'doer; agent',a:'faa3ila'}}
   ]},
   {id:'r-nzr',root:'ن ظ ر',meaning:'looking, seeing',words:[
-    {id:'w-nzr-1',ar:'نَظَرَ',t:'naẓara',en:'he looked',a:'nazara',reg:'msa'},
+    {id:'w-nzr-1',ar:'نَظَرَ',t:'naẓara',en:'he looked',a:'nazara',reg:'msa',
+     f:{ar:'نَظَرَتْ',t:'naẓarat',en:'she looked',a:'nazarat'}},
     {id:'w-nzr-2',ar:'نَظَر',t:'naẓar',en:'sight, view',a:'nazar',reg:'msa'},
     {id:'w-nzr-3',ar:'مَنْظَر',t:'manẓar',en:'view, scene',a:'manzar',reg:'msa'},
     {id:'w-nzr-4',ar:'نَظَّارَة',t:'naẓẓāra',en:'eyeglasses',a:'nazzaara',reg:'msa'}
   ]},
   {id:'r-sm3',root:'س م ع',meaning:'hearing',words:[
-    {id:'w-sm3-1',ar:'سَمِعَ',t:'samiʿa',en:'he heard',a:'sami3a',reg:'msa'},
+    {id:'w-sm3-1',ar:'سَمِعَ',t:'samiʿa',en:'he heard',a:'sami3a',reg:'msa',
+     f:{ar:'سَمِعَتْ',t:'samiʿat',en:'she heard',a:'sami3at'}},
     {id:'w-sm3-2',ar:'سَمْع',t:'samʿ',en:'hearing',a:'sam3',reg:'msa'},
-    {id:'w-sm3-3',ar:'مُسْتَمِع',t:'mustamiʿ',en:'listener',a:'mustami3',reg:'msa'}
+    {id:'w-sm3-3',ar:'مُسْتَمِع',t:'mustamiʿ',en:'listener',a:'mustami3',reg:'msa',
+     f:{ar:'مُسْتَمِعَة',t:'mustamiʿa',en:'listener',a:'mustami3a'}}
   ]},
   {id:'r-klm',root:'ك ل م',meaning:'speaking, words',words:[
     {id:'w-klm-1',ar:'كَلِمَة',t:'kalima',en:'word',a:'kalima',reg:'msa'},
     {id:'w-klm-2',ar:'كَلَام',t:'kalām',en:'speech, talk',a:'kalaam',reg:'msa'},
-    {id:'w-klm-3',ar:'تَكَلَّمَ',t:'takallama',en:'he spoke',a:'takallama',reg:'msa'}
+    {id:'w-klm-3',ar:'تَكَلَّمَ',t:'takallama',en:'he spoke',a:'takallama',reg:'msa',
+     f:{ar:'تَكَلَّمَتْ',t:'takallamat',en:'she spoke',a:'takallamat'}}
   ]},
   {id:'r-3rf',root:'ع ر ف',meaning:'knowing, recognizing',words:[
-    {id:'w-3rf-1',ar:'عَرَفَ',t:'ʿarafa',en:'he knew, recognized',a:'3arafa',reg:'msa'},
+    {id:'w-3rf-1',ar:'عَرَفَ',t:'ʿarafa',en:'he knew, recognized',a:'3arafa',reg:'msa',
+     f:{ar:'عَرَفَتْ',t:'ʿarafat',en:'she knew, recognized',a:'3arafat'}},
     {id:'w-3rf-2',ar:'مَعْرِفَة',t:'maʿrifa',en:'knowledge',a:'ma3rifa',reg:'msa'},
     {id:'w-3rf-3',ar:'مَعْرُوف',t:'maʿrūf',en:'well-known; favor',a:'ma3ruuf',reg:'msa'}
   ]},
   {id:'r-khrj',root:'خ ر ج',meaning:'exiting, going out',words:[
-    {id:'w-khrj-1',ar:'خَرَجَ',t:'kharaja',en:'he went out',a:'kharaja',reg:'msa'},
+    {id:'w-khrj-1',ar:'خَرَجَ',t:'kharaja',en:'he went out',a:'kharaja',reg:'msa',
+     f:{ar:'خَرَجَتْ',t:'kharajat',en:'she went out',a:'kharajat'}},
     {id:'w-khrj-2',ar:'خَارِج',t:'khārij',en:'outside',a:'khaarij',reg:'msa'},
     {id:'w-khrj-3',ar:'مَخْرَج',t:'makhraj',en:'exit',a:'makhraj',reg:'msa'}
   ]},
   {id:'r-dkhl',root:'د خ ل',meaning:'entering',words:[
-    {id:'w-dkhl-1',ar:'دَخَلَ',t:'dakhala',en:'he entered',a:'dakhala',reg:'msa'},
+    {id:'w-dkhl-1',ar:'دَخَلَ',t:'dakhala',en:'he entered',a:'dakhala',reg:'msa',
+     f:{ar:'دَخَلَتْ',t:'dakhalat',en:'she entered',a:'dakhalat'}},
     {id:'w-dkhl-2',ar:'دَاخِل',t:'dākhil',en:'inside',a:'daakhil',reg:'msa'},
     {id:'w-dkhl-3',ar:'مَدْخَل',t:'madkhal',en:'entrance',a:'madkhal',reg:'msa'}
   ]},
   {id:'r-sghr',root:'ص غ ر',meaning:'smallness',words:[
-    {id:'w-sghr-1',ar:'صَغِير',t:'ṣaghīr',en:'small; young',a:'saghiir',reg:'msa'},
+    {id:'w-sghr-1',ar:'صَغِير',t:'ṣaghīr',en:'small; young',a:'saghiir',reg:'msa',
+     f:{ar:'صَغِيرَة',t:'ṣaghīra',en:'small; young',a:'saghiira'}},
     {id:'w-sghr-2',ar:'أَصْغَر',t:'ʾaṣghar',en:'smaller, smallest',a:'2asghar',reg:'msa'}
   ]},
   {id:'r-jml',root:'ج م ل',meaning:'beauty',words:[
-    {id:'w-jml-1',ar:'جَمِيل',t:'jamīl',en:'beautiful',a:'jamiil',reg:'msa'},
+    {id:'w-jml-1',ar:'جَمِيل',t:'jamīl',en:'beautiful',a:'jamiil',reg:'msa',
+     f:{ar:'جَمِيلَة',t:'jamīla',en:'beautiful',a:'jamiila'}},
     {id:'w-jml-2',ar:'جَمَال',t:'jamāl',en:'beauty',a:'jamaal',reg:'msa'},
     {id:'w-jml-3',ar:'أَجْمَل',t:'ʾajmal',en:'more beautiful',a:'2ajmal',reg:'msa'}
   ]},
   {id:'r-fth',root:'ف ت ح',meaning:'opening',words:[
-    {id:'w-fth-1',ar:'فَتَحَ',t:'fataḥa',en:'he opened',a:'fataha',reg:'msa'},
+    {id:'w-fth-1',ar:'فَتَحَ',t:'fataḥa',en:'he opened',a:'fataha',reg:'msa',
+     f:{ar:'فَتَحَتْ',t:'fataḥat',en:'she opened',a:'fatahat'}},
     {id:'w-fth-2',ar:'مِفْتَاح',t:'miftāḥ',en:'key',a:'miftaah',reg:'msa'},
-    {id:'w-fth-3',ar:'مَفْتُوح',t:'maftūḥ',en:'open',a:'maftuuh',reg:'msa'}
+    {id:'w-fth-3',ar:'مَفْتُوح',t:'maftūḥ',en:'open',a:'maftuuh',reg:'msa',
+     f:{ar:'مَفْتُوحَة',t:'maftūḥa',en:'open',a:'maftuuha'}}
   ]},
   {id:'r-s2l',root:'س أ ل',meaning:'asking',words:[
-    {id:'w-s2l-1',ar:'سَأَلَ',t:'saʾala',en:'he asked',a:'sa2ala',reg:'msa'},
+    {id:'w-s2l-1',ar:'سَأَلَ',t:'saʾala',en:'he asked',a:'sa2ala',reg:'msa',
+     f:{ar:'سَأَلَتْ',t:'saʾalat',en:'she asked',a:'sa2alat'}},
     {id:'w-s2l-2',ar:'سُؤَال',t:'suʾāl',en:'question',a:'su2aal',reg:'msa'},
     {id:'w-s2l-3',ar:'مَسْأَلَة',t:'masʾala',en:'issue, problem',a:'mas2ala',reg:'msa'}
   ]},
   {id:'r-jwb',root:'ج و ب',meaning:'answering',words:[
-    {id:'w-jwb-1',ar:'أَجَابَ',t:'ʾajāba',en:'he answered',a:'2ajaaba',reg:'msa'},
+    {id:'w-jwb-1',ar:'أَجَابَ',t:'ʾajāba',en:'he answered',a:'2ajaaba',reg:'msa',
+     f:{ar:'أَجَابَتْ',t:'ʾajābat',en:'she answered',a:'2ajaabat'}},
     {id:'w-jwb-2',ar:'جَوَاب',t:'jawāb',en:'answer',a:'jawaab',reg:'msa'},
     {id:'w-jwb-3',ar:'إِجَابَة',t:'ʾijāba',en:'answer, response',a:'2ijaaba',reg:'msa'}
   ]},
   {id:'r-l3b',root:'ل ع ب',meaning:'playing',words:[
-    {id:'w-l3b-1',ar:'لَعِبَ',t:'laʿiba',en:'he played',a:'la3iba',reg:'msa'},
+    {id:'w-l3b-1',ar:'لَعِبَ',t:'laʿiba',en:'he played',a:'la3iba',reg:'msa',
+     f:{ar:'لَعِبَتْ',t:'laʿibat',en:'she played',a:'la3ibat'}},
     {id:'w-l3b-2',ar:'لُعْبَة',t:'luʿba',en:'game, toy',a:'lu3ba',reg:'msa'},
-    {id:'w-l3b-3',ar:'لَاعِب',t:'lāʿib',en:'player',a:'laa3ib',reg:'msa'},
+    {id:'w-l3b-3',ar:'لَاعِب',t:'lāʿib',en:'player',a:'laa3ib',reg:'msa',
+     f:{ar:'لَاعِبَة',t:'lāʿiba',en:'player',a:'laa3iba'}},
     {id:'w-l3b-4',ar:'مَلْعَب',t:'malʿab',en:'playground, stadium',a:'mal3ab',reg:'msa'}
   ]},
   {id:'r-nwm',root:'ن و م',meaning:'sleeping',words:[
-    {id:'w-nwm-1',ar:'نَامَ',t:'nāma',en:'he slept',a:'naama',reg:'msa'},
+    {id:'w-nwm-1',ar:'نَامَ',t:'nāma',en:'he slept',a:'naama',reg:'msa',
+     f:{ar:'نَامَتْ',t:'nāmat',en:'she slept',a:'naamat'}},
     {id:'w-nwm-2',ar:'نَوْم',t:'nawm',en:'sleep',a:'nawm',reg:'msa'},
-    {id:'w-nwm-3',ar:'نَائِم',t:'nāʾim',en:'asleep, sleeping',a:'naa2im',reg:'msa'}
+    {id:'w-nwm-3',ar:'نَائِم',t:'nāʾim',en:'asleep, sleeping',a:'naa2im',reg:'msa',
+     f:{ar:'نَائِمَة',t:'nāʾima',en:'asleep, sleeping',a:'naa2ima'}}
   ]},
   {id:'r-shghl',root:'ش غ ل',meaning:'occupation, busyness',words:[
     {id:'w-shghl-1',ar:'شُغْل',t:'shughl',en:'work, business',a:'shughl',reg:'msa'},
-    {id:'w-shghl-2',ar:'مَشْغُول',t:'mashghūl',en:'busy',a:'mashghuul',reg:'msa'},
-    {id:'w-shghl-3',ar:'اِشْتَغَلَ',t:'ishtaghala',en:'he worked',a:'ishtaghala',reg:'msa'}
+    {id:'w-shghl-2',ar:'مَشْغُول',t:'mashghūl',en:'busy',a:'mashghuul',reg:'msa',
+     f:{ar:'مَشْغُولَة',t:'mashghūla',en:'busy',a:'mashghuula'}},
+    {id:'w-shghl-3',ar:'اِشْتَغَلَ',t:'ishtaghala',en:'he worked',a:'ishtaghala',reg:'msa',
+     f:{ar:'اِشْتَغَلَتْ',t:'ishtaghalat',en:'she worked',a:'ishtaghalat'}}
   ]},
   {id:'r-zwr',root:'ز و ر',meaning:'visiting',words:[
-    {id:'w-zwr-1',ar:'زَارَ',t:'zāra',en:'he visited',a:'zaara',reg:'msa'},
+    {id:'w-zwr-1',ar:'زَارَ',t:'zāra',en:'he visited',a:'zaara',reg:'msa',
+     f:{ar:'زَارَتْ',t:'zārat',en:'she visited',a:'zaarat'}},
     {id:'w-zwr-2',ar:'زِيَارَة',t:'ziyāra',en:'visit',a:'ziyaara',reg:'msa'},
-    {id:'w-zwr-3',ar:'زَائِر',t:'zāʾir',en:'visitor',a:'zaa2ir',reg:'msa'}
+    {id:'w-zwr-3',ar:'زَائِر',t:'zāʾir',en:'visitor',a:'zaa2ir',reg:'msa',
+     f:{ar:'زَائِرَة',t:'zāʾira',en:'visitor',a:'zaa2ira'}}
   ]},
   {id:'r-wsl',root:'و ص ل',meaning:'arriving, connecting',words:[
-    {id:'w-wsl-1',ar:'وَصَلَ',t:'waṣala',en:'he arrived',a:'wasala',reg:'msa'},
+    {id:'w-wsl-1',ar:'وَصَلَ',t:'waṣala',en:'he arrived',a:'wasala',reg:'msa',
+     f:{ar:'وَصَلَتْ',t:'waṣalat',en:'she arrived',a:'wasalat'}},
     {id:'w-wsl-2',ar:'وُصُول',t:'wuṣūl',en:'arrival',a:'wusuul',reg:'msa'},
     {id:'w-wsl-3',ar:'مُوَاصَلَات',t:'muwāṣalāt',en:'transportation',a:'muwaasalaat',reg:'msa'}
   ]},
   {id:'r-ghsl',root:'غ س ل',meaning:'washing',words:[
-    {id:'w-ghsl-1',ar:'غَسَلَ',t:'ghasala',en:'he washed',a:'ghasala',reg:'msa'},
+    {id:'w-ghsl-1',ar:'غَسَلَ',t:'ghasala',en:'he washed',a:'ghasala',reg:'msa',
+     f:{ar:'غَسَلَتْ',t:'ghasalat',en:'she washed',a:'ghasalat'}},
     {id:'w-ghsl-2',ar:'غَسِيل',t:'ghasīl',en:'laundry',a:'ghasiil',reg:'msa'},
     {id:'w-ghsl-3',ar:'غَسَّالَة',t:'ghassāla',en:'washing machine',a:'ghassaala',reg:'msa'}
   ]},
   {id:'r-tbkh',root:'ط ب خ',meaning:'cooking',words:[
-    {id:'w-tbkh-1',ar:'طَبَخَ',t:'ṭabakha',en:'he cooked',a:'tabakha',reg:'msa'},
+    {id:'w-tbkh-1',ar:'طَبَخَ',t:'ṭabakha',en:'he cooked',a:'tabakha',reg:'msa',
+     f:{ar:'طَبَخَتْ',t:'ṭabakhat',en:'she cooked',a:'tabakhat'}},
     {id:'w-tbkh-2',ar:'مَطْبَخ',t:'maṭbakh',en:'kitchen',a:'matbakh',reg:'msa'},
-    {id:'w-tbkh-3',ar:'طَبَّاخ',t:'ṭabbākh',en:'cook, chef',a:'tabbaakh',reg:'msa'}
+    {id:'w-tbkh-3',ar:'طَبَّاخ',t:'ṭabbākh',en:'cook, chef',a:'tabbaakh',reg:'msa',
+     f:{ar:'طَبَّاخَة',t:'ṭabbākha',en:'cook, chef',a:'tabbaakha'}}
   ]},
   {id:'r-sbh',root:'ص ب ح',meaning:'morning, becoming',words:[
     {id:'w-sbh-1',ar:'صَبَاح',t:'ṣabāḥ',en:'morning',a:'sabaah',reg:'msa'},
     {id:'w-sbh-2',ar:'مِصْبَاح',t:'miṣbāḥ',en:'lamp',a:'misbaah',reg:'msa'},
-    {id:'w-sbh-3',ar:'أَصْبَحَ',t:'ʾaṣbaḥa',en:'he became',a:'2asbaha',reg:'msa'}
+    {id:'w-sbh-3',ar:'أَصْبَحَ',t:'ʾaṣbaḥa',en:'he became',a:'2asbaha',reg:'msa',
+     f:{ar:'أَصْبَحَتْ',t:'ʾaṣbaḥat',en:'she became',a:'2asbahat'}}
   ]}
 ];
 
@@ -691,7 +752,7 @@ var DECK = [];
 ALPHABET.forEach(function(a){ DECK.push({id:'a-'+a.id,type:'alphabet',d:a}); });
 ROOTS.forEach(function(r){
   r.words.forEach(function(w){
-    DECK.push({id:w.id,type:'vocab',d:{ar:w.ar,t:w.t,en:w.en,a:w.a,reg:w.reg,
+    DECK.push({id:w.id,type:'vocab',d:{ar:w.ar,t:w.t,en:w.en,a:w.a,reg:w.reg,f:w.f||null,
       root:r.root,rootId:r.id,rootMeaning:r.meaning}});
   });
 });
@@ -757,6 +818,17 @@ function schedule(prev,q){
    backend's Azure neural voice when configured. Files: audio/letters/<key>.mp3,
    audio/words/<a>.mp3. The Settings tab has a coverage check. */
 var AUDIO_MISSING = {};
+/* Which committed clips are machine-generated. [R-24a] requires synthetic audio to
+   be labelled wherever it plays — without this a generated clip sitting at the same
+   path as a human recording would be presented as one. Written by
+   tools/gen-audio.mjs; delete a line when a human recording replaces that file. */
+var AUDIO_SYNTH = {};
+fetch('audio/synthetic.json').then(function(r){ return r.ok ? r.json() : null; })
+  .then(function(j){
+    if(!j || !j.files) return;
+    j.files.forEach(function(f){ AUDIO_SYNTH[f] = true; });
+    render();
+  }).catch(function(){ /* no manifest: nothing is claimed either way */ });
 var audioEl = null;
 function letterSrc(id){ return 'audio/letters/'+LETTER_META[id].key+'.mp3'; }
 function wordSrc(w){ return 'audio/words/'+w.a+'.mp3'; }
@@ -774,9 +846,12 @@ function playAudio(src, text, reg){
 }
 function playBtn(src, text, reg){
   var miss = AUDIO_MISSING[src], canSay = !!text && !!S.settings.tts, muted = miss && !canSay;
-  var title = muted ? 'no recording yet — see Settings → Audio coverage'
-            : (miss ? 'synthetic voice — no human recording yet' : 'play recording');
-  return '<button class="playbtn'+(muted?' miss':'')+(miss&&canSay?' syn':'')+'" data-play="'+src+'"'
+  var synth = !miss && AUDIO_SYNTH[src];       /* a committed clip, but machine-made */
+  var title = muted ? 'no clip yet — see Settings → Audio coverage'
+            : miss ? 'synthetic voice — no clip for this word yet'
+            : synth ? 'synthetic clip — not a human recording'
+            : 'play recording';
+  return '<button class="playbtn'+(muted?' miss':'')+((miss&&canSay)||synth?' syn':'')+'" data-play="'+esc(src)+'"'
        + (text?' data-say-fb="'+esc(text)+'"':'')
        + (reg?' data-say-reg="'+esc(reg)+'"':'')
        + ' title="'+title+'">'+svg(IC.spk)+'</button>';
@@ -942,7 +1017,10 @@ function speakText(text, reg){
 function allAudio(){
   var list = [];
   ALPHABET.forEach(function(a){ list.push(letterSrc(a.id)); });
-  ROOTS.forEach(function(r){ r.words.forEach(function(w){ list.push(wordSrc(w)); }); });
+  ROOTS.forEach(function(r){ r.words.forEach(function(w){
+    list.push(wordSrc(w));
+    if(w.f) list.push(wordSrc(w.f));   /* both gendered forms are playable [R-51] */
+  }); });
   return list;
 }
 /* Remember which clips are absent, so the first tap on each word doesn't pay a
@@ -1398,7 +1476,8 @@ function mountUserCards(){
   (S.userCards||[]).forEach(function(w){
     if(!w.inReview) return;   /* library words join the deck only once opted in (§5, #3) */
     DECK.push({id:w.id, type:'vocab', d:{ar:w.ar, t:w.translit, en:w.en, a:'', reg:w.reg||'msa',
-      root:w.root||'', rootMeaning:w.root_meaning||'', source:w.source_title, source_ref:w.source_ref}});
+      f:w.f||null, root:w.root||'', rootMeaning:w.root_meaning||'',
+      source:w.source_title, source_ref:w.source_ref}});
   });
 }
 /* Which register the content pipeline writes in. Egyptian is where the media the
@@ -1627,10 +1706,14 @@ function viewVocab(){
           'learning':['#B8935A','rgba(184,147,90,.16)'],
           'retained':['#4F8A8B','rgba(79,138,139,.16)']
         }[st];
-        out += '<div class="word"><div><div class="w-ar">'+w.ar+'</div>'
-             + '<div class="w-en">'+esc(w.t)+' \u00b7 '+esc(w.en)+' '+regTag(w.reg)+'</div></div>'
+        out += '<div class="word"><div class="w-gen">'
+             + '<div><span'+(w.f?' class="gl">m.</span><span':'>')+' class="w-ar">'+w.ar+'</span></div>'
+             + (w.f?'<div><span class="gl">f.</span><span class="w-ar">'+w.f.ar+'</span></div>':'')
+             + '<div class="w-en">'+esc(w.t)+(w.f?' · '+esc(w.f.t):'')+' \u00b7 '+esc(w.en)
+             +   (w.f && w.f.en!==w.en ? ' · '+esc(w.f.en) : '')+' '+regTag(w.reg)+'</div></div>'
              + '<div style="display:flex;align-items:center;gap:8px">'
              +   playBtn(wordSrc(w), w.ar, w.reg)
+             +   (w.f?playBtn(wordSrc(w.f), w.f.ar, w.reg):'')
              +   '<span class="pill" style="color:'+PILL[0]+';background:'+PILL[1]+'">'+st+'</span>'
              + '</div></div>';
       });
@@ -2038,6 +2121,8 @@ function materialize(){
     /* saved to the Library, NOT the review deck — the learner opts them in later (#3) */
     S.userCards.push({id:'u-'+stamp+'-'+i, passage:pid, inReview:false,
       ar:w.ar, translit:w.translit||'', en:w.en||'',
+      /* [R-51] — kept only when the model actually supplied a distinct form */
+      f: (w.f && w.f !== w.ar) ? {ar:w.f, t:w.f_translit||'', en:w.en||'', a:''} : null,
       root:w.root||'', root_meaning:w.root_meaning||'', reg:targetRegister(),
       source_title:ing.title, source_ref:ing.source_ref, added:today()});
     n++;
@@ -2105,8 +2190,11 @@ function renderOverlay(){
   }
   if(sess.mode==='speak'){
     var sc = sess.q[sess.i], sd = sc.d, spct = (sess.i/sess.q.length)*100;
+    /* One form is spoken at a time — the mic checks a single word — so speaking
+       practice prompts the masculine and shows the feminine for reference. */
     var smid = '<div class="q-root">root: <span>'+sd.root+'</span> ('+esc(sd.rootMeaning)+') '+regTag(sd.reg)+'</div>'
       + '<div class="q-word">'+sd.ar+'</div>'
+      + (sd.f?'<div class="fade-hint" style="cursor:default">feminine: <span style="font-family:var(--arabic)">'+sd.f.ar+'</span> · '+esc(sd.f.t)+'</div>':'')
       + '<div class="ans"><div class="a1">'+esc(sd.t)+'</div><div class="a2">'+esc(sd.en)+'</div>'
       + speakPrompt()
       + '<div class="ab-row">'+playBtn(wordSrc(sd), sd.ar, sd.reg)+micBtn(sc.id)+'</div>'
@@ -2140,12 +2228,26 @@ function renderOverlay(){
   } else {
     var vstage = wordStage(c.id);
     var showFull = sess.show || sess.showVowels || vstage === 'full';
+    var shown = function(t){ return showFull ? t : arDisplay(t, vstage); };
+    /* [R-51]: a gendered word shows BOTH forms, each labelled. The masculine
+       citation form on its own is the dictionary's convention, and taking it
+       wholesale leaves the learner unable to produce or recognise half of
+       ordinary speech — without ever saying that is what happened. */
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
-        + '<div class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+(showFull?d.ar:arDisplay(d.ar,vstage))+'</div>'
+        + (d.f
+            ? '<div class="genpair">'
+              + '<div class="genform"><span class="genlbl">m.</span>'
+              +   '<span class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+shown(d.ar)+'</span></div>'
+              + '<div class="genform"><span class="genlbl">f.</span>'
+              +   '<span class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+shown(d.f.ar)+'</span></div>'
+              + '</div>'
+            : '<div class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+shown(d.ar)+'</div>')
         + (showFull ? '' : '<div class="fade-hint" data-vowels="1">'+(vstage==='bare'?'no vowel marks':'vowels faded')+' — tap to reveal</div>')
-        + '<div class="ab-row">'+playBtn(wordSrc(d), d.ar, d.reg)+'</div>'   /* audio on both sides */
-        + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.en)+'</div>'
-            + (trShown() ? '<div class="a2 tr-read">'+esc(d.t)+'</div>' : '')
+        + '<div class="ab-row">'+playBtn(wordSrc(d), d.ar, d.reg)
+            + (d.f ? playBtn(wordSrc(d.f), d.f.ar, d.reg) : '')+'</div>'   /* audio on both sides */
+        + (sess.show ? '<div class="ans"><div class="a1">'
+            + (d.f && d.f.en !== d.en ? esc(d.en)+' · '+esc(d.f.en) : esc(d.en))+'</div>'
+            + (trShown() ? '<div class="a2 tr-read">'+esc(d.t)+(d.f?' · '+esc(d.f.t):'')+'</div>' : '')
             + (d.source?'<div class="prov">from '+esc(d.source)+'</div>':'')
             + '</div>' : '');
   }

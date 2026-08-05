@@ -146,9 +146,20 @@ export function genPrompt(excerpt, profile) {
     '- Preserve the meaning of the source; simplify the language, not the substance.\n' +
     '- Reuse known words wherever natural; at most ' + target + ' new words, preferring the known roots.\n' +
     '- Keep it to 2–4 short sentences.\n' +
+    /* [R-51]: the masculine is a dictionary convention, not a neutral default.
+       Left to itself a model writes every human subject as masculine, and a
+       learner who only ever reads that cannot produce or recognise half of
+       ordinary speech. */
+    '- Do NOT default to masculine. Where a person appears, choose the gender as the source ' +
+    'suggests, and otherwise vary it — masculine and feminine subjects should be about equally likely ' +
+    'across what you write. Whatever gender you choose, make the verb and adjective agreement correct.\n' +
+    '- For each new word that has a gendered counterpart (a verb, an agent noun, an adjective), give ' +
+    'the counterpart in "f" with its own transliteration, fully diacritized. Use "" for words that ' +
+    'have no gendered counterpart, such as inanimate nouns and verbal nouns.\n' +
     'Return ONLY valid JSON (no prose, no code fences) in exactly this shape:\n' +
     '{"arabic":"...","transliteration":"...","english_gloss":"...",' +
-    '"new_words":[{"ar":"","translit":"","en":"","root":"","root_meaning":""}],"grammar_notes":"..."}';
+    '"new_words":[{"ar":"","translit":"","en":"","root":"","root_meaning":"","f":"","f_translit":""}],' +
+    '"grammar_notes":"..."}';
 }
 
 /* Provider-agnostic model call. Configured OpenAI-compatible provider wins

@@ -59,8 +59,12 @@ const wordsDoc = {
   words: ROOTS.flatMap(r => r.words.map(w => {
     const a = wordAnn.get(w.id);
     if (!a) gaps.push(`word ${w.id} (${w.ar}) has no pos — add it to content/roots-words.json`);
-    return { id: w.id, root: r.id, ar: w.ar, translit: w.t, en: w.en,
-             pos: a ? a.pos : '', register: w.reg, audio: w.a };
+    const out = { id: w.id, root: r.id, ar: w.ar, translit: w.t, en: w.en,
+                  pos: a ? a.pos : '', register: w.reg, audio: w.a };
+    /* [R-51]: the feminine counterpart travels with its word rather than as a
+       separate entry, so the pair can never be split or half-deleted. */
+    if (w.f) out.feminine = { ar: w.f.ar, translit: w.f.t, en: w.f.en, audio: w.f.a };
+    return out;
   })),
 };
 
@@ -89,7 +93,12 @@ const lettersDoc = {
 
 /* ---------- recording-list.md ---------- */
 const words = ROOTS.flatMap(r => r.words);
-const total = ALPHABET.length + words.length;
+/* every clip the app can ask for: masculine and feminine forms both have audio */
+const clips = words.flatMap(w => [
+  { file: w.a, ar: w.ar, t: w.t, en: w.en, gender: w.f ? 'm.' : '' },
+  ...(w.f ? [{ file: w.f.a, ar: w.f.ar, t: w.f.t, en: w.f.en, gender: 'f.' }] : []),
+]);
+const total = ALPHABET.length + clips.length;
 const recording = [
   `# Recording checklist — ${total} clips`,
   '',
@@ -106,11 +115,13 @@ const recording = [
   '|---|---|---|---|',
   ...ALPHABET.map(a => `| \`${LETTER_META[a.id].key}.mp3\` | ${a.letter} | ${a.name} | ${a.translit} |`),
   '',
-  `## Words — save to \`audio/words/\` (${words.length})`,
+  `## Words — save to \`audio/words/\` (${clips.length})`,
   '',
-  '| file | word | transliteration | meaning |',
-  '|---|---|---|---|',
-  ...words.map(w => `| \`${w.a}.mp3\` | ${w.ar} | ${w.t} | ${w.en} |`),
+  'Gendered words have a clip for each form.',
+  '',
+  '| file | word | | transliteration | meaning |',
+  '|---|---|---|---|---|',
+  ...clips.map(c => `| \`${c.file}.mp3\` | ${c.ar} | ${c.gender} | ${c.t} | ${c.en} |`),
   '',
 ].join('\n');
 
@@ -124,7 +135,8 @@ const dup = (label, xs) => {
 dup('root id', ROOTS.map(r => r.id));
 dup('word id', words.map(w => w.id));
 dup('word form', words.map(w => w.ar));
-dup('audio stem', words.map(w => w.a));
+dup('feminine form', words.filter(w => w.f).map(w => w.f.ar));
+dup('audio stem', clips.map(c => c.file));
 dup('letter audio stem', ALPHABET.map(a => LETTER_META[a.id].key));
 for (const w of words) {
   if (!/^w-[a-z0-9]+-\d+$/.test(w.id)) problems.push(`word id not in stable form: ${w.id}`);
@@ -133,6 +145,15 @@ for (const w of words) {
   /* [R-35]: stored content stays fully diacritized; fading is a render-time
      decision. A word with no vowel marks at all never got them. */
   if (!/[ً-ْٰ]/.test(w.ar)) problems.push(`no diacritics on ${w.id} (${w.ar})`);
+  if (w.f) {
+    if (!/[ً-ْٰ]/.test(w.f.ar)) problems.push(`no diacritics on the feminine of ${w.id} (${w.f.ar})`);
+    if (!/^[a-z0-9_]+$/.test(w.f.a)) problems.push(`feminine audio stem is not filename-safe: ${w.f.a}`);
+    if (w.f.ar === w.ar) problems.push(`${w.id}: feminine form is identical to the masculine`);
+    /* Regular morphology: a past-tense feminine ends in تْ, everything else in ة.
+       Anything that doesn't fit is irregular and should not have been derived. */
+    if (!/(تْ|ة)$/.test(w.f.ar) && !/^ت/.test(w.f.ar))
+      problems.push(`${w.id}: feminine ${w.f.ar} ends in neither تْ nor ة`);
+  }
 }
 for (const a of ALPHABET) if (!LETTER_META[a.id]) problems.push(`letter ${a.id} has no LETTER_META entry`);
 

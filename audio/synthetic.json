@@ -1,0 +1,6 @@
+{
+  "note": "Files listed here are synthetic, not human recordings. The app reads this and labels them as such in the UI [R-24a]. Written by tools/gen-audio.mjs. When a human recording replaces a file, delete its line here and the label goes away [R-24b].",
+  "generated": null,
+  "voice": {},
+  "files": []
+}

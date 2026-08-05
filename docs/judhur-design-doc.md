@@ -2,7 +2,7 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.15 · August 2026 *(0.15 adds §11.1.1, Egyptian as the primary target with the register plumbed end to end, and §6.7, the verification ladder that closes the gap between how pronunciation and generated text were checked. 0.14 amends [R-24] again — synthetic audio is the shipped path and human recordings move to a later version; adds [R-51], gender coverage in vocabulary; relicenses to AGPL-3.0. 0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists; 0.12 adds §7.5.1, measured Azure TTS limits + pausal decision, and refreshes §3 to the current build; 0.13 corrects claims this document made about its own implementation — see below)*
+Version 0.16 · August 2026 *(0.16 resolves [R-51] — the deck now carries both gendered forms — and settles the register question in favour of MSA for now. 0.15 adds §11.1.1, Egyptian as the primary target with the register plumbed end to end, and §6.7, the verification ladder that closes the gap between how pronunciation and generated text were checked. 0.14 amends [R-24] again — synthetic audio is the shipped path and human recordings move to a later version; adds [R-51], gender coverage in vocabulary; relicenses to AGPL-3.0. 0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists; 0.12 adds §7.5.1, measured Azure TTS limits + pausal decision, and refreshes §3 to the current build; 0.13 corrects claims this document made about its own implementation — see below)*
 
 **0.13 is a correction pass, not new design.** An outside review (`docs/review-2026-08.md`) found several places where this document described requirements as met that were not, and one place where it asserted something factually untrue about its own protocol. Those are corrected in place, and where a fix landed in code the section says so. The substantive changes: §3 and §10 no longer overstate what is built; §11.3 and §14 no longer claim that delaying the reviewer search costs no data (it currently costs data, because no audio is retained); §7.5 records the TTS engine actually in use; §2.4 gets the evidence caveat §2.3 already had; §8 and §11.1 are marked descriptive rather than built; the word count is corrected from 146 to 118. **No requirement was weakened to match the implementation.** Where the two disagreed, the requirement stands and the gap is named.
 
@@ -89,14 +89,21 @@ Arabic marks gender pervasively: on verbs, adjectives, pronouns, and many nouns.
 
 **`[R-51]`** Vocabulary MUST cover gendered forms rather than defaulting to the masculine citation form alone, and each card MUST make its own gender explicit rather than leaving it implied by the English gloss.
 
-Open design questions, deliberately not resolved here:
+**Resolved v0.16 (owner decision).**
 
-- **Card shape.** One card per form (كَتَبَ / كَتَبَتْ as separate cards), or one card showing the pair? Separate cards double the review load on a deck already gated at 12 a day; a paired card teaches the alternation, which is the actual thing to learn, but is harder to grade with a single Again/Hard/Good/Easy.
-- **Scope.** Verbs are the clearest case. Adjectives and nouns (مُعَلِّم / مُعَلِّمَة) matter too. Pronouns and full conjugation belong to Phase 2 (§8) — this requirement is about the vocabulary deck, not about teaching conjugation early.
-- **Existing progress.** 118 cards already carry review history keyed to stable ids ([R-50]). Adding feminine forms as new cards preserves that; restructuring existing cards into pairs does not, and would need a migration.
-- **Beyond binary.** Arabic grammatical gender is binary and there is no non-binary verb form to teach; the honest framing is that this covers the grammar as it exists rather than implying the language offers a neutral option it doesn't. Where the app writes *about* the learner or a third party in English — glosses, coaching text, UI copy — it should not assume gender.
+- **Single words show both forms.** One card, both forms, each labelled `m.` / `f.`, each with its own audio. Not two cards: the deck is capped at 12 reviews a day, doubling it would halve the rate of new material, and the alternation *is* the thing to learn — seeing كَتَبَ next to كَتَبَتْ teaches the pattern in a way two cards met a week apart do not. Review history is untouched, because the pair rides on the existing card rather than replacing it ([R-50]).
+- **Sentences and phrases use either gender, equally often.** Generated passages must not default to masculine; the generation prompt now asks for roughly even distribution and correct agreement either way.
+- **Generated content keeps the gender it was written with.** The app renders what the generator produced rather than normalising it.
 
-**Next step:** decide the card shape before adding content, since the choice is expensive to reverse once feminine cards carry review history.
+**Coverage as built:** 53 of 118 words carry a feminine counterpart — every past-tense verb, the one present-tense form, and every agent noun, participle and adjective that takes ة. The derivations are fully regular (past 3ms + ـَتْ; agent nouns and adjectives + ة) and are checked mechanically by `tools/sync-content.mjs`.
+
+**Deliberately not derived**, because they are irregular and guessing would teach a wrong form: the elatives أَكْبَر / أَصْغَر / أَجْمَل, whose فُعْلَى feminines are idiomatic only for some adjectives; and مَعْرُوف and مَفْهُوم, glossed here as nouns rather than participles. These need a reviewer, not a rule.
+
+**Still open:**
+
+- **Scope beyond the deck.** Pronouns and full conjugation belong to Phase 2 (§8); this covers vocabulary only.
+- **Beyond binary.** Arabic grammatical gender is binary and there is no non-binary verb form to teach; this covers the grammar as it exists rather than implying the language offers a neutral option it doesn't. Separately, where the app writes *about* the learner in English — glosses, coaching, UI copy — it should not assume gender.
+- **Not native-reviewed.** These 53 forms are hand-derived from regular morphology and share the same status as the rest of the deck: unreviewed (§12). The morphology is elementary, but that is an argument for low risk, not for no check.
 
 *Sources:* blog.goavena.com; arabify.org; blog.alifbee.com; arabiclearningcentre.com.
 
@@ -681,7 +688,9 @@ The plumbing is done: register is now a per-request parameter end to end. `/tts`
 
 So the register shift **helps** media supply, listening relevance, and eventual conversation, and **hurts** generated-text reliability, diacritisation confidence, and — most sharply — verifiability, because `[R-18]`'s dictionary lookup is the one check in §6 that is cheap and definitive, and it does not exist for colloquial. Shifting register removes the cheapest verification tool at the same moment it makes the output harder to verify.
 
-**Consequence for sequencing.** §6.6's measurement should exist before Egyptian becomes the generation default, not after. Flipping first would make the least-checked path also the highest-volume one — precisely the pattern §6.6 was written about. The Settings default therefore stays MSA, one tap from Egyptian, with the caveat shown in the app; flip it once flag data (`[R-48]`) shows what the error rate actually is.
+**Decision (v0.16, owner): MSA stays the generation register for now.** The deciding argument is §6.7 rung 1 — root correctness by dictionary lookup is the one check in the whole verification ladder that is cheap, mechanical and definitive, and Hans Wehr is an MSA reference. Moving to Egyptian would delete that rung at the same moment it made output harder to verify and pointed more volume at it. Verification first, register second.
+
+Egyptian is not abandoned: it remains the eventual target for the reasons above, it is one tap away in Settings, and every card, voice and assessment call already carries its own register (`[R-52]`), so the switch stays a configuration change rather than a rewrite. **What would flip it:** rung 1 built for MSA and flag data (`[R-48]`) showing a tolerable error rate — at which point the cost of losing the dictionary is measurable instead of hypothetical. §11.1's original plan for Egyptian as *listening* content is unaffected and still unbuilt.
 
 **`[R-52]`** Every content-producing and speech-consuming call MUST carry the register of the content it concerns, rather than reading a single global locale. A card's register determines its voice and its assessment locale.
 
@@ -958,12 +967,14 @@ Not pending decisions — questions only answerable by running the system.
 | Phoneme model detects, LLM explains | A text model asked to judge audio confabulates fluently |
 | Ship synthetic clips now; human recordings later | Amended v0.14. Synthesis is still least trustworthy on the pharyngeals, but making the audio loop wait on a speaker nobody had found meant shipping no audio at all ([R-24]) |
 | Vocabulary covers gendered forms, not just the masculine citation form | The dictionary convention makes half of ordinary speech invisible, and does so silently ([R-51]) |
+| One card shows both gendered forms, rather than two cards | The alternation is the thing to learn, and splitting it would halve the rate of new material against a 12-card cap (§2.3.1) |
+| Synthetic clips are committed and labelled, not fetched per learner | [R-12] wants fixed core audio on-device; a manifest keeps "synthetic" honest and lets a human recording win later ([R-24a][R-24b]) |
 | AGPL-3.0, not a permissive licence | Every fork and every hosted copy stays free and open; §13 closes the host-it-without-releasing loophole (§11.7) |
 | Automated feedback limited to segmental accuracy | Corpora are recitation-register; prosody would not transfer |
 | Tier 1 speech before Tier 2 | Prove the learner will speak aloud before investing further |
 | Egyptian integrated from Phase 1 | Integration appears not to cost MSA outcomes; media footprint; Azure covers `ar-EG` |
 | Machine assesses MSA, human assesses dialect | No automated path exists for dialect speech |
-| Egyptian is the target register; MSA stays the generation default until error rates are measured | Egyptian has the media the pipeline needs, but is thinner and less standardised in writing and has no root-indexed dictionary to check against (§11.1.1) |
+| MSA stays the generation register; Egyptian remains the eventual target | Egyptian has the media the pipeline needs, but deletes §6.7's one definitive check — Hans Wehr is MSA. Verification first, register second (§11.1.1) |
 | Register travels with the content, not as a global setting | A card's own register has to pick its voice and its assessment locale (`[R-52]`) |
 | Verification is a ladder, not an ensemble | Deterministic checks and dictionary lookups beat model votes; models converge confidently on the same wrong diacritics (§6.7) |
 | Register tagged on every card | The risk is not learning two registers — it is not knowing which is which |

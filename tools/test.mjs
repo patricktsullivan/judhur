@@ -290,6 +290,30 @@ section('app: sync merge');
   eq('merging with nothing remote is a no-op', A.mergeStates(A.ensureShape({ xp: 7 }), null).xp, 7);
 }
 
+section('app: gendered vocabulary [R-51]');
+{
+  const vocab = A.DECK.filter(c => c.type === 'vocab');
+  const gendered = vocab.filter(c => c.d.f);
+  ok('a substantial share of the deck is gendered', gendered.length > 40);
+  ok('feminine differs from masculine', gendered.every(c => c.d.f.ar !== c.d.ar));
+  ok('feminine forms are diacritized [R-35]', gendered.every(c => /[\u064B-\u0652\u0670]/.test(c.d.f.ar)));
+  ok('feminine forms carry a transliteration', gendered.every(c => c.d.f.t && c.d.f.t !== c.d.t));
+  ok('feminine forms carry an audio stem', gendered.every(c => /^[a-z0-9_]+$/.test(c.d.f.a)));
+  ok('feminine audio stems are unique',
+    new Set(gendered.map(c => c.d.f.a)).size === gendered.length);
+  ok('no feminine stem collides with a masculine one',
+    !gendered.some(c => vocab.some(v => v.d.a === c.d.f.a)));
+  /* Regular morphology: past-tense feminines end in تْ, the rest in ة, and the
+     one present-tense form swaps its prefix to ت. */
+  ok('feminine forms follow the regular pattern',
+    gendered.every(c => /(\u062A\u0652|\u0629)$/.test(c.d.f.ar) || /^\u062A/.test(c.d.f.ar)));
+  const kataba = vocab.find(c => c.id === 'w-ktb-1');
+  eq('كَتَبَ pairs with كَتَبَتْ', kataba.d.f.ar, 'كَتَبَتْ');
+  eq('and its gloss is the feminine one', kataba.d.f.en, 'she wrote');
+  const akbar = vocab.find(c => c.id === 'w-kbr-2');
+  eq('the irregular elative is left alone', akbar.d.f, null);
+}
+
 section('app: generated-content flags [R-48]');
 {
   const M = (a, b) => A.mergeStates(A.ensureShape(a), A.ensureShape(b));

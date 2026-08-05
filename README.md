@@ -114,8 +114,11 @@ audio/
 The stem is the word's transliteration, not its card id — the exact filename for every
 clip is in the recording list below.
 
-**What to record: 146 clips — one per letter (28) and one per word (118).** Roots
-themselves are not recorded; each *word* in a family gets its own clip. The full list
+**199 clips: one per letter (28) and one per word form (171).** Roots themselves are
+not recorded; each *word* gets its own clip, and a gendered word gets one for each
+form. `tools/gen-audio.mjs` produces them all from Azure; anything it generates is
+listed in `audio/synthetic.json` so the app can label it synthetic rather than pass
+it off as a recording. The full list
 with exact filenames is [`content/recording-list.md`](content/recording-list.md) —
 hand it to the speaker as-is. It is generated from the app by
 `node tools/sync-content.mjs`, so it stays right as content grows.
@@ -193,7 +196,9 @@ LICENSE                     GNU AGPL v3; bundled fonts are OFL 1.1 (fonts/OFL.tx
 node tools/test.mjs             # 120 checks; re-runs across five timezones
 node tools/sync-content.mjs     # regenerate content/ + the recording list from index.html
 node tools/sync-content.mjs --check   # CI: fail if content/ is stale
-node tools/sync-fonts.mjs       # refetch the webfonts (the only tool needing network)
+node tools/sync-fonts.mjs       # refetch the webfonts (needs network)
+AZURE_SPEECH_KEY=... AZURE_SPEECH_REGION=eastus node tools/gen-audio.mjs
+                                # generate the 199 synthetic clips into audio/ (--dry-run to preview)
 ```
 
 No build step and no dependencies — the app is one file you can open from disk. The

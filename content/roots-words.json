@@ -233,7 +233,13 @@
       "en": "he wrote",
       "pos": "verb",
       "register": "msa",
-      "audio": "kataba"
+      "audio": "kataba",
+      "feminine": {
+        "ar": "كَتَبَتْ",
+        "translit": "katabat",
+        "en": "she wrote",
+        "audio": "katabat"
+      }
     },
     {
       "id": "w-ktb-2",
@@ -253,7 +259,13 @@
       "en": "writer",
       "pos": "noun",
       "register": "msa",
-      "audio": "kaatib"
+      "audio": "kaatib",
+      "feminine": {
+        "ar": "كَاتِبَة",
+        "translit": "kātiba",
+        "en": "writer",
+        "audio": "kaatiba"
+      }
     },
     {
       "id": "w-ktb-3",
@@ -283,7 +295,13 @@
       "en": "he studied",
       "pos": "verb",
       "register": "msa",
-      "audio": "darasa"
+      "audio": "darasa",
+      "feminine": {
+        "ar": "دَرَسَتْ",
+        "translit": "darasat",
+        "en": "she studied",
+        "audio": "darasat"
+      }
     },
     {
       "id": "w-drs-2",
@@ -313,7 +331,13 @@
       "en": "teacher, instructor",
       "pos": "noun",
       "register": "msa",
-      "audio": "mudarris"
+      "audio": "mudarris",
+      "feminine": {
+        "ar": "مُدَرِّسَة",
+        "translit": "mudarrisa",
+        "en": "teacher, instructor",
+        "audio": "mudarrisa"
+      }
     },
     {
       "id": "w-3lm-1",
@@ -323,7 +347,13 @@
       "en": "he knew",
       "pos": "verb",
       "register": "msa",
-      "audio": "3alima"
+      "audio": "3alima",
+      "feminine": {
+        "ar": "عَلِمَتْ",
+        "translit": "ʿalimat",
+        "en": "she knew",
+        "audio": "3alimat"
+      }
     },
     {
       "id": "w-3lm-2",
@@ -343,7 +373,13 @@
       "en": "teacher",
       "pos": "noun",
       "register": "msa",
-      "audio": "mu3allim"
+      "audio": "mu3allim",
+      "feminine": {
+        "ar": "مُعَلِّمَة",
+        "translit": "muʿallima",
+        "en": "teacher",
+        "audio": "mu3allima"
+      }
     },
     {
       "id": "w-3lm-4",
@@ -363,7 +399,13 @@
       "en": "he read",
       "pos": "verb",
       "register": "msa",
-      "audio": "qara2a"
+      "audio": "qara2a",
+      "feminine": {
+        "ar": "قَرَأَتْ",
+        "translit": "qaraʾat",
+        "en": "she read",
+        "audio": "qara2at"
+      }
     },
     {
       "id": "w-qr2-2",
@@ -383,7 +425,13 @@
       "en": "reader",
       "pos": "noun",
       "register": "msa",
-      "audio": "qaari2"
+      "audio": "qaari2",
+      "feminine": {
+        "ar": "قَارِئَة",
+        "translit": "qāriʾa",
+        "en": "reader",
+        "audio": "qaari2a"
+      }
     },
     {
       "id": "w-3ml-1",
@@ -393,7 +441,13 @@
       "en": "he worked",
       "pos": "verb",
       "register": "msa",
-      "audio": "3amila"
+      "audio": "3amila",
+      "feminine": {
+        "ar": "عَمِلَتْ",
+        "translit": "ʿamilat",
+        "en": "she worked",
+        "audio": "3amilat"
+      }
     },
     {
       "id": "w-3ml-2",
@@ -413,7 +467,13 @@
       "en": "worker",
       "pos": "noun",
       "register": "msa",
-      "audio": "3aamil"
+      "audio": "3aamil",
+      "feminine": {
+        "ar": "عَامِلَة",
+        "translit": "ʿāmila",
+        "en": "worker",
+        "audio": "3aamila"
+      }
     },
     {
       "id": "w-slm-1",
@@ -443,7 +503,13 @@
       "en": "one who submits",
       "pos": "noun",
       "register": "msa",
-      "audio": "muslim"
+      "audio": "muslim",
+      "feminine": {
+        "ar": "مُسْلِمَة",
+        "translit": "muslima",
+        "en": "one who submits",
+        "audio": "muslima"
+      }
     },
     {
       "id": "w-hbb-1",
@@ -453,7 +519,13 @@
       "en": "he loved",
       "pos": "verb",
       "register": "msa",
-      "audio": "ahabba"
+      "audio": "ahabba",
+      "feminine": {
+        "ar": "أَحَبَّتْ",
+        "translit": "aḥabbat",
+        "en": "she loved",
+        "audio": "ahabbat"
+      }
     },
     {
       "id": "w-hbb-2",
@@ -473,7 +545,13 @@
       "en": "beloved",
       "pos": "noun",
       "register": "msa",
-      "audio": "habiib"
+      "audio": "habiib",
+      "feminine": {
+        "ar": "حَبِيبَة",
+        "translit": "ḥabība",
+        "en": "beloved",
+        "audio": "habiiba"
+      }
     },
     {
       "id": "w-kbr-1",
@@ -483,7 +561,13 @@
       "en": "big",
       "pos": "adj",
       "register": "msa",
-      "audio": "kabiir"
+      "audio": "kabiir",
+      "feminine": {
+        "ar": "كَبِيرَة",
+        "translit": "kabīra",
+        "en": "big",
+        "audio": "kabiira"
+      }
     },
     {
       "id": "w-kbr-2",
@@ -513,7 +597,13 @@
       "en": "he/it grew big",
       "pos": "verb",
       "register": "msa",
-      "audio": "kabura"
+      "audio": "kabura",
+      "feminine": {
+        "ar": "كَبُرَتْ",
+        "translit": "kaburat",
+        "en": "she/it grew big",
+        "audio": "kaburat"
+      }
     },
     {
       "id": "w-dhhb-1",
@@ -523,7 +613,13 @@
       "en": "he went",
       "pos": "verb",
       "register": "msa",
-      "audio": "dhahaba"
+      "audio": "dhahaba",
+      "feminine": {
+        "ar": "ذَهَبَتْ",
+        "translit": "dhahabat",
+        "en": "she went",
+        "audio": "dhahabat"
+      }
     },
     {
       "id": "w-dhhb-4",
@@ -533,7 +629,13 @@
       "en": "he goes",
       "pos": "verb",
       "register": "msa",
-      "audio": "yadhhab"
+      "audio": "yadhhab",
+      "feminine": {
+        "ar": "تَذْهَب",
+        "translit": "tadhhab",
+        "en": "she goes",
+        "audio": "tadhhab"
+      }
     },
     {
       "id": "w-dhhb-2",
@@ -563,7 +665,13 @@
       "en": "he traveled",
       "pos": "verb",
       "register": "msa",
-      "audio": "saafara"
+      "audio": "saafara",
+      "feminine": {
+        "ar": "سَافَرَتْ",
+        "translit": "sāfarat",
+        "en": "she traveled",
+        "audio": "saafarat"
+      }
     },
     {
       "id": "w-sfr-2",
@@ -583,7 +691,13 @@
       "en": "traveler",
       "pos": "noun",
       "register": "msa",
-      "audio": "musaafir"
+      "audio": "musaafir",
+      "feminine": {
+        "ar": "مُسَافِرَة",
+        "translit": "musāfira",
+        "en": "traveler",
+        "audio": "musaafira"
+      }
     },
     {
       "id": "w-skn-1",
@@ -593,7 +707,13 @@
       "en": "he lived, resided",
       "pos": "verb",
       "register": "msa",
-      "audio": "sakana"
+      "audio": "sakana",
+      "feminine": {
+        "ar": "سَكَنَتْ",
+        "translit": "sakanat",
+        "en": "she lived, resided",
+        "audio": "sakanat"
+      }
     },
     {
       "id": "w-skn-2",
@@ -653,7 +773,13 @@
       "en": "he ate",
       "pos": "verb",
       "register": "msa",
-      "audio": "2akala"
+      "audio": "2akala",
+      "feminine": {
+        "ar": "أَكَلَتْ",
+        "translit": "ʾakalat",
+        "en": "she ate",
+        "audio": "2akalat"
+      }
     },
     {
       "id": "w-2kl-2",
@@ -683,7 +809,13 @@
       "en": "he drank",
       "pos": "verb",
       "register": "msa",
-      "audio": "shariba"
+      "audio": "shariba",
+      "feminine": {
+        "ar": "شَرِبَتْ",
+        "translit": "sharibat",
+        "en": "she drank",
+        "audio": "sharibat"
+      }
     },
     {
       "id": "w-shrb-2",
@@ -713,7 +845,13 @@
       "en": "he sat",
       "pos": "verb",
       "register": "msa",
-      "audio": "jalasa"
+      "audio": "jalasa",
+      "feminine": {
+        "ar": "جَلَسَتْ",
+        "translit": "jalasat",
+        "en": "she sat",
+        "audio": "jalasat"
+      }
     },
     {
       "id": "w-jls-2",
@@ -743,7 +881,13 @@
       "en": "he understood",
       "pos": "verb",
       "register": "msa",
-      "audio": "fahima"
+      "audio": "fahima",
+      "feminine": {
+        "ar": "فَهِمَتْ",
+        "translit": "fahimat",
+        "en": "she understood",
+        "audio": "fahimat"
+      }
     },
     {
       "id": "w-fhm-2",
@@ -773,7 +917,13 @@
       "en": "he said",
       "pos": "verb",
       "register": "msa",
-      "audio": "qaala"
+      "audio": "qaala",
+      "feminine": {
+        "ar": "قَالَتْ",
+        "translit": "qālat",
+        "en": "she said",
+        "audio": "qaalat"
+      }
     },
     {
       "id": "w-qwl-2",
@@ -803,7 +953,13 @@
       "en": "he did",
       "pos": "verb",
       "register": "msa",
-      "audio": "fa3ala"
+      "audio": "fa3ala",
+      "feminine": {
+        "ar": "فَعَلَتْ",
+        "translit": "faʿalat",
+        "en": "she did",
+        "audio": "fa3alat"
+      }
     },
     {
       "id": "w-f3l-2",
@@ -823,7 +979,13 @@
       "en": "doer; agent",
       "pos": "noun",
       "register": "msa",
-      "audio": "faa3il"
+      "audio": "faa3il",
+      "feminine": {
+        "ar": "فَاعِلَة",
+        "translit": "fāʿila",
+        "en": "doer; agent",
+        "audio": "faa3ila"
+      }
     },
     {
       "id": "w-nzr-1",
@@ -833,7 +995,13 @@
       "en": "he looked",
       "pos": "verb",
       "register": "msa",
-      "audio": "nazara"
+      "audio": "nazara",
+      "feminine": {
+        "ar": "نَظَرَتْ",
+        "translit": "naẓarat",
+        "en": "she looked",
+        "audio": "nazarat"
+      }
     },
     {
       "id": "w-nzr-2",
@@ -873,7 +1041,13 @@
       "en": "he heard",
       "pos": "verb",
       "register": "msa",
-      "audio": "sami3a"
+      "audio": "sami3a",
+      "feminine": {
+        "ar": "سَمِعَتْ",
+        "translit": "samiʿat",
+        "en": "she heard",
+        "audio": "sami3at"
+      }
     },
     {
       "id": "w-sm3-2",
@@ -893,7 +1067,13 @@
       "en": "listener",
       "pos": "noun",
       "register": "msa",
-      "audio": "mustami3"
+      "audio": "mustami3",
+      "feminine": {
+        "ar": "مُسْتَمِعَة",
+        "translit": "mustamiʿa",
+        "en": "listener",
+        "audio": "mustami3a"
+      }
     },
     {
       "id": "w-klm-1",
@@ -923,7 +1103,13 @@
       "en": "he spoke",
       "pos": "verb",
       "register": "msa",
-      "audio": "takallama"
+      "audio": "takallama",
+      "feminine": {
+        "ar": "تَكَلَّمَتْ",
+        "translit": "takallamat",
+        "en": "she spoke",
+        "audio": "takallamat"
+      }
     },
     {
       "id": "w-3rf-1",
@@ -933,7 +1119,13 @@
       "en": "he knew, recognized",
       "pos": "verb",
       "register": "msa",
-      "audio": "3arafa"
+      "audio": "3arafa",
+      "feminine": {
+        "ar": "عَرَفَتْ",
+        "translit": "ʿarafat",
+        "en": "she knew, recognized",
+        "audio": "3arafat"
+      }
     },
     {
       "id": "w-3rf-2",
@@ -963,7 +1155,13 @@
       "en": "he went out",
       "pos": "verb",
       "register": "msa",
-      "audio": "kharaja"
+      "audio": "kharaja",
+      "feminine": {
+        "ar": "خَرَجَتْ",
+        "translit": "kharajat",
+        "en": "she went out",
+        "audio": "kharajat"
+      }
     },
     {
       "id": "w-khrj-2",
@@ -993,7 +1191,13 @@
       "en": "he entered",
       "pos": "verb",
       "register": "msa",
-      "audio": "dakhala"
+      "audio": "dakhala",
+      "feminine": {
+        "ar": "دَخَلَتْ",
+        "translit": "dakhalat",
+        "en": "she entered",
+        "audio": "dakhalat"
+      }
     },
     {
       "id": "w-dkhl-2",
@@ -1023,7 +1227,13 @@
       "en": "small; young",
       "pos": "adj",
       "register": "msa",
-      "audio": "saghiir"
+      "audio": "saghiir",
+      "feminine": {
+        "ar": "صَغِيرَة",
+        "translit": "ṣaghīra",
+        "en": "small; young",
+        "audio": "saghiira"
+      }
     },
     {
       "id": "w-sghr-2",
@@ -1043,7 +1253,13 @@
       "en": "beautiful",
       "pos": "adj",
       "register": "msa",
-      "audio": "jamiil"
+      "audio": "jamiil",
+      "feminine": {
+        "ar": "جَمِيلَة",
+        "translit": "jamīla",
+        "en": "beautiful",
+        "audio": "jamiila"
+      }
     },
     {
       "id": "w-jml-2",
@@ -1073,7 +1289,13 @@
       "en": "he opened",
       "pos": "verb",
       "register": "msa",
-      "audio": "fataha"
+      "audio": "fataha",
+      "feminine": {
+        "ar": "فَتَحَتْ",
+        "translit": "fataḥat",
+        "en": "she opened",
+        "audio": "fatahat"
+      }
     },
     {
       "id": "w-fth-2",
@@ -1093,7 +1315,13 @@
       "en": "open",
       "pos": "adj",
       "register": "msa",
-      "audio": "maftuuh"
+      "audio": "maftuuh",
+      "feminine": {
+        "ar": "مَفْتُوحَة",
+        "translit": "maftūḥa",
+        "en": "open",
+        "audio": "maftuuha"
+      }
     },
     {
       "id": "w-s2l-1",
@@ -1103,7 +1331,13 @@
       "en": "he asked",
       "pos": "verb",
       "register": "msa",
-      "audio": "sa2ala"
+      "audio": "sa2ala",
+      "feminine": {
+        "ar": "سَأَلَتْ",
+        "translit": "saʾalat",
+        "en": "she asked",
+        "audio": "sa2alat"
+      }
     },
     {
       "id": "w-s2l-2",
@@ -1133,7 +1367,13 @@
       "en": "he answered",
       "pos": "verb",
       "register": "msa",
-      "audio": "2ajaaba"
+      "audio": "2ajaaba",
+      "feminine": {
+        "ar": "أَجَابَتْ",
+        "translit": "ʾajābat",
+        "en": "she answered",
+        "audio": "2ajaabat"
+      }
     },
     {
       "id": "w-jwb-2",
@@ -1163,7 +1403,13 @@
       "en": "he played",
       "pos": "verb",
       "register": "msa",
-      "audio": "la3iba"
+      "audio": "la3iba",
+      "feminine": {
+        "ar": "لَعِبَتْ",
+        "translit": "laʿibat",
+        "en": "she played",
+        "audio": "la3ibat"
+      }
     },
     {
       "id": "w-l3b-2",
@@ -1183,7 +1429,13 @@
       "en": "player",
       "pos": "noun",
       "register": "msa",
-      "audio": "laa3ib"
+      "audio": "laa3ib",
+      "feminine": {
+        "ar": "لَاعِبَة",
+        "translit": "lāʿiba",
+        "en": "player",
+        "audio": "laa3iba"
+      }
     },
     {
       "id": "w-l3b-4",
@@ -1203,7 +1455,13 @@
       "en": "he slept",
       "pos": "verb",
       "register": "msa",
-      "audio": "naama"
+      "audio": "naama",
+      "feminine": {
+        "ar": "نَامَتْ",
+        "translit": "nāmat",
+        "en": "she slept",
+        "audio": "naamat"
+      }
     },
     {
       "id": "w-nwm-2",
@@ -1223,7 +1481,13 @@
       "en": "asleep, sleeping",
       "pos": "adj",
       "register": "msa",
-      "audio": "naa2im"
+      "audio": "naa2im",
+      "feminine": {
+        "ar": "نَائِمَة",
+        "translit": "nāʾima",
+        "en": "asleep, sleeping",
+        "audio": "naa2ima"
+      }
     },
     {
       "id": "w-shghl-1",
@@ -1243,7 +1507,13 @@
       "en": "busy",
       "pos": "adj",
       "register": "msa",
-      "audio": "mashghuul"
+      "audio": "mashghuul",
+      "feminine": {
+        "ar": "مَشْغُولَة",
+        "translit": "mashghūla",
+        "en": "busy",
+        "audio": "mashghuula"
+      }
     },
     {
       "id": "w-shghl-3",
@@ -1253,7 +1523,13 @@
       "en": "he worked",
       "pos": "verb",
       "register": "msa",
-      "audio": "ishtaghala"
+      "audio": "ishtaghala",
+      "feminine": {
+        "ar": "اِشْتَغَلَتْ",
+        "translit": "ishtaghalat",
+        "en": "she worked",
+        "audio": "ishtaghalat"
+      }
     },
     {
       "id": "w-zwr-1",
@@ -1263,7 +1539,13 @@
       "en": "he visited",
       "pos": "verb",
       "register": "msa",
-      "audio": "zaara"
+      "audio": "zaara",
+      "feminine": {
+        "ar": "زَارَتْ",
+        "translit": "zārat",
+        "en": "she visited",
+        "audio": "zaarat"
+      }
     },
     {
       "id": "w-zwr-2",
@@ -1283,7 +1565,13 @@
       "en": "visitor",
       "pos": "noun",
       "register": "msa",
-      "audio": "zaa2ir"
+      "audio": "zaa2ir",
+      "feminine": {
+        "ar": "زَائِرَة",
+        "translit": "zāʾira",
+        "en": "visitor",
+        "audio": "zaa2ira"
+      }
     },
     {
       "id": "w-wsl-1",
@@ -1293,7 +1581,13 @@
       "en": "he arrived",
       "pos": "verb",
       "register": "msa",
-      "audio": "wasala"
+      "audio": "wasala",
+      "feminine": {
+        "ar": "وَصَلَتْ",
+        "translit": "waṣalat",
+        "en": "she arrived",
+        "audio": "wasalat"
+      }
     },
     {
       "id": "w-wsl-2",
@@ -1323,7 +1617,13 @@
       "en": "he washed",
       "pos": "verb",
       "register": "msa",
-      "audio": "ghasala"
+      "audio": "ghasala",
+      "feminine": {
+        "ar": "غَسَلَتْ",
+        "translit": "ghasalat",
+        "en": "she washed",
+        "audio": "ghasalat"
+      }
     },
     {
       "id": "w-ghsl-2",
@@ -1353,7 +1653,13 @@
       "en": "he cooked",
       "pos": "verb",
       "register": "msa",
-      "audio": "tabakha"
+      "audio": "tabakha",
+      "feminine": {
+        "ar": "طَبَخَتْ",
+        "translit": "ṭabakhat",
+        "en": "she cooked",
+        "audio": "tabakhat"
+      }
     },
     {
       "id": "w-tbkh-2",
@@ -1373,7 +1679,13 @@
       "en": "cook, chef",
       "pos": "noun",
       "register": "msa",
-      "audio": "tabbaakh"
+      "audio": "tabbaakh",
+      "feminine": {
+        "ar": "طَبَّاخَة",
+        "translit": "ṭabbākha",
+        "en": "cook, chef",
+        "audio": "tabbaakha"
+      }
     },
     {
       "id": "w-sbh-1",
@@ -1403,7 +1715,13 @@
       "en": "he became",
       "pos": "verb",
       "register": "msa",
-      "audio": "2asbaha"
+      "audio": "2asbaha",
+      "feminine": {
+        "ar": "أَصْبَحَتْ",
+        "translit": "ʾaṣbaḥat",
+        "en": "she became",
+        "audio": "2asbahat"
+      }
     }
   ]
 }
