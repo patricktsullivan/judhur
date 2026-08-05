@@ -757,7 +757,33 @@ function playBtn(src, text){
 /* Synthetic speech (§7, amended [R-24]) — always a fallback, never the gold standard.
    Azure neural voice when the backend is configured (cached per text); otherwise the
    device's built-in Arabic voice via the Web Speech API (free, offline). */
+/* One owner for all synthetic speech. A new request cancels whatever is playing
+   instead of layering on top of it: pressing "Test the voice" twice used to start
+   a second sequence that played over the first, and a slow /tts fetch for one word
+   could land after the learner had moved on and speak the wrong one. Async
+   callbacks capture `token` and drop out if anything has cancelled them since. */
 var ttsAudio = null, ttsCache = {}, TTS_VOICES = [];
+var ttsToken = 0;         /* bumped by every stop; stale callbacks compare against it */
+var ttsTesting = false;   /* the multi-clip voice check is mid-sequence */
+var ttsTimer = null;      /* the gap between test clips */
+var ttsTmpUrls = [];      /* blob URLs from the test, which unlike words are not cached */
+function revokeTtsCache(){
+  Object.keys(ttsCache).forEach(function(k){ try{ URL.revokeObjectURL(ttsCache[k]); }catch(e){} });
+  ttsCache = {};
+}
+function stopSpeech(){
+  ttsToken++;
+  if(ttsTimer){ clearTimeout(ttsTimer); ttsTimer = null; }
+  try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){}
+  if(ttsAudio){
+    ttsAudio.onended = null; ttsAudio.onerror = null;
+    try{ ttsAudio.pause(); }catch(e){}
+  }
+  ttsTmpUrls.forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(e){} });
+  ttsTmpUrls = [];
+  ttsTesting = false;
+  return ttsToken;
+}
 /* getVoices() is populated asynchronously — it returns [] on the first synchronous
    call, which is why an Arabic voice was being missed and a Latin voice mangled the
    text. Cache the list and refresh on 'voiceschanged'. */
@@ -789,7 +815,12 @@ function browserSpeak(text){
     return {ok:true, voice: v ? v.name : null};
   }catch(e){ return {ok:false, err:String(e.message||e)}; }
 }
-function playTtsUrl(url){ if(!ttsAudio) ttsAudio=new Audio(); ttsAudio.src=url; var p=ttsAudio.play(); if(p&&p.catch) p.catch(function(){}); }
+function playTtsUrl(url){
+  if(!ttsAudio) ttsAudio=new Audio();
+  ttsAudio.onended = null; ttsAudio.onerror = null;   /* drop any handlers the voice check left */
+  ttsAudio.src = url;
+  var p = ttsAudio.play(); if(p&&p.catch) p.catch(function(){});
+}
 /* Voice check: three guttural words in isolation (ح ع ق — sounds a non-Arabic voice
    can't fake, so a wrong voice is obvious), then a sentence. The words are read pausally
    (final short vowel dropped); the sentence is connected speech, where those vowels are
@@ -797,14 +828,23 @@ function playTtsUrl(url){ if(!ttsAudio) ttsAudio=new Audio(); ttsAudio.src=url; 
    reports which voice was used. */
 function ttsTest(){
   if(!S.settings.tts) return;
-  ttsCache = {};
+  /* Pressing it again while a sequence is running stops it, rather than starting
+     a second sequence alongside the first. */
+  if(ttsTesting){ stopSpeech(); ttsLast = {via:'test', detail:'Voice check stopped.'}; render(); return; }
+  var token = stopSpeech();          /* silence anything already playing */
+  ttsTesting = true;
+  revokeTtsCache();                  /* the check should hear the voice, not a cached clip */
   var items = ['حَلِيب','عَيْن','قَلَم','أَنَا أَتَعَلَّمُ العَرَبِيَّةَ'];
   var azure = !!(CFG.url && CFG.token), base = azure ? CFG.url.replace(/\/+$/,'') : null;
   var i = 0, via = 'test', voiceLabel = '';
-  function finish(){ ttsLast = {via: (via==='azure'||via==='device')?via:'warn',
-    detail: 'Played '+items.length+' clips ('+items.join(' · ')+'). Voice: '+(voiceLabel||'unknown')+'.'}; render(); }
-  function afterEach(){ i++; if(i>=items.length){ finish(); } else { setTimeout(step, 350); } }
+  function live(){ return ttsTesting && token === ttsToken; }
+  function finish(){ if(!live()) return;
+    ttsTesting = false;
+    ttsLast = {via: (via==='azure'||via==='device')?via:'warn',
+      detail: 'Played '+items.length+' clips ('+items.join(' · ')+'). Voice: '+(voiceLabel||'unknown')+'.'}; render(); }
+  function afterEach(){ if(!live()) return; i++; if(i>=items.length){ finish(); } else { ttsTimer = setTimeout(step, 350); } }
   function browserOne(text){
+    if(!live()) return;
     if(!('speechSynthesis' in window)){ via='none'; voiceLabel='no speech synthesis on this device'; afterEach(); return; }
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(text); u.lang='ar-SA'; u.rate=0.85;
@@ -815,23 +855,34 @@ function ttsTest(){
     window.speechSynthesis.speak(u);
   }
   function step(){
+    if(!live()) return;
     var text = items[i];
-    ttsLast = {via:'test', detail:'Playing '+(i+1)+' / '+items.length+': '+esc(text)}; render();
+    ttsLast = {via:'test', detail:'Playing '+(i+1)+' / '+items.length+': '+text}; render();
     if(azure){
       fetch(base+'/tts',{method:'POST',headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
         body:JSON.stringify({text:text})})
         .then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+' '+t.slice(0,80)); }); return r.blob(); })
-        .then(function(b){ if(!b||b.size<200) throw new Error('empty audio');
+        .then(function(b){
+          if(!live()) return;        /* stopped while the fetch was in flight */
+          if(!b||b.size<200) throw new Error('empty audio');
           via='azure'; voiceLabel='Azure neural voice';
-          var a = new Audio(URL.createObjectURL(b)); a.onended = afterEach; a.onerror = afterEach; a.play();
+          var url = URL.createObjectURL(b); ttsTmpUrls.push(url);
+          if(!ttsAudio) ttsAudio = new Audio();
+          ttsAudio.onended = afterEach; ttsAudio.onerror = afterEach;
+          ttsAudio.src = url;
+          var pl = ttsAudio.play(); if(pl && pl.catch) pl.catch(function(){ afterEach(); });
         })
-        .catch(function(){ browserOne(text); });   /* this clip failed on Azure — fall back */
+        .catch(function(){ if(live()) browserOne(text); });   /* this clip failed on Azure — fall back */
     } else { browserOne(text); }
   }
   step();
 }
 function speakText(text){
   if(!S.settings.tts || !text) return;
+  /* Whatever is speaking now loses to what was just asked for — including a
+     running voice check, and including this word's own earlier request. */
+  var token = stopSpeech();
+  var live = function(){ return token === ttsToken; };
   var done = function(via, detail){ ttsLast = {via:via, detail:detail||''}; if(tab==='settings') render(); };
   var fallback = function(prefix){
     var r = browserSpeak(text);
@@ -850,10 +901,11 @@ function speakText(text){
         return r.blob();
       })
       .then(function(b){
+        if(!live()) return;          /* the learner moved on while this was in flight */
         if(!b || b.size < 200) throw new Error('empty audio from /tts');
         var url=URL.createObjectURL(b); ttsCache[text]=url; playTtsUrl(url); done('azure','Azure neural voice');
       })
-      .catch(function(e){ fallback('Azure /tts failed ('+String(e.message||e)+') → '); });   /* free device voice */
+      .catch(function(e){ if(live()) fallback('Azure /tts failed ('+String(e.message||e)+') → '); });   /* free device voice */
     return;
   }
   fallback('no backend configured → ');
@@ -1633,7 +1685,8 @@ function ttsCard(){
     + '<p class="sub" style="margin:4px 0 0">When there’s no human recording yet, a computer voice reads the word aloud, marked <em>synthetic</em>. A single word is read in isolation form, so a final short vowel is not sounded (كَتَبَ is read “katab”) — the same way the word is said on its own; inside a sentence that vowel returns. A human recording replaces it when available.</p></div>'
     + '<button class="toggle'+(on?' on':'')+'" data-set="tts" role="switch" aria-checked="'+on+'"><span></span></button></div>'
     + (on?'<div class="tts-status '+statusCls+'">'+statusTxt+'</div>'
-        + '<button class="btn-teal" style="margin:10px 0 0" data-act="tts-test">▶ Test the voice — 3 words + a sentence</button>'
+        + '<button class="btn-teal" style="margin:10px 0 0" data-act="tts-test">'
+        + (ttsTesting ? '■ Stop the voice check' : '▶ Test the voice — 3 words + a sentence')+'</button>'
         + (ttsLast?'<div class="tts-status '+(ttsLast.via==='azure'||ttsLast.via==='device'?'ok':'warn')+'">Last played via: '+esc(ttsLast.detail||ttsLast.via)+'</div>':'')
       :'')
     + '</div>';
@@ -2061,6 +2114,7 @@ document.addEventListener('click', function(e){
     openRoot = (openRoot===ri) ? null : ri; render(); return;
   }
   if((el = e.target.closest('[data-tab]'))){
+    stopSpeech();   /* navigating away shouldn't leave a voice check playing */
     tab = el.dataset.tab; progSub=''; libView=null; libSel=null; libTr=false; cardMenu=false; render(); return;
   }
   if((el = e.target.closest('[data-act]'))){
