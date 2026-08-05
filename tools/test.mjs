@@ -109,6 +109,17 @@ eq('letter skeleton keeps long vowels', W.arLetters('كِتَاب'), ['ك', 'ت'
 }
 eq('no NBest is not ok', W.parseAzureAssessment({}).ok, false);
 
+section('worker: register selects locale and voice');
+eq('msa locale', W.registerCfg({}, 'msa').locale, 'ar-SA');
+eq('egy locale', W.registerCfg({}, 'egy').locale, 'ar-EG');
+eq('egy voice differs from msa', W.registerCfg({}, 'egy').voice === W.registerCfg({}, 'msa').voice, false);
+eq('unknown register falls back to msa', W.registerCfg({}, 'zzz').locale, 'ar-SA');
+eq('missing register falls back to msa', W.registerCfg({}, undefined).locale, 'ar-SA');
+eq('case insensitive', W.registerCfg({}, 'EGY').locale, 'ar-EG');
+eq('per-register voice override wins', W.registerCfg({ AZURE_TTS_VOICE_EGY: 'x' }, 'egy').voice, 'x');
+eq('legacy single-voice override still honoured', W.registerCfg({ AZURE_TTS_VOICE: 'y' }, 'msa').voice, 'y');
+eq('explicit locale override wins', W.registerCfg({ AZURE_SPEECH_LOCALE: 'ar-EG' }, 'msa').locale, 'ar-EG');
+
 section('worker: coaching prompt hedges inferred labels');
 ok('inferred labels produce a hedge', /not certain/.test(W.coachPrompt('كَتَبَ', [{ phoneme: 'ت', inferred: true }])));
 ok('real labels produce no hedge', !/not certain/.test(W.coachPrompt('كَتَبَ', [{ phoneme: 'k' }])));
@@ -277,6 +288,16 @@ section('app: sync merge');
   eq('speech attempts union by key',
     M({ speech: [{ k: 'a' }] }, { speech: [{ k: 'a' }, { k: 'b' }] }).speech.length, 2);
   eq('merging with nothing remote is a no-op', A.mergeStates(A.ensureShape({ xp: 7 }), null).xp, 7);
+}
+
+section('app: generated-content flags [R-48]');
+{
+  const M = (a, b) => A.mergeStates(A.ensureShape(a), A.ensureShape(b));
+  eq('flag reports union across devices',
+    M({ flags: [{ t: 1, id: 'u-1' }] }, { flags: [{ t: 2, id: 'u-2' }, { t: 1, id: 'u-1' }] }).flags.length, 2);
+  eq('flag reports dedupe',
+    M({ flags: [{ t: 1, id: 'u-1' }] }, { flags: [{ t: 1, id: 'u-1' }] }).flags.length, 1);
+  eq('a fresh state has an empty flag log', A.ensureShape(A.blankState()).flags, []);
 }
 
 section('app: streak reconstruction');

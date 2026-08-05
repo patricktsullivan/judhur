@@ -265,7 +265,29 @@ export function coachPrompt(word, detected) {
     'Be brief and encouraging. Do NOT invent other errors — address only the listed sounds. Plain text, one line per sound.';
 }
 
-async function azureAssess(env, expected, audioBytes, contentType) {
+/* Register → Azure locale and voice. Both registers are wired end to end so the
+   choice is configuration, not a rewrite (§11.1). Azure assesses exactly two
+   Arabic locales, ar-EG and ar-SA, and these are the two we tag content with.
+   VERIFY THE EGYPTIAN VOICE NAMES against your Azure region's voice list before
+   relying on them — Microsoft retires and renames neural voices, and a bad name
+   fails the request rather than falling back. Override with AZURE_TTS_VOICE_EGY /
+   AZURE_TTS_VOICE_MSA. */
+const REGISTERS = {
+  msa: { locale: 'ar-SA', voice: 'ar-SA-HamedNeural', voiceEnv: 'AZURE_TTS_VOICE_MSA' },
+  egy: { locale: 'ar-EG', voice: 'ar-EG-ShakirNeural', voiceEnv: 'AZURE_TTS_VOICE_EGY' },
+};
+export function registerCfg(env, register) {
+  const key = String(register || '').toLowerCase() === 'egy' ? 'egy' : 'msa';
+  const base = REGISTERS[key];
+  return {
+    key,
+    locale: (env && env.AZURE_SPEECH_LOCALE) || base.locale,
+    /* AZURE_TTS_VOICE stays honoured as the single-voice override it always was */
+    voice: (env && (env[base.voiceEnv] || env.AZURE_TTS_VOICE)) || base.voice,
+  };
+}
+
+async function azureAssess(env, expected, audioBytes, contentType, register) {
   const region = env.AZURE_SPEECH_REGION;
   const cfg = b64utf8(JSON.stringify({
     ReferenceText: expected, GradingSystem: 'HundredMark', Granularity: 'Phoneme', Dimension: 'Comprehensive',
@@ -276,7 +298,7 @@ async function azureAssess(env, expected, audioBytes, contentType) {
     PhonemeAlphabet: 'IPA'
   }));
   const url = 'https://' + region + '.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=' +
-    (env.AZURE_SPEECH_LOCALE || 'ar-SA') + '&format=detailed';
+    registerCfg(env, register).locale + '&format=detailed';
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -302,10 +324,10 @@ function xmlEscape(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 }
-async function azureTTS(env, text) {
+async function azureTTS(env, text, register) {
   const region = env.AZURE_SPEECH_REGION;
-  const voice = env.AZURE_TTS_VOICE || 'ar-SA-HamedNeural';
-  const locale = env.AZURE_SPEECH_LOCALE || 'ar-SA';
+  const cfg = registerCfg(env, register);
+  const voice = cfg.voice, locale = cfg.locale;
   const ssml = "<speak version='1.0' xml:lang='" + locale + "'><voice name='" + voice + "'>" +
     xmlEscape(text) + "</voice></speak>";
   return fetch('https://' + region + '.tts.speech.microsoft.com/cognitiveservices/v1', {
@@ -400,7 +422,7 @@ export default {
         let az;
         try {
           az = await azureAssess(env, body.expected, b64ToBytes(body.audio),
-                                  body.contentType || 'audio/webm; codecs=opus');
+                                  body.contentType || 'audio/webm; codecs=opus', body.register);
         } catch (e) {
           return json({ error: 'pronunciation assessment call failed: ' + (e.message || 'unknown') }, 502);
         }
@@ -461,7 +483,9 @@ export default {
       const text = (body.text || '').toString().slice(0, 400);   // one word/phrase, not an essay
       if (!text.trim()) return json({ error: 'text is required' }, 400);
       let res;
-      try { res = await azureTTS(env, text); }
+      /* The card's own register picks the voice — an Egyptian card read in a Saudi
+         voice teaches the wrong thing (§11.1). */
+      try { res = await azureTTS(env, text, body.register); }
       catch (e) { return json({ error: 'tts call failed: ' + (e.message || 'unknown') }, 502); }
       if (!res.ok) {
         const detail = await res.text().catch(() => '');

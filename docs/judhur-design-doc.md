@@ -2,7 +2,7 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.14 · August 2026 *(0.14 amends [R-24] again — synthetic audio is the shipped path and human recordings move to a later version; adds [R-51], gender coverage in vocabulary; relicenses to AGPL-3.0. 0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists; 0.12 adds §7.5.1, measured Azure TTS limits + pausal decision, and refreshes §3 to the current build; 0.13 corrects claims this document made about its own implementation — see below)*
+Version 0.15 · August 2026 *(0.15 adds §11.1.1, Egyptian as the primary target with the register plumbed end to end, and §6.7, the verification ladder that closes the gap between how pronunciation and generated text were checked. 0.14 amends [R-24] again — synthetic audio is the shipped path and human recordings move to a later version; adds [R-51], gender coverage in vocabulary; relicenses to AGPL-3.0. 0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists; 0.12 adds §7.5.1, measured Azure TTS limits + pausal decision, and refreshes §3 to the current build; 0.13 corrects claims this document made about its own implementation — see below)*
 
 **0.13 is a correction pass, not new design.** An outside review (`docs/review-2026-08.md`) found several places where this document described requirements as met that were not, and one place where it asserted something factually untrue about its own protocol. Those are corrected in place, and where a fix landed in code the section says so. The substantive changes: §3 and §10 no longer overstate what is built; §11.3 and §14 no longer claim that delaying the reviewer search costs no data (it currently costs data, because no audio is retained); §7.5 records the TTS engine actually in use; §2.4 gets the evidence caveat §2.3 already had; §8 and §11.1 are marked descriptive rather than built; the word count is corrected from 146 to 118. **No requirement was weakened to match the implementation.** Where the two disagreed, the requirement stands and the gap is named.
 
@@ -348,7 +348,30 @@ The stakes are higher here than for pronunciation, not lower. §11.3 warns that 
 
 **`[R-48]`** The Library MUST offer a way to mark a generated item as wrong, and MUST record it. This is the measurement Step 10 is gated on; without it the gate cannot open.
 
-*Both are unimplemented as of v0.13 and are the smallest change that makes Step 10 decidable.*
+*(v0.15: both are now built. Model-asserted roots render with an unverified marker; a flag button records an append-only report and pulls the word out of the review deck, because the cost of a wrong card is that spaced repetition makes it permanent.)*
+
+### 6.7 Closing the gap with pronunciation — the verification ladder *(added v0.15)*
+
+The reviewed asymmetry was real: pronunciation feedback, which is transient, had a five-requirement protocol; generated vocabulary, which spaced repetition makes permanent, had a warning banner. The fix is **not** to run every generated item through an ensemble. §6.1 is explicit that ensemble gains come from diversity across model families rather than call volume, and that models "converge confidently on the same wrong answer with some regularity" — and Arabic diacritisation is close to a worst case for that. Every major model has learned from the same undiacritized corpora and shares the same weak spots, so three of them voting on the harakat of a rare word will agree, cheaply and wrongly, and the agreement will read as confidence. §6.5's rule stands: **grounding beats ensembling**, and ensembling is the fallback for judgments no lookup can make.
+
+The ladder, cheapest and most definitive first. Each rung only sees what the rung above could not settle:
+
+| Rung | Check | Catches | Cost |
+|---|---|---|---|
+| **0 — Deterministic** | Is every word diacritized? Is the register tag consistent? Does the transliteration's consonant skeleton match the Arabic? Is the JSON shape right? | Malformed and truncated output, silently undiacritized words, transliteration/Arabic mismatch | Free, no model, runs on every generation |
+| **1 — Dictionary grounding** (`[R-18]`) | Is the stated root real, and is this word actually derived from it? | Wrong roots — which corrupt the family structure, the organizing principle of the whole system | One lookup. Definitive. **MSA only — this rung disappears for Egyptian (§11.1.1)** |
+| **2 — Cross-vendor verifier** (`[R-16]`) | One model from a *different vendor*, against the §6.4 checklist, returning per-item pass/fail with corrections — never a score (`[R-17]`) | Naturalness, register leakage, meaning drift, level | One call per generation |
+| **3 — Ensemble + judge** | Only when rung 2 flags something substantive: three generators across three vendors, a judge with written rationale | Genuinely contested cases | Expensive; rare by construction |
+| **4 — Human** | The §12 content checker, 20 items a month, and the learner's own `[R-48]` flags | Everything the machine shares a blind spot on | ~20 min/month |
+
+Two properties worth naming, because they are what make this different from "add more agents":
+
+- **Rungs 0 and 1 are not opinions.** A word either carries diacritics or it doesn't; a root either appears in the dictionary or it doesn't. No amount of model consensus is worth one deterministic check, and these two rungs cover the failure modes that matter most for a beginner's deck.
+- **Rung 4 is the only rung that can measure the others.** Flags and spot-checks are what tell you whether rungs 0–3 are working. Without them, adding rungs is faith. This is the same argument §11.3 makes for pronunciation, applied where it was missing.
+
+**Ensembling has no analogue for audio.** The learner's own speech cannot be checked by text models voting — `[R-25]` forbids exactly that, because a text model asked to judge audio it cannot hear invents fluent, confident feedback. For *synthetic* audio there is a real check that is not ensembling: **round-trip the generated speech through ASR and compare the transcript to the source text.** It catches gross synthesis failures (wrong word, dropped syllables, a voice reading the wrong language) for the cost of one Whisper call the project already has free. It does not catch subtle mispronunciation, and must not be presented as though it does.
+
+**Build order:** rung 0, then rung 4's flag button *(both done in v0.15)*, then rung 1 for MSA, then rung 2. Rung 3 last, if the flag data ever justifies it — which is what Step 10 was always gated on.
 
 ---
 
@@ -639,6 +662,31 @@ Integration appears close to free. Huntley's comparative study (MESA 2020) found
 >
 > The decision itself still looks right; nothing here argues against it. But "integrate Egyptian from Phase 1" and "tag every card" are a content commitment (~40 listening items) that no build step owns, and until that content exists this section describes an intention.
 
+#### 11.1.1 Egyptian as the primary target *(added v0.15 — owner direction)*
+
+**Direction: the project targets Egyptian Arabic**, on the media-pool argument — Egyptian has by far the largest body of film, television, music, and online video, which is the supply the whole ingestion pipeline (§5) draws on, and §1 says that pipeline is the reason this project exists rather than Anki.
+
+The plumbing is done: register is now a per-request parameter end to end. `/tts` picks the voice by register, `/assess` picks the locale by register, `/generate` receives the learner's chosen target, and Settings exposes the choice. Both registers work; picking one is configuration.
+
+**What the shift does not do is improve generation accuracy, and this needs stating because it points the other way.** MSA and Egyptian are asymmetric in the written channel:
+
+| | MSA | Egyptian |
+|---|---|---|
+| Written training data | Enormous — news, books, encyclopaedias, formal web | Thin and informal — subtitles, social media, some fiction |
+| Spelling | Standardised | **Not standardised.** Common words have several accepted spellings |
+| Diacritics | Conventional, with real tooling | Not conventional. `[R-35]`'s full-harakat requirement has far less to imitate |
+| Root-indexed dictionary | Hans Wehr — the grounding `[R-18]` depends on | **No equivalent.** Colloquial dictionaries exist; a root-indexed authority of that standing does not |
+| Azure assessment | `ar-SA` | `ar-EG` — equally supported |
+| TTS | `ar-SA` voices | `ar-EG` voices exist, but they read *MSA orthography with an Egyptian accent*; how they handle colloquial spelling is **untested — verify by ear before trusting it** |
+
+So the register shift **helps** media supply, listening relevance, and eventual conversation, and **hurts** generated-text reliability, diacritisation confidence, and — most sharply — verifiability, because `[R-18]`'s dictionary lookup is the one check in §6 that is cheap and definitive, and it does not exist for colloquial. Shifting register removes the cheapest verification tool at the same moment it makes the output harder to verify.
+
+**Consequence for sequencing.** §6.6's measurement should exist before Egyptian becomes the generation default, not after. Flipping first would make the least-checked path also the highest-volume one — precisely the pattern §6.6 was written about. The Settings default therefore stays MSA, one tap from Egyptian, with the caveat shown in the app; flip it once flag data (`[R-48]`) shows what the error rate actually is.
+
+**`[R-52]`** Every content-producing and speech-consuming call MUST carry the register of the content it concerns, rather than reading a single global locale. A card's register determines its voice and its assessment locale.
+
+**What would settle the TTS half:** an A/B of `ar-EG-ShakirNeural` against `ar-SA-HamedNeural` on the same diacritized words, using the existing voice-check button. If the Egyptian voice honours harakat where the Saudi one ignores them (§7.5.1), that is a real gain and should be recorded there. It is a ten-minute test and nobody has run it.
+
 **Evidence caveat.** Al-Batal's own volume notes little empirical research exists on integration effectiveness. This rests on expert consensus and one comparative study. **What would change it:** interference rather than reinforcement, detectable by comparing retention curves across the two register tags — which `[R-30]` makes measurable *(once dialect content exists; see above)*.
 
 ### 11.2 Diacritics → Three-stage fade at the display layer
@@ -915,6 +963,9 @@ Not pending decisions — questions only answerable by running the system.
 | Tier 1 speech before Tier 2 | Prove the learner will speak aloud before investing further |
 | Egyptian integrated from Phase 1 | Integration appears not to cost MSA outcomes; media footprint; Azure covers `ar-EG` |
 | Machine assesses MSA, human assesses dialect | No automated path exists for dialect speech |
+| Egyptian is the target register; MSA stays the generation default until error rates are measured | Egyptian has the media the pipeline needs, but is thinner and less standardised in writing and has no root-indexed dictionary to check against (§11.1.1) |
+| Register travels with the content, not as a global setting | A card's own register has to pick its voice and its assessment locale (`[R-52]`) |
+| Verification is a ladder, not an ensemble | Deterministic checks and dictionary lookups beat model votes; models converge confidently on the same wrong diacritics (§6.7) |
 | Register tagged on every card | The risk is not learning two registers — it is not knowing which is which |
 | Diacritics fade at display layer only | Data must stay diacritized; fading stays free and reversible |
 | Fade triggered by retention, not calendar | Tracks mastery rather than elapsed time |

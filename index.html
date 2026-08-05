@@ -230,6 +230,12 @@
           font-size:12.5px;font-weight:600;padding:7px 11px;cursor:pointer;display:flex;align-items:center;gap:3px;white-space:nowrap}
   .nw-add svg{width:14px;height:14px}
   .nw-lib{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .nw.flagged{opacity:.6;border:1px solid rgba(193,89,46,.4)}
+  .nw-flag{color:var(--coral);font-size:11px;margin-top:3px}
+  .nw-bad{background:none;border:1px solid var(--surface-lt);color:var(--muted);border-radius:8px;
+          font-size:12px;padding:6px 9px;cursor:pointer;white-space:nowrap}
+  .nw-bad.on{color:var(--coral);border-color:rgba(193,89,46,.5)}
+  .unver{color:var(--amber);font-weight:700;margin-left:2px;cursor:help}
   .nw-lib .nw-txt{min-width:0}
   .ans .a3{font-family:var(--arabic);font-size:21px;direction:rtl;margin-top:18px}
   .ans .a4{color:var(--muted);font-size:12px;margin-top:4px}
@@ -754,24 +760,25 @@ var AUDIO_MISSING = {};
 var audioEl = null;
 function letterSrc(id){ return 'audio/letters/'+LETTER_META[id].key+'.mp3'; }
 function wordSrc(w){ return 'audio/words/'+w.a+'.mp3'; }
-function playAudio(src, text){
-  if(AUDIO_MISSING[src]){ if(text) speakText(text); return; }   /* known-missing → synthetic */
+function playAudio(src, text, reg){
+  if(AUDIO_MISSING[src]){ if(text) speakText(text, reg); return; }   /* known-missing → synthetic */
   if(!audioEl) audioEl = new Audio();
   var fail = function(){
     if(!AUDIO_MISSING[src]){ AUDIO_MISSING[src]=true; saveMissing(); }
-    if(text){ speakText(text); } else render();
+    if(text){ speakText(text, reg); } else render();
   };
   audioEl.onerror = fail;
   audioEl.src = src;
   var p = audioEl.play();
   if(p && p.catch) p.catch(fail);
 }
-function playBtn(src, text){
+function playBtn(src, text, reg){
   var miss = AUDIO_MISSING[src], canSay = !!text && !!S.settings.tts, muted = miss && !canSay;
   var title = muted ? 'no recording yet — see Settings → Audio coverage'
             : (miss ? 'synthetic voice — no human recording yet' : 'play recording');
   return '<button class="playbtn'+(muted?' miss':'')+(miss&&canSay?' syn':'')+'" data-play="'+src+'"'
        + (text?' data-say-fb="'+esc(text)+'"':'')
+       + (reg?' data-say-reg="'+esc(reg)+'"':'')
        + ' title="'+title+'">'+svg(IC.spk)+'</button>';
 }
 /* Synthetic speech (§7, amended [R-24]) — always a fallback, never the gold standard.
@@ -880,7 +887,7 @@ function ttsTest(){
     ttsLast = {via:'test', detail:'Playing '+(i+1)+' / '+items.length+': '+text}; render();
     if(azure){
       fetch(base+'/tts',{method:'POST',headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
-        body:JSON.stringify({text:text})})
+        body:JSON.stringify({text:text, register:S.settings.target||'msa'})})
         .then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+' '+t.slice(0,80)); }); return r.blob(); })
         .then(function(b){
           if(!live()) return;        /* stopped while the fetch was in flight */
@@ -897,7 +904,9 @@ function ttsTest(){
   }
   step();
 }
-function speakText(text){
+/* `reg` is the card's register: an Egyptian word read in a Saudi voice teaches the
+   wrong pronunciation, so the register travels with the text (§11.1). */
+function speakText(text, reg){
   if(!S.settings.tts || !text) return;
   /* Whatever is speaking now loses to what was just asked for — including a
      running voice check, and including this word's own earlier request. */
@@ -915,7 +924,7 @@ function speakText(text){
     if(ttsCache[text]){ playTtsUrl(ttsCache[text]); done('azure','Azure neural voice (cached)'); return; }
     fetch(CFG.url.replace(/\/+$/,'')+'/tts', {method:'POST',
       headers:{'Authorization':'Bearer '+CFG.token,'Content-Type':'application/json'},
-      body:JSON.stringify({text:text})})
+      body:JSON.stringify({text:text, register:reg||'msa'})})
       .then(function(r){
         if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+(t?': '+t.slice(0,140):'')); });
         return r.blob();
@@ -1057,6 +1066,8 @@ function mergeStates(a,b){
   m.speech = unionByKey(a.speech, b.speech, function(at){ return at.k || JSON.stringify(at); });
   /* (t, id) is unique: one card can't be graded twice in the same millisecond */
   m.log = unionByKey(a.log, b.log, function(e){ return e.t+'|'+e.id; })
+            .sort(function(x,y){ return x.t-y.t; });
+  m.flags = unionByKey(a.flags, b.flags, function(e){ return e.t+'|'+e.id; })
             .sort(function(x,y){ return x.t-y.t; });
   /* Ingested content: union by id, but MERGE the entry when both sides have it
      — keeping only the first copy meant an opt-in performed on the other
@@ -1261,7 +1272,8 @@ function toggleMic(cardId){
     var source = ac.createMediaStreamSource(stream);
     var proc = ac.createScriptProcessor(4096, 1, 1);
     var mute = ac.createGain(); mute.gain.value = 0;   // capture without audible feedback
-    REC = {cardId:cardId, stream:stream, expected:expectedFor(card), ac:ac, source:source, proc:proc, chunks:[]};
+    REC = {cardId:cardId, stream:stream, expected:expectedFor(card), register:(card.d&&card.d.reg)||'msa',
+           ac:ac, source:source, proc:proc, chunks:[]};
     proc.onaudioprocess = function(ev){
       if(REC) REC.chunks.push(new Float32Array(ev.inputBuffer.getChannelData(0)));
     };
@@ -1289,7 +1301,7 @@ function finishMic(){
   fetch(CFG.url.replace(/\/+$/,'')+'/assess', {
     method:'POST',
     headers:{'Authorization':'Bearer '+CFG.token, 'Content-Type':'application/json'},
-    body: JSON.stringify({expected:r.expected, audio:wav.b64,
+    body: JSON.stringify({expected:r.expected, audio:wav.b64, register:r.register||'msa',
                           contentType:'audio/wav; codecs=audio/pcm; samplerate=16000', coach:true})
   }).then(function(res){
     if(!res.ok) return res.json().then(function(j){ throw new Error(j.error||('backend said '+res.status)); },
@@ -1339,6 +1351,7 @@ function ensureShape(st){
   if(!st.setT) st.setT = {};          /* per-setting last-change ms, for the sync merge */
   if(!st.log) st.log = [];            /* append-only review log [R-32] */
   if(!st.speech) st.speech = [];      /* append-only speech attempts [R-32] */
+  if(!st.flags) st.flags = [];        /* append-only "this word is wrong" reports [R-48] */
   /* Per-card harakat pin [R-36]. Stored as {id:{v:0|1,t:ms}} so an UNpin is a
      real event that survives a sync — the old {id:true} shape had no way to
      express "no longer pinned", so a union merge re-pinned it forever. */
@@ -1388,6 +1401,15 @@ function mountUserCards(){
       root:w.root||'', rootMeaning:w.root_meaning||'', source:w.source_title, source_ref:w.source_ref}});
   });
 }
+/* Which register the content pipeline writes in. Egyptian is where the media the
+   learner actually consumes lives (§11.1), so it's a first-class choice rather than
+   a hardcoded 'MSA'. It is deliberately NOT the default yet: generated Egyptian is
+   harder to check, not easier — colloquial spelling is unstandardised, diacritics
+   are not conventional for it, and the root-indexed dictionary that [R-18] leans on
+   is an MSA reference. Flipping this before the verification in §6.6 exists makes
+   the least-checked path also the most-used one. */
+function targetRegister(){ return S.settings.target === 'egy' ? 'egy' : 'msa'; }
+function targetRegisterName(){ return targetRegister() === 'egy' ? 'Egyptian Arabic (colloquial)' : 'MSA'; }
 /* Learner profile for /generate — what makes output personal (§5.3). */
 function learnerProfile(){
   var words=[], roots={};
@@ -1397,7 +1419,8 @@ function learnerProfile(){
        is how graded output drifts above the learner's real level. */
     if(c.type==='vocab' && retained(c.id)){ words.push(c.d.ar); if(c.d.root) roots[c.d.root]=1; }
   });
-  return {known_words:words.slice(0,60), known_roots:Object.keys(roots), register:'MSA', target_new_words:5};
+  return {known_words:words.slice(0,60), known_roots:Object.keys(roots),
+          register: targetRegisterName(), target_new_words:5};
 }
 var tab = 'home';
 var progSub = '';       /* Progress sub-page: '' | 'letters' | 'roadmap' */
@@ -1607,7 +1630,7 @@ function viewVocab(){
         out += '<div class="word"><div><div class="w-ar">'+w.ar+'</div>'
              + '<div class="w-en">'+esc(w.t)+' \u00b7 '+esc(w.en)+' '+regTag(w.reg)+'</div></div>'
              + '<div style="display:flex;align-items:center;gap:8px">'
-             +   playBtn(wordSrc(w), w.ar)
+             +   playBtn(wordSrc(w), w.ar, w.reg)
              +   '<span class="pill" style="color:'+PILL[0]+';background:'+PILL[1]+'">'+st+'</span>'
              + '</div></div>';
       });
@@ -1678,6 +1701,7 @@ function viewSettings(){
   return '<h1 class="tt">Settings</h1>'
        + '<p class="sub">Syncing, how words are shown, and voice. Nothing here leaves your device except sync, which talks only to your own backend.</p>'
        + syncCard()
+       + registerCard()
        + diacriticCard()
        + readingCard()
        + ttsCard()
@@ -1726,6 +1750,29 @@ function ttsCard(){
         + (ttsTesting ? '■ Stop the voice check' : '▶ Test the voice — 3 words + a sentence')+'</button>'
         + (ttsLast?'<div class="tts-status '+(ttsLast.via==='azure'||ttsLast.via==='device'?'ok':'warn')+'">Last played via: '+esc(ttsLast.detail||ttsLast.via)+'</div>':'')
       :'')
+    + '</div>';
+}
+/* Target register for new generated content. Existing cards keep their own tag
+   [R-30] — this only decides what the pipeline writes next. */
+function registerCard(){
+  var t = targetRegister();
+  var opt = function(v,label,sub){
+    return '<button class="diac-opt'+(t===v?' on':'')+'" data-target="'+v+'">'
+         + '<span class="diac-l">'+label+'</span><span class="diac-s" style="font-family:var(--body);font-size:11.5px;max-width:150px;text-align:right">'+sub+'</span></button>';
+  };
+  return '<div class="card" style="padding:16px;margin-top:12px">'
+    + '<div style="font-size:13px;font-weight:600">Register for new content</div>'
+    + '<p class="sub">Which Arabic the content pipeline writes when you bring in an article. '
+    + 'Cards you already have keep the register they were made with.</p>'
+    + '<div class="diac-opts">'
+    +   opt('msa','Modern Standard', 'what gets written and broadcast')
+    +   opt('egy','Egyptian', 'what people actually speak; most media')
+    + '</div>'
+    + (t==='egy'
+        ? '<div class="tts-status warn">Egyptian generation is less reliable than MSA: colloquial spelling isn’t '
+          + 'standardised, vowel marks aren’t conventional for it, and the root dictionary that would catch a bad '
+          + 'root is an MSA reference. Check what comes out, and flag anything wrong.</div>'
+        : '')
     + '</div>';
 }
 function diacriticCard(){
@@ -1795,14 +1842,37 @@ var libTr = false;   /* passage reading+meaning panel open */
 function wordsForPassage(pid){ return (S.userCards||[]).filter(function(w){ return w.passage===pid; }); }
 function addWordToReviews(uid){
   var w = (S.userCards||[]).filter(function(x){return x.id===uid;})[0];
-  if(!w) return;
+  if(!w || w.flagged) return;
   w.inReview = true; mountUserCards(); persist(); syncNow(); render();
 }
 function addPassageToReviews(pid){
-  wordsForPassage(pid).forEach(function(w){ w.inReview = true; });
+  /* a word reported wrong stays out — "add all" must not quietly undo a flag */
+  wordsForPassage(pid).forEach(function(w){ if(!w.flagged) w.inReview = true; });
   mountUserCards(); persist(); syncNow(); render();
 }
 function normKey(s){ return String(s).replace(/[ً-ْٰـ]/g,'').replace(/[^ء-ي]/g,''); }
+/* [R-48] — the measurement that Step 10's "do this if measured error rates warrant"
+   is gated on. Nothing measured generation accuracy, so that gate could never open.
+   One tap, recorded append-only [R-32]; a flagged word is also pulled back out of
+   the review deck, because the cost of a wrong card is that spaced repetition makes
+   it permanent. */
+function flagWord(uid){
+  var w = (S.userCards||[]).filter(function(x){return x.id===uid;})[0];
+  if(!w) return;
+  w.flagged = !w.flagged;
+  if(w.flagged) w.inReview = false;
+  if(!S.flags) S.flags = [];
+  S.flags.push({t:Date.now(), d:today(), id:uid, ar:w.ar, reg:w.reg||'msa',
+                src:w.source_ref||'', on:!!w.flagged});
+  mountUserCards(); persist(); syncNow(); render();
+}
+/* Every generated word carries a model's claim about its root. Curated roots were
+   hand-checked; these were not, and §6.5 says a root belongs in a dictionary lookup,
+   not a model's confidence. Until that lookup exists they are marked unverified. */
+function rootNote(w){
+  if(!w.root) return '';
+  return ' · root ' + esc(w.root) + '<span class="unver" title="stated by the model that wrote this word — not checked against a dictionary">?</span>';
+}
 function viewLibrary(){
   if(libView) return libraryDetail(libView);
   var out = '<h1 class="tt">Library</h1>';
@@ -1852,16 +1922,21 @@ function libraryDetail(pid){
          + (p.grammar?'<div class="p-gr">'+esc(p.grammar)+'</div>':'');
   }
   out += '<div class="nw-h">New words <span class="sub" style="font-weight:400">('+words.length+')</span></div>';
-  var pending = words.filter(function(w){return !w.inReview;}).length;
+  var pending = words.filter(function(w){return !w.inReview && !w.flagged;}).length;
   if(pending) out += '<button class="btn-gold" data-act="lib-add-all" data-pid="'+esc(pid)+'" style="margin:4px 0 10px">Add all '+pending+' to my reviews</button>';
   words.forEach(function(w){
-    out += '<div class="nw nw-lib"><div class="nw-txt"><div><span class="nw-ar">'+esc(w.ar)+'</span> '
+    out += '<div class="nw nw-lib'+(w.flagged?' flagged':'')+'"><div class="nw-txt"><div><span class="nw-ar">'+esc(w.ar)+'</span> '
          + (S.settings.trDefault?'<span class="nw-tr">'+esc(w.translit)+'</span>':'')+'</div>'
-         + '<div class="nw-en">'+esc(w.en)+(w.root?' · root '+esc(w.root):'')+'</div></div>'
-         + (w.inReview
-             ? '<div class="nw-in">✓ in reviews</div>'
-             : '<button class="nw-add" data-act="lib-add-word" data-uid="'+esc(w.id)+'">'+svg(IC.plus)+' add</button>')
-         + '</div>';
+         + '<div class="nw-en">'+esc(w.en)+rootNote(w)+'</div>'
+         + (w.flagged?'<div class="nw-flag">flagged as wrong — kept out of reviews</div>':'')
+         + '</div>'
+         + '<div style="display:flex;align-items:center;gap:6px">'
+         +   (w.flagged ? ''
+               : w.inReview ? '<div class="nw-in">✓ in reviews</div>'
+               : '<button class="nw-add" data-act="lib-add-word" data-uid="'+esc(w.id)+'">'+svg(IC.plus)+' add</button>')
+         +   '<button class="nw-bad'+(w.flagged?' on':'')+'" data-act="lib-flag" data-uid="'+esc(w.id)+'" title="'
+         +     (w.flagged?'undo — put this back':'report this word as wrong')+'">'+(w.flagged?'undo':'⚑')+'</button>'
+         + '</div></div>';
   });
   return out;
 }
@@ -1963,7 +2038,7 @@ function materialize(){
     /* saved to the Library, NOT the review deck — the learner opts them in later (#3) */
     S.userCards.push({id:'u-'+stamp+'-'+i, passage:pid, inReview:false,
       ar:w.ar, translit:w.translit||'', en:w.en||'',
-      root:w.root||'', root_meaning:w.root_meaning||'', reg:'msa',
+      root:w.root||'', root_meaning:w.root_meaning||'', reg:targetRegister(),
       source_title:ing.title, source_ref:ing.source_ref, added:today()});
     n++;
   });
@@ -2034,7 +2109,7 @@ function renderOverlay(){
       + '<div class="q-word">'+sd.ar+'</div>'
       + '<div class="ans"><div class="a1">'+esc(sd.t)+'</div><div class="a2">'+esc(sd.en)+'</div>'
       + speakPrompt()
-      + '<div class="ab-row">'+playBtn(wordSrc(sd), sd.ar)+micBtn(sc.id)+'</div>'
+      + '<div class="ab-row">'+playBtn(wordSrc(sd), sd.ar, sd.reg)+micBtn(sc.id)+'</div>'
       + t1Line(sc.id)
       + '</div>';
     var sfoot = '<div class="grades" style="grid-template-columns:repeat(2,1fr)">'
@@ -2068,7 +2143,7 @@ function renderOverlay(){
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
         + '<div class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+(showFull?d.ar:arDisplay(d.ar,vstage))+'</div>'
         + (showFull ? '' : '<div class="fade-hint" data-vowels="1">'+(vstage==='bare'?'no vowel marks':'vowels faded')+' — tap to reveal</div>')
-        + '<div class="ab-row">'+playBtn(wordSrc(d), d.ar)+'</div>'   /* audio on both sides */
+        + '<div class="ab-row">'+playBtn(wordSrc(d), d.ar, d.reg)+'</div>'   /* audio on both sides */
         + (sess.show ? '<div class="ans"><div class="a1">'+esc(d.en)+'</div>'
             + (trShown() ? '<div class="a2 tr-read">'+esc(d.t)+'</div>' : '')
             + (d.source?'<div class="prov">from '+esc(d.source)+'</div>':'')
@@ -2136,11 +2211,12 @@ document.addEventListener('click', function(e){
     cardMenu = false; persist(); render(); return;
   }
   if((el = e.target.closest('[data-diac]'))){ setPref('diacritics', el.dataset.diac); render(); return; }
+  if((el = e.target.closest('[data-target]'))){ setPref('target', el.dataset.target); render(); return; }
   if((el = e.target.closest('[data-set]'))){ var k=el.dataset.set; setPref(k, !S.settings[k]); render(); return; }
-  if((el = e.target.closest('[data-say]'))){ speakText(el.dataset.say); if(el.dataset.selword!==undefined){ libSel = libSel===el.dataset.selword ? null : el.dataset.selword; render(); } return; }
+  if((el = e.target.closest('[data-say]'))){ speakText(el.dataset.say, el.dataset.sayReg); if(el.dataset.selword!==undefined){ libSel = libSel===el.dataset.selword ? null : el.dataset.selword; render(); } return; }
   if((el = e.target.closest('[data-tr-lib]'))){ libTr = !libTr; render(); return; }
   if((el = e.target.closest('[data-mic]'))){ toggleMic(el.dataset.mic); return; }
-  if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play, el.dataset.sayFb); return; }
+  if((el = e.target.closest('[data-play]'))){ playAudio(el.dataset.play, el.dataset.sayFb, el.dataset.sayReg); return; }
   if((el = e.target.closest('[data-gs]'))){ gradeSpeak(parseInt(el.dataset.gs,10)); return; }
   if((el = e.target.closest('[data-g]'))){ grade(parseInt(el.dataset.g,10)); return; }
   if((el = e.target.closest('[data-flip]'))){
@@ -2166,6 +2242,7 @@ document.addEventListener('click', function(e){
     else if(a==='lib-open'){ libView=el.dataset.pid; libSel=null; libTr=false; render(); }
     else if(a==='lib-back'){ libView=null; libSel=null; libTr=false; render(); }
     else if(a==='lib-add-word'){ addWordToReviews(el.dataset.uid); }
+    else if(a==='lib-flag'){ flagWord(el.dataset.uid); }
     else if(a==='lib-add-all'){ addPassageToReviews(el.dataset.pid); }
     else if(a==='ing-open') openIngest();
     else if(a==='ing-run') runIngest();
