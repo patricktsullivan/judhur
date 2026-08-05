@@ -350,7 +350,27 @@
    Judhūr — standalone Arabic study app
    Single file. No build step. Open in any browser.
    Progress saves to localStorage; falls back to memory if blocked.
+
+   Copyright (C) 2026  Patrick Sullivan
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Affero General Public License as published
+   by the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Affero General Public License for more details.
+
+   You should have received a copy of the GNU Affero General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
    ============================================================ */
+
+/* AGPL §13: anyone who runs a modified copy where others can reach it must
+   offer those users its source. A visible link is the way this app does that.
+   IF YOU FORK AND DEPLOY A CHANGED VERSION, POINT THIS AT YOUR OWN REPOSITORY. */
+var SOURCE_URL = 'https://github.com/patricktsullivan/judhur';
 
 /* ---------- storage (graceful fallback) ---------- */
 var KEY = 'judhur-v1';
@@ -1662,7 +1682,24 @@ function viewSettings(){
        + readingCard()
        + ttsCard()
        + covCard()
+       + licenseCard()
        + '<button class="reset" data-act="reset" style="margin-top:16px">Reset all progress</button>';
+}
+/* AGPL §13 compliance, and the plainest place to say what the licence means:
+   free to use, free to copy, and any changed copy anyone puts online has to
+   come with its source on the same terms. */
+function licenseCard(){
+  return '<div class="card" style="padding:16px;margin-top:12px">'
+    + '<div style="font-size:13px;font-weight:600">Source &amp; licence</div>'
+    + '<p class="sub">Judhūr is free software under the GNU Affero General Public Licence v3. '
+    + 'You can use it, copy it, and change it. Anyone who publishes a changed version — including '
+    + 'running it on a website — has to release their source under this same licence, so it stays '
+    + 'free for everyone downstream. It comes with no warranty.</p>'
+    + '<p class="sub" style="margin-top:8px"><a href="'+esc(SOURCE_URL)+'" target="_blank" rel="noopener" '
+    + 'style="color:var(--teal)">Source code</a> · '
+    + '<a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener" '
+    + 'style="color:var(--teal)">the licence in full</a></p>'
+    + '</div>';
 }
 function readingCard(){
   var on = !!S.settings.trDefault;

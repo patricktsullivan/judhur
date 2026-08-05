@@ -20,7 +20,8 @@ install.
 
 **Licensing.** All three families are under the SIL Open Font License 1.1
 (`OFL.txt`), which permits redistribution. They are not covered by the
-repository's MIT license.
+repository's AGPL-3.0 licence and keep their own terms; the OFL is compatible with
+shipping them alongside AGPL software.
 
 **Updating.** `node tools/sync-fonts.mjs` refetches from Google Fonts and
 rewrites the `@font-face` block in `index.html`. It is the only tool in this

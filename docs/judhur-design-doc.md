@@ -2,7 +2,7 @@
 
 **A personal Arabic learning system for a native English speaker with ADHD, built around root-family vocabulary and personally meaningful input.**
 
-Version 0.13 · August 2026 *(0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists; 0.12 adds §7.5.1, measured Azure TTS limits + pausal decision, and refreshes §3 to the current build; 0.13 corrects claims this document made about its own implementation — see below)*
+Version 0.14 · August 2026 *(0.14 amends [R-24] again — synthetic audio is the shipped path and human recordings move to a later version; adds [R-51], gender coverage in vocabulary; relicenses to AGPL-3.0. 0.6 adds §11.7, the sharing model; 0.7 amends [R-34] — building may run ahead of usage, [R-38] remains the hard stop; 0.8 adds §11.8, Chromium-first platform support; 0.9 adds §11.9, free-first cost policy + Tier 1 ASR choice; 0.10 adds §11.10, letters recognition-only + standalone words-only speaking; 0.11 amends [R-24] — labeled synthetic audio may fill in until a human recording exists; 0.12 adds §7.5.1, measured Azure TTS limits + pausal decision, and refreshes §3 to the current build; 0.13 corrects claims this document made about its own implementation — see below)*
 
 **0.13 is a correction pass, not new design.** An outside review (`docs/review-2026-08.md`) found several places where this document described requirements as met that were not, and one place where it asserted something factually untrue about its own protocol. Those are corrected in place, and where a fix landed in code the section says so. The substantive changes: §3 and §10 no longer overstate what is built; §11.3 and §14 no longer claim that delaying the reviewer search costs no data (it currently costs data, because no audio is retained); §7.5 records the TTS engine actually in use; §2.4 gets the evidence caveat §2.3 already had; §8 and §11.1 are marked descriptive rather than built; the word count is corrected from 146 to 118. **No requirement was weakened to match the implementation.** Where the two disagreed, the requirement stands and the gap is named.
 
@@ -79,6 +79,24 @@ Arabic words derive from three-consonant roots carrying a core meaning, reshaped
 **`[R-3]`** Roots MUST be a first-class entity in the data model, not a tag on a word. Vocabulary is browsed, introduced, and reviewed by family.
 
 **`[R-4]`** When selecting new vocabulary to introduce, the system MUST prefer words derived from roots the learner already knows.
+
+### 2.3.1 Gender coverage `[PENDING]` *(added v0.14 — owner note)*
+
+Arabic marks gender pervasively: on verbs, adjectives, pronouns, and many nouns. The current deck cites every verb in the past third-person **masculine** singular — كَتَبَ "he wrote" — because that is the conventional dictionary citation form. That convention is a lexicographer's, and adopting it wholesale has two costs the deck should not silently absorb:
+
+1. **A learner who only ever sees the masculine cannot produce or recognise the feminine**, which is not an edge case — it is half of ordinary speech, and it is how the learner will refer to a great many people including, potentially, themselves.
+2. **It is silently a choice.** Nothing on the card says "this is the masculine form"; it just says "he wrote," and the feminine is absent rather than deferred.
+
+**`[R-51]`** Vocabulary MUST cover gendered forms rather than defaulting to the masculine citation form alone, and each card MUST make its own gender explicit rather than leaving it implied by the English gloss.
+
+Open design questions, deliberately not resolved here:
+
+- **Card shape.** One card per form (كَتَبَ / كَتَبَتْ as separate cards), or one card showing the pair? Separate cards double the review load on a deck already gated at 12 a day; a paired card teaches the alternation, which is the actual thing to learn, but is harder to grade with a single Again/Hard/Good/Easy.
+- **Scope.** Verbs are the clearest case. Adjectives and nouns (مُعَلِّم / مُعَلِّمَة) matter too. Pronouns and full conjugation belong to Phase 2 (§8) — this requirement is about the vocabulary deck, not about teaching conjugation early.
+- **Existing progress.** 118 cards already carry review history keyed to stable ids ([R-50]). Adding feminine forms as new cards preserves that; restructuring existing cards into pairs does not, and would need a migration.
+- **Beyond binary.** Arabic grammatical gender is binary and there is no non-binary verb form to teach; the honest framing is that this covers the grammar as it exists rather than implying the language offers a neutral option it doesn't. Where the app writes *about* the learner or a third party in English — glosses, coaching text, UI copy — it should not assume gender.
+
+**Next step:** decide the card shape before adding content, since the choice is expensive to reverse once feminine cards carry review history.
 
 *Sources:* blog.goavena.com; arabify.org; blog.alifbee.com; arabiclearningcentre.com.
 
@@ -185,9 +203,9 @@ A progressive web app delivers a home-screen icon, full-screen chrome, and offli
 
 **`[R-12]`** TTS audio for fixed core content (letters, known vocabulary) MUST be pre-generated and cached on device. Hearing a word is part of the study loop, not an enhancement.
 
-> **Unmet as of v0.13.** Nothing is pre-generated. There are no human recordings, and synthetic speech is either fetched live from the backend per word or spoken by the device's own voice — so offline, on a device with no Arabic system voice, there is no audio at all. The README's "check recordings once while online and the whole loop works in airplane mode" describes a mechanism that currently pulls 146 files that do not exist.
+> **Unmet, and now the top of the build queue** *(v0.14)*. Nothing is pre-generated. Synthetic speech is either fetched live from the backend per word or spoken by the device's own voice — so offline, on a device with no Arabic system voice, there is no audio at all.
 >
-> **The cheap fix serves three requirements at once:** generate the 146 clips once against the maintainer's Azure account, commit them as ordinary files labeled synthetic, and let the existing human-recording override replace them one at a time as §12 delivers. That satisfies `[R-12]`, un-degrades the free path under `[R-45]` (§11.9), and makes the offline claim true — for a few MB and no new architecture. It is deliberately *not* a per-learner runtime cost: the clips are fixed content, which is what this requirement says.
+> With `[R-24]` amended, this is no longer waiting on anyone. Generate the 146 clips once against the maintainer's Azure account, commit them as ordinary files labeled synthetic, ship them. That satisfies this requirement, un-degrades the free path under `[R-45]` (§11.9), and makes the offline claim true — a few MB and no new architecture. The clips are fixed content generated once, not a per-learner runtime cost, which is exactly what this requirement asks for. `[R-24b]`'s drop-in override means a human recording can replace any clip later without a code change.
 
 Network is required only for ingestion, generation, and assessment of the learner's own speech.
 
@@ -410,7 +428,17 @@ Arabic ASR is also weaker than English ASR. As of July 2026, Cohere's open-sourc
 
 **None of the four was adopted** *(recorded v0.13; the table above had been left standing as though the choice were open)*. The build uses **Azure Neural TTS (`ar-SA-HamedNeural`)**, on §11.9's reasoning rather than this table's: the synthetic voice is a stopgap until human recordings exist, and reusing the Speech resource the learner already needs for Tier 2 beats adding a vendor for a stopgap. The four options above remain the shortlist if synthetic audio ever becomes something other than a placeholder — Habibi in particular, if dialect coverage arrives with §11.1. Measured behavior of the voice actually in use is §7.5.1.
 
-**`[R-24]`** *(amended v0.11)* Recorded human audio remains the **gold standard** for the 28 letters and core vocabulary — pharyngeal and uvular consonants are where synthesis is least trustworthy and what the learner most needs to imitate. Source from Common Voice Arabic or record with a native speaker. When a human recording does **not yet exist**, the app MAY fall back to synthetic speech so a word is still audible, provided it is **clearly labeled synthetic** and is always superseded by the human clip once recorded. The fallback uses the learner's configured Azure neural voice when available, or the device's own Arabic voice (Web Speech API — free, offline) otherwise. Synthetic audio is never sent to the tutor calibration pool (§11.3) as a reference.
+**`[R-24]`** *(amended v0.14 — owner decision)* **Synthetic audio is the shipped path.** Every letter and core word MUST have a pre-generated clip committed to the repository, clearly labeled synthetic. Recorded human audio is **deferred to a later version** and is no longer a dependency of any current build step.
+
+The v0.11 wording had this backwards. It made human recordings the requirement and synthetic speech a temporary fallback "until a human recording exists" — which meant every day without a native speaker was a day the audio requirement went unmet, and 146 empty slots sat in the repo waiting on a person nobody had found yet. Sourcing a speaker is a months-scale task with no committed timeline; making the audio loop depend on it was a standing bet that the project could not collect on.
+
+What is unchanged is *why* human recordings are wanted: pharyngeal and uvular consonants (ح ع خ غ ق) are where synthesis is least trustworthy and where imitation matters most, and §7.5.1 records real limits in the voice actually available. Those remain true. They are reasons to schedule recordings later, not reasons to ship nothing now.
+
+**`[R-24a]`** Synthetic clips MUST be labeled synthetic wherever they play, and MUST NOT be sent to the tutor calibration pool (§11.3) as a reference.
+
+**`[R-24b]`** The audio layer MUST keep the drop-in override: a human recording at the same path supersedes the synthetic clip with no code change. Deferring recordings must not mean designing them out.
+
+**When to revisit:** when a native speaker is actually engaged (§12), or when a materially better Arabic voice is available — the §7.5 shortlist, re-tested. Not before; and no build step blocks on it.
 
 #### 7.5.1 Implemented behavior and its limits (v0.12)
 
@@ -548,7 +576,7 @@ Each step must be independently usable. Nothing depends on a later step to deliv
 | Step | Deliverable | Status |
 |---|---|---|
 | **1** | v0 HTML in daily use | ✅ Built |
-| **2** | Content expansion: all letter forms, ~30 root families, recorded core audio | ◑ Partial — 28 letters × 4 forms, 118 words across 37 roots. **No audio files exist**, so `[R-12]` is unmet; every word falls back to synthetic. Previously marked ✅ with the audio treated as a HUMAN-track footnote, which understated it: recorded core audio is in the step's own title. |
+| **2** | Content expansion: all letter forms, ~30 root families, **pre-generated core audio** | ◑ Partial — 28 letters × 4 forms, 118 words across 37 roots. **No audio files exist**, so `[R-12]` is unmet. Step title amended v0.14: the deliverable is 146 committed clips, synthetic per `[R-24]`, which depends on nobody. Gender coverage (`[R-51]`) is open content work under this step. |
 | **3** | PWA | ✅ Built — installable, offline study, service worker, self-hosted fonts. iOS best-effort per §11.8. *Offline **audio** depends on step 2's missing clips.* |
 | **4** | Backend skeleton + `/state` | ✅ Built — no key in client (grep-verifiable); cross-device sync; graceful offline degradation; deploys from the repo with keys as Secrets ([R-41]). |
 | **5** | Tier 1 intelligibility | ✅ Built — WAV mic capture on Chrome; Whisper round-trip; understood/not-understood, never a score. |
@@ -837,7 +865,7 @@ Ordinary criteria, plus:
 - **Egyptian dialect** (§11.1), with enough MSA to explain the relationship between the two
 - **Comfortable with a self-directed learner** — the curriculum is set; they supplement it rather than replacing it
 - **Willing to work on prosody explicitly** (§11.5), since no automated path exists and this is where a human is most valuable
-- **Willing to record audio**, if core recordings are still needed for `[R-24]`
+- **Willing to record audio** — *nice to have, not a screening criterion since v0.14. The app ships synthetic clips ([R-24]), so recordings are an upgrade to schedule once someone is engaged, not a gap to hire against.*
 
 ### 12.6 Cost
 
@@ -880,7 +908,9 @@ Not pending decisions — questions only answerable by running the system.
 | Speaking is a standalone, words-only activity; letters recognition-only | Isolated letters don't round-trip through ASR; recognition is the goal for the alphabet (§11.10) |
 | Assessment tuned toward precision | False rejects destroy trust and compound with `[R-8]` |
 | Phoneme model detects, LLM explains | A text model asked to judge audio confabulates fluently |
-| Recorded audio for core, TTS for generated | Synthesis is least trustworthy on the pharyngeals |
+| Ship synthetic clips now; human recordings later | Amended v0.14. Synthesis is still least trustworthy on the pharyngeals, but making the audio loop wait on a speaker nobody had found meant shipping no audio at all ([R-24]) |
+| Vocabulary covers gendered forms, not just the masculine citation form | The dictionary convention makes half of ordinary speech invisible, and does so silently ([R-51]) |
+| AGPL-3.0, not a permissive licence | Every fork and every hosted copy stays free and open; §13 closes the host-it-without-releasing loophole (§11.7) |
 | Automated feedback limited to segmental accuracy | Corpora are recitation-register; prosody would not transfer |
 | Tier 1 speech before Tier 2 | Prove the learner will speak aloud before investing further |
 | Egyptian integrated from Phase 1 | Integration appears not to cost MSA outcomes; media footprint; Azure covers `ar-EG` |

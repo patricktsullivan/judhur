@@ -1,4 +1,11 @@
 /* Judhūr backend — Cloudflare Worker.
+
+   Copyright (C) 2026  Patrick Sullivan
+   Licensed under the GNU Affero General Public License v3 or later.
+   This program comes with ABSOLUTELY NO WARRANTY. See the LICENSE file at the
+   repository root, or <https://www.gnu.org/licenses/>. If you deploy a modified
+   copy that others can reach, you must offer them its source (AGPL §13).
+
    Step 4: /state (GET/PUT learner profile).
    Step 5: /assess — Tier 1 intelligibility via Workers AI Whisper
      (task:"transcribe", language:"ar" — §11.9). Returns understood/not

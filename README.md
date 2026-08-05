@@ -92,14 +92,18 @@ fetched — see its §4.2.)
   recompute from the union of study days. Unconfigured or offline, nothing changes:
   progress stays local and the app never blocks on the network.
 
-## Audio: recorded human audio drop-in convention
+## Audio: drop-in clip convention
 
-Per `[R-24]`, the 28 letters and core vocabulary must use **recorded human audio, never
-TTS** — pharyngeal and uvular consonants are where synthesis is least trustworthy and
-exactly what the learner most needs to imitate. Recording is a `[HUMAN]` task; the app
-ships with the playback slots wired and empty.
+**Synthetic clips are the shipped path** (design doc `[R-24]`, amended v0.14). The
+146 letter and word clips are meant to be generated once and committed, clearly
+labeled synthetic. Human recordings are **deferred to a later version** — they're still
+wanted, because synthesis is least trustworthy on exactly the throat consonants a
+learner most needs to imitate, but nothing in the build waits on finding a speaker.
 
-To add recordings, drop files here (next to the HTML file):
+Either way the convention is the same: a file at the right path wins. Drop a human
+recording in later and it replaces the synthetic clip with no code change.
+
+Files go here (next to the HTML file):
 
 ```
 audio/
@@ -115,6 +119,8 @@ themselves are not recorded; each *word* in a family gets its own clip. The full
 with exact filenames is [`content/recording-list.md`](content/recording-list.md) —
 hand it to the speaker as-is. It is generated from the app by
 `node tools/sync-content.mjs`, so it stays right as content grows.
+
+These notes apply when a human eventually records them:
 
 - **Letters**: the letter's name, then its bare sound — "بَاء … بْ". Phase 0 gates on
   *recognising* letters and their sounds, not on producing them (design doc §11.10) —
@@ -176,9 +182,9 @@ wrangler.jsonc              Cloudflare Worker config for the backend
 docs/judhur-design-doc.md   the spec of record
 docs/review-2026-08.md      outside review that prompted design doc v0.13
 content/                    GENERATED export of the app's content — do not hand-edit
-audio/                      recorded human audio (drop-in; commit recordings so they follow the repo)
+audio/                      word and letter clips (drop-in; commit them so they follow the repo)
 tools/                      test suite and generators (see below)
-LICENSE                     MIT; bundled fonts are OFL 1.1 (fonts/OFL.txt)
+LICENSE                     GNU AGPL v3; bundled fonts are OFL 1.1 (fonts/OFL.txt)
 ```
 
 ## Working on it
@@ -198,8 +204,25 @@ Deploy note: when a change lands that should update installed clients' cached sh
 bump `VERSION` in `sw.js` (navigations are network-first anyway, so the app page
 itself refreshes on the next online visit regardless).
 
-## License
+## Licence
 
-MIT — see [LICENSE](LICENSE). The bundled fonts are SIL OFL 1.1 and keep their own
-terms ([fonts/OFL.txt](fonts/OFL.txt)). The design doc's §11.7 sharing model assumes
-you can fork this and run your own copy; the license is what makes that true.
+**GNU Affero General Public License v3.0 or later** — see [LICENSE](LICENSE).
+
+The intent is that this stays free for everyone, permanently. In practice that means:
+
+- Use it, copy it, change it, run it — for anything, including teaching.
+- **If you publish a changed version you must publish its source under this same
+  licence.** The AGPL closes the loophole that lets someone host a modified copy as a
+  website without releasing anything: §13 makes running it for others count as
+  distributing it.
+- Nobody can take this closed. Every fork, and every fork of a fork, stays free.
+
+One honest caveat: no free-software licence can forbid charging money — the AGPL's own
+preamble says you may "charge for them if you wish." What it guarantees is that anyone
+who pays immediately receives the source with the right to give it away, so there is no
+version of this that someone can lock up and sell. If you fork and deploy it, point
+`SOURCE_URL` in `index.html` at your own repository so your users can find your source.
+
+The bundled fonts are SIL OFL 1.1 and keep their own terms
+([fonts/OFL.txt](fonts/OFL.txt)); the OFL is compatible with distributing them
+alongside AGPL software.
