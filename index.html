@@ -177,14 +177,19 @@
   .ov-mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
   .q-letter{font-family:var(--arabic);font-size:74px;line-height:1}
   .q-word{font-family:var(--arabic);font-size:46px;direction:rtl;line-height:1.3;display:inline-block}
-  /* gendered pair: both forms, each labelled ([R-51]) */
-  .genpair{display:flex;flex-direction:column;gap:2px;align-items:center}
-  .genform{display:flex;align-items:baseline;gap:10px}
-  .genform .q-word{font-size:38px}
-  .genlbl{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.5px;
-          min-width:16px;text-align:right;flex:none}
-  .w-gen{display:flex;flex-direction:column;gap:1px}
-  .w-gen .gl{font-size:9.5px;font-weight:700;color:var(--teal);margin-inline-end:5px}
+  /* Gendered pair ([R-51]). A three-column grid — label · word · its own speaker —
+     so the columns line up and every button sits beside the form it plays. */
+  .genpair{display:inline-grid;grid-template-columns:auto auto auto;
+           align-items:center;gap:6px 12px;margin:0 auto}
+  .genpair .genlbl{justify-self:end}
+  .genpair .q-word{font-size:38px;justify-self:center}
+  .genpair .playbtn{justify-self:start}
+  .genlbl{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.5px}
+  .playbtn.inline{min-width:44px;min-height:44px;padding:9px;border-radius:10px}
+  .playbtn.inline svg{width:18px;height:18px}
+  .w-gen{display:flex;flex-direction:column;gap:2px}
+  .w-row{display:flex;align-items:center;gap:7px}
+  .w-row .gl{font-size:9.5px;font-weight:700;color:var(--teal);min-width:13px}
   .q-root{color:var(--teal);font-size:12px;margin-bottom:10px}
   .q-root span{font-family:var(--arabic);direction:rtl}
   .ans{margin-top:26px}
@@ -844,17 +849,23 @@ function playAudio(src, text, reg){
   var p = audioEl.play();
   if(p && p.catch) p.catch(fail);
 }
-function playBtn(src, text, reg){
+/* `label` names what this button will say, for anyone who can't see which word it
+   sits beside — two unlabelled speakers in a row are ambiguous to a screen reader
+   for the same reason they were ambiguous on screen. `cls` allows the compact
+   variant used when a button sits inline with its word. */
+function playBtn(src, text, reg, label, cls){
   var miss = AUDIO_MISSING[src], canSay = !!text && !!S.settings.tts, muted = miss && !canSay;
   var synth = !miss && AUDIO_SYNTH[src];       /* a committed clip, but machine-made */
-  var title = muted ? 'no clip yet — see Settings → Audio coverage'
-            : miss ? 'synthetic voice — no clip for this word yet'
-            : synth ? 'synthetic clip — not a human recording'
-            : 'play recording';
-  return '<button class="playbtn'+(muted?' miss':'')+((miss&&canSay)||synth?' syn':'')+'" data-play="'+esc(src)+'"'
+  var what = label ? ' ' + label : '';
+  var title = muted ? 'no clip yet' + what + ' — see Settings → Audio coverage'
+            : miss ? 'synthetic voice' + what + ' — no clip for this word yet'
+            : synth ? 'synthetic clip' + what + ' — not a human recording'
+            : 'play' + (what || ' recording');
+  return '<button class="playbtn'+(cls?' '+cls:'')+(muted?' miss':'')+((miss&&canSay)||synth?' syn':'')
+       + '" data-play="'+esc(src)+'"'
        + (text?' data-say-fb="'+esc(text)+'"':'')
        + (reg?' data-say-reg="'+esc(reg)+'"':'')
-       + ' title="'+title+'">'+svg(IC.spk)+'</button>';
+       + ' title="'+esc(title)+'" aria-label="'+esc(title)+'">'+svg(IC.spk)+'</button>';
 }
 /* Synthetic speech (§7, amended [R-24]) — always a fallback, never the gold standard.
    Azure neural voice when the backend is configured (cached per text); otherwise the
@@ -1706,16 +1717,18 @@ function viewVocab(){
           'learning':['#B8935A','rgba(184,147,90,.16)'],
           'retained':['#4F8A8B','rgba(79,138,139,.16)']
         }[st];
+        /* speaker beside its own form, not pooled at the end of the row */
         out += '<div class="word"><div class="w-gen">'
-             + '<div><span'+(w.f?' class="gl">m.</span><span':'>')+' class="w-ar">'+w.ar+'</span></div>'
-             + (w.f?'<div><span class="gl">f.</span><span class="w-ar">'+w.f.ar+'</span></div>':'')
+             + '<div class="w-row">'+(w.f?'<span class="gl">m.</span>':'')
+             +   '<span class="w-ar">'+w.ar+'</span>'
+             +   playBtn(wordSrc(w), w.ar, w.reg, w.f?'the masculine form':esc(w.t), 'inline')+'</div>'
+             + (w.f?'<div class="w-row"><span class="gl">f.</span>'
+                 +   '<span class="w-ar">'+w.f.ar+'</span>'
+                 +   playBtn(wordSrc(w.f), w.f.ar, w.reg, 'the feminine form', 'inline')+'</div>':'')
              + '<div class="w-en">'+esc(w.t)+(w.f?' · '+esc(w.f.t):'')+' \u00b7 '+esc(w.en)
              +   (w.f && w.f.en!==w.en ? ' · '+esc(w.f.en) : '')+' '+regTag(w.reg)+'</div></div>'
-             + '<div style="display:flex;align-items:center;gap:8px">'
-             +   playBtn(wordSrc(w), w.ar, w.reg)
-             +   (w.f?playBtn(wordSrc(w.f), w.f.ar, w.reg):'')
-             +   '<span class="pill" style="color:'+PILL[0]+';background:'+PILL[1]+'">'+st+'</span>'
-             + '</div></div>';
+             + '<span class="pill" style="color:'+PILL[0]+';background:'+PILL[1]+'">'+st+'</span>'
+             + '</div>';
       });
       out += '</div>';
     }
@@ -2193,11 +2206,16 @@ function renderOverlay(){
     /* One form is spoken at a time — the mic checks a single word — so speaking
        practice prompts the masculine and shows the feminine for reference. */
     var smid = '<div class="q-root">root: <span>'+sd.root+'</span> ('+esc(sd.rootMeaning)+') '+regTag(sd.reg)+'</div>'
-      + '<div class="q-word">'+sd.ar+'</div>'
-      + (sd.f?'<div class="fade-hint" style="cursor:default">feminine: <span style="font-family:var(--arabic)">'+sd.f.ar+'</span> · '+esc(sd.f.t)+'</div>':'')
+      + '<div class="genpair" style="grid-template-columns:auto auto">'
+      +   '<span class="q-word" style="font-size:46px">'+sd.ar+'</span>'
+      +   playBtn(wordSrc(sd), sd.ar, sd.reg, sd.f?'the masculine form':esc(sd.t), 'inline')
+      + '</div>'
+      + (sd.f?'<div class="fade-hint" style="cursor:default;display:flex;align-items:center;justify-content:center;gap:8px">'
+             + '<span>feminine: <span style="font-family:var(--arabic)">'+sd.f.ar+'</span> · '+esc(sd.f.t)+'</span>'
+             + playBtn(wordSrc(sd.f), sd.f.ar, sd.reg, 'the feminine form', 'inline')+'</div>':'')
       + '<div class="ans"><div class="a1">'+esc(sd.t)+'</div><div class="a2">'+esc(sd.en)+'</div>'
       + speakPrompt()
-      + '<div class="ab-row">'+playBtn(wordSrc(sd), sd.ar, sd.reg)+micBtn(sc.id)+'</div>'
+      + '<div class="ab-row">'+micBtn(sc.id)+'</div>'
       + t1Line(sc.id)
       + '</div>';
     var sfoot = '<div class="grades" style="grid-template-columns:repeat(2,1fr)">'
@@ -2233,18 +2251,23 @@ function renderOverlay(){
        citation form on its own is the dictionary's convention, and taking it
        wholesale leaves the learner unable to produce or recognise half of
        ordinary speech — without ever saying that is what happened. */
+    /* Each form owns the speaker beside it. Two buttons in a row under both words
+       left it to the learner to infer which played which — and the inference runs
+       left-to-right against text that runs right-to-left. */
+    var wordCell = function(t){
+      return '<span class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+shown(t)+'</span>';
+    };
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
         + (d.f
             ? '<div class="genpair">'
-              + '<div class="genform"><span class="genlbl">m.</span>'
-              +   '<span class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+shown(d.ar)+'</span></div>'
-              + '<div class="genform"><span class="genlbl">f.</span>'
-              +   '<span class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+shown(d.f.ar)+'</span></div>'
+              + '<span class="genlbl">m.</span>' + wordCell(d.ar)
+              +   playBtn(wordSrc(d), d.ar, d.reg, 'the masculine form', 'inline')
+              + '<span class="genlbl">f.</span>' + wordCell(d.f.ar)
+              +   playBtn(wordSrc(d.f), d.f.ar, d.reg, 'the feminine form', 'inline')
               + '</div>'
             : '<div class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+shown(d.ar)+'</div>')
         + (showFull ? '' : '<div class="fade-hint" data-vowels="1">'+(vstage==='bare'?'no vowel marks':'vowels faded')+' — tap to reveal</div>')
-        + '<div class="ab-row">'+playBtn(wordSrc(d), d.ar, d.reg)
-            + (d.f ? playBtn(wordSrc(d.f), d.f.ar, d.reg) : '')+'</div>'   /* audio on both sides */
+        + (d.f ? '' : '<div class="ab-row">'+playBtn(wordSrc(d), d.ar, d.reg)+'</div>')   /* audio on both sides */
         + (sess.show ? '<div class="ans"><div class="a1">'
             + (d.f && d.f.en !== d.en ? esc(d.en)+' · '+esc(d.f.en) : esc(d.en))+'</div>'
             + (trShown() ? '<div class="a2 tr-read">'+esc(d.t)+(d.f?' · '+esc(d.f.t):'')+'</div>' : '')
