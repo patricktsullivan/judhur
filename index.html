@@ -1272,7 +1272,17 @@ function chunksToWav(chunks, inRate){
   var bytes=new Uint8Array(buf), bin=''; for(i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
   return {b64: btoa(bin), samples: pcm.length};
 }
-function expectedFor(c){ return c.type==='alphabet' ? LETTER_META[c.d.id].an : c.d.ar; }
+/* Which gendered form this presentation asks about. Chosen once per card, not per
+   render — the card re-renders on every tap, and a fresh draw each time would flip
+   the word under the learner. */
+function pickGender(){ return Math.random() < 0.5 ? 'f' : 'm'; }
+/* The form being asked, and its counterpart. Non-gendered words have no counterpart. */
+function askedForm(d, gen){ return (d.f && gen === 'f') ? d.f : d; }
+function otherForm(d, gen){ if(!d.f) return null; return askedForm(d, gen) === d.f ? d : d.f; }
+function expectedFor(c, gen){
+  if(c.type==='alphabet') return LETTER_META[c.d.id].an;
+  return askedForm(c.d, gen).ar;
+}
 function micBtn(cardId){
   if(!speechReady()) return '';
   var recing = REC && REC.cardId===cardId;
@@ -1361,7 +1371,7 @@ function toggleMic(cardId){
     var source = ac.createMediaStreamSource(stream);
     var proc = ac.createScriptProcessor(4096, 1, 1);
     var mute = ac.createGain(); mute.gain.value = 0;   // capture without audible feedback
-    REC = {cardId:cardId, stream:stream, expected:expectedFor(card), register:(card.d&&card.d.reg)||'msa',
+    REC = {cardId:cardId, stream:stream, expected:expectedFor(card, sess && sess.gen), register:(card.d&&card.d.reg)||'msa',
            ac:ac, source:source, proc:proc, chunks:[]};
     proc.onaudioprocess = function(ev){
       if(REC) REC.chunks.push(new Float32Array(ev.inputBuffer.getChannelData(0)));
@@ -2042,7 +2052,7 @@ function startSession(filter){
   var q = dueList(filter||null).slice(0,MAX_SESSION);
   if(!q.length) return;
   cardMenu = false;
-  sess = {q:q,i:0,show:false,done:false,reviewed:0,xp:0};
+  sess = {q:q,i:0,show:false,done:false,reviewed:0,xp:0,gen:pickGender()};
   render();
 }
 /* ---------- speaking practice (production track, words only) ---------- */
@@ -2063,7 +2073,7 @@ function prodDue(){
 function startSpeaking(){
   var q = prodDue().slice(0,MAX_SESSION);
   if(!q.length) return;
-  sess = {mode:'speak', q:q, i:0, done:false, reviewed:0, xp:0};
+  sess = {mode:'speak', q:q, i:0, done:false, reviewed:0, xp:0, gen:pickGender()};
   render();
 }
 function gradeSpeak(q){
@@ -2077,6 +2087,7 @@ function gradeSpeak(q){
   S.xp += gain; sess.reviewed++; sess.xp += gain;
   delete T1[card.id];
   sess.i++;
+  sess.gen = pickGender();
   if(sess.i >= sess.q.length) sess.done = true;
   persist(); render();
   if(sess.done) syncNow();
@@ -2092,6 +2103,7 @@ function grade(q){
   S.xp += gain;
   sess.reviewed++; sess.xp += gain;
   sess.i++;
+  sess.gen = pickGender();   /* a fresh draw for the next card */
   sess.show = false;
   sess.showVowels = false;   /* reset the tap-to-reveal for the next card */
   sess.showTr = undefined;   /* reading falls back to the global default on each new card */
@@ -2203,17 +2215,22 @@ function renderOverlay(){
   }
   if(sess.mode==='speak'){
     var sc = sess.q[sess.i], sd = sc.d, spct = (sess.i/sess.q.length)*100;
-    /* One form is spoken at a time — the mic checks a single word — so speaking
-       practice prompts the masculine and shows the feminine for reference. */
+    /* The mic checks a single word, so one form is prompted — drawn per card like
+       the review side, rather than always the masculine. Always drilling the
+       citation form is the gap [R-51] exists to close, and it would be odd to fix
+       recognition and leave production one-sided. Nothing is hidden here: this is
+       a production prompt, so the counterpart is shown for reference. */
+    var sAsk = askedForm(sd, sess.gen), sOther = otherForm(sd, sess.gen);
+    var sAskLbl = (sAsk === sd.f) ? 'feminine' : 'masculine';
     var smid = '<div class="q-root">root: <span>'+sd.root+'</span> ('+esc(sd.rootMeaning)+') '+regTag(sd.reg)+'</div>'
       + '<div class="genpair" style="grid-template-columns:auto auto">'
-      +   '<span class="q-word" style="font-size:46px">'+sd.ar+'</span>'
-      +   playBtn(wordSrc(sd), sd.ar, sd.reg, sd.f?'the masculine form':esc(sd.t), 'inline')
+      +   '<span class="q-word" style="font-size:46px">'+sAsk.ar+'</span>'
+      +   playBtn(wordSrc(sAsk), sAsk.ar, sd.reg, sOther?('the '+sAskLbl+' form'):esc(sAsk.t), 'inline')
       + '</div>'
-      + (sd.f?'<div class="fade-hint" style="cursor:default;display:flex;align-items:center;justify-content:center;gap:8px">'
-             + '<span>feminine: <span style="font-family:var(--arabic)">'+sd.f.ar+'</span> · '+esc(sd.f.t)+'</span>'
-             + playBtn(wordSrc(sd.f), sd.f.ar, sd.reg, 'the feminine form', 'inline')+'</div>':'')
-      + '<div class="ans"><div class="a1">'+esc(sd.t)+'</div><div class="a2">'+esc(sd.en)+'</div>'
+      + (sOther?'<div class="fade-hint" style="cursor:default;display:flex;align-items:center;justify-content:center;gap:8px">'
+             + '<span>'+(sAskLbl==='feminine'?'masculine':'feminine')+': <span style="font-family:var(--arabic)">'+sOther.ar+'</span> · '+esc(sOther.t)+'</span>'
+             + playBtn(wordSrc(sOther), sOther.ar, sd.reg, 'the other form', 'inline')+'</div>':'')
+      + '<div class="ans"><div class="a1">'+esc(sAsk.t)+'</div><div class="a2">'+esc(sAsk.en)+'</div>'
       + speakPrompt()
       + '<div class="ab-row">'+micBtn(sc.id)+'</div>'
       + t1Line(sc.id)
@@ -2251,28 +2268,43 @@ function renderOverlay(){
        citation form on its own is the dictionary's convention, and taking it
        wholesale leaves the learner unable to produce or recognise half of
        ordinary speech — without ever saying that is what happened. */
-    /* Each form owns the speaker beside it. Two buttons in a row under both words
-       left it to the learner to infer which played which — and the inference runs
-       left-to-right against text that runs right-to-left. */
+    /* ONE form is asked, drawn per presentation, with nothing on the prompt to
+       say a counterpart exists — not even a gender label, since a label is
+       itself the hint. Showing both up front let the pair carry the recall: a
+       known root plus a visible m/f pair narrows the answer to "the verb one"
+       without the word being remembered. The counterpart appears with the
+       answer, where seeing the alternation is what teaches it.
+       On reveal the asked form stays where it was and the counterpart appears
+       beneath it, so nothing jumps; the labels carry the gender either way. */
+    var asked = askedForm(d, sess.gen), other = otherForm(d, sess.gen);
+    var askedLbl = (asked === d.f) ? 'f.' : 'm.', otherLbl = (askedLbl === 'f.') ? 'm.' : 'f.';
     var wordCell = function(t){
       return '<span class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+shown(t)+'</span>';
     };
+    /* Glosses and romanization follow the on-screen order rather than a fixed
+       masculine-first order, so the columns read straight down. */
+    var gloss = (other && other.en !== asked.en) ? esc(asked.en)+' · '+esc(other.en) : esc(asked.en);
+    var roman = other ? esc(asked.t)+' · '+esc(other.t) : esc(asked.t);
+    var ans = sess.show
+      ? '<div class="ans"><div class="a1">'+gloss+'</div>'
+        + (trShown() ? '<div class="a2 tr-read">'+roman+'</div>' : '')
+        + (d.source?'<div class="prov">from '+esc(d.source)+'</div>':'')
+        + '</div>'
+      : '';
+    var fadeHint = showFull ? ''
+      : '<div class="fade-hint" data-vowels="1">'+(vstage==='bare'?'no vowel marks':'vowels faded')+' — tap to reveal</div>';
     mid = '<div class="q-root">root: <span>'+d.root+'</span> ('+esc(d.rootMeaning)+') '+regTag(d.reg)+'</div>'
-        + (d.f
+        + ((other && sess.show)
             ? '<div class="genpair">'
-              + '<span class="genlbl">m.</span>' + wordCell(d.ar)
-              +   playBtn(wordSrc(d), d.ar, d.reg, 'the masculine form', 'inline')
-              + '<span class="genlbl">f.</span>' + wordCell(d.f.ar)
-              +   playBtn(wordSrc(d.f), d.f.ar, d.reg, 'the feminine form', 'inline')
-              + '</div>'
-            : '<div class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+shown(d.ar)+'</div>')
-        + (showFull ? '' : '<div class="fade-hint" data-vowels="1">'+(vstage==='bare'?'no vowel marks':'vowels faded')+' — tap to reveal</div>')
-        + (d.f ? '' : '<div class="ab-row">'+playBtn(wordSrc(d), d.ar, d.reg)+'</div>')   /* audio on both sides */
-        + (sess.show ? '<div class="ans"><div class="a1">'
-            + (d.f && d.f.en !== d.en ? esc(d.en)+' · '+esc(d.f.en) : esc(d.en))+'</div>'
-            + (trShown() ? '<div class="a2 tr-read">'+esc(d.t)+(d.f?' · '+esc(d.f.t):'')+'</div>' : '')
-            + (d.source?'<div class="prov">from '+esc(d.source)+'</div>':'')
-            + '</div>' : '');
+              + '<span class="genlbl">'+askedLbl+'</span>' + wordCell(asked.ar)
+              +   playBtn(wordSrc(asked), asked.ar, d.reg, 'this form', 'inline')
+              + '<span class="genlbl">'+otherLbl+'</span>' + wordCell(other.ar)
+              +   playBtn(wordSrc(other), other.ar, d.reg, 'the other form', 'inline')
+              + '</div>' + fadeHint
+            : '<div class="q-word"'+(showFull?'':' data-vowels="1" style="cursor:pointer"')+'>'+shown(asked.ar)+'</div>'
+              + fadeHint
+              + '<div class="ab-row">'+playBtn(wordSrc(asked), asked.ar, d.reg)+'</div>')
+        + ans;
   }
   var foot = sess.show
     ? '<div class="grades">'
